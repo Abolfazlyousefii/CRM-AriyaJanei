@@ -16,94 +16,28 @@ class CustomerNotesController extends Controller
         $this->middleware('auth');
     }
 
-    private function isAdminLike(User $user): bool
+    private function canEditNotes($user): bool
     {
-        return $user->hasRole('Admin') || $user->hasRole('internalManager');
+        return $user->hasRole('Admin')
+            || $user->hasRole('Marketer')
+            || $user->hasRole('internalManager');
     }
 
-    private function canViewCustomer(User $user, Customer $customer): bool
+    private function canDeleteNotes($user): bool
     {
-        if (
-            $user->hasRole('Admin') ||
-            $user->hasRole('internalManager') ||
-            $user->hasRole('SaleManager')
-        ) {
-            return true;
-        }
-
-        if ($user->hasRole('Marketer')) {
-            return true;
-        }
-
-        return false;
+        return $user->hasRole('Admin')
+            || $user->hasRole('internalManager');
     }
 
-    private function canCreateNote(User $user, Customer $customer): bool
-    {
-        if (
-            $user->hasRole('Admin') ||
-            $user->hasRole('internalManager') ||
-            $user->hasRole('Marketer')
-        ) {
-            return true;
-        }
-
-        return false;
-    }
-
-    private function canEditNote(User $user, Customer $customer): bool
-    {
-        if (
-            $user->hasRole('Admin') ||
-            $user->hasRole('internalManager')
-        ) {
-            return true;
-        }
-
-        if ($user->hasRole('Marketer')) {
-            return (int) $customer->user_id === (int) $user->id;
-        }
-
-        return false;
-    }
-
-    private function canDeleteNote(User $user, Customer $customer): bool
-    {
-        return $this->isAdminLike($user);
-    }
-
-    private function ensureCustomerCanBeViewed(Customer $customer): void
+    private function ensureCustomerAccess(Customer $customer): void
     {
         $user = Auth::user();
 
-        if (!$this->canViewCustomer($user, $customer)) {
+        if (!$this->canEditNotes($user) && !$user->hasRole('SaleManager')) {
             abort(403);
         }
-    }
 
-    private function ensureCustomerCanReceiveNote(Customer $customer): void
-    {
-        $user = Auth::user();
-
-        if (!$this->canCreateNote($user, $customer)) {
-            abort(403);
-        }
-    }
-
-    private function ensureNoteEditable(Customer $customer): void
-    {
-        $user = Auth::user();
-
-        if (!$this->canEditNote($user, $customer)) {
-            abort(403);
-        }
-    }
-
-    private function ensureNoteDeletable(Customer $customer): void
-    {
-        $user = Auth::user();
-
-        if (!$this->canDeleteNote($user, $customer)) {
+        if ($user->hasRole('Marketer') && (int) $customer->user_id !== (int) $user->id) {
             abort(403);
         }
     }
@@ -111,14 +45,7 @@ class CustomerNotesController extends Controller
     private function ensureNestedMarketerCustomer(User $marketer, Customer $customer): void
     {
         if ((int) $customer->user_id !== (int) $marketer->id) {
-            abort(404);
-        }
-    }
-
-    private function ensureNoteBelongsToCustomer(CustomerNote $note, Customer $customer): void
-    {
-        if ((int) $note->customer_id !== (int) $customer->id) {
-            abort(404);
+            abort(403);
         }
     }
 
@@ -137,8 +64,12 @@ class CustomerNotesController extends Controller
 
     public function index(User $marketer, Customer $customer)
     {
-      
+        if (url()->previous() && !str_contains(url()->previous(), 'notes')) {
+            session(['customers_previous_url' => url()->previous()]);
+        }
 
+        $this->ensureNestedMarketerCustomer($marketer, $customer);
+        $this->ensureCustomerAccess($customer);
 
         $notes = $customer->notes()->latest('created_at')->paginate(15);
 
@@ -151,7 +82,9 @@ class CustomerNotesController extends Controller
 
     public function create(User $marketer, Customer $customer)
     {
-     
+        $this->ensureNestedMarketerCustomer($marketer, $customer);
+        $this->ensureCustomerAccess($customer);
+
         if (Auth::user()->hasRole('Marketer')) {
             return view('marketer.customers.notes.create', compact('customer'));
         }
@@ -163,7 +96,11 @@ class CustomerNotesController extends Controller
     {
         $user = Auth::user();
 
-        $this->ensureCustomerCanReceiveNote($customer);
+        if (!$this->canEditNotes($user)) {
+            abort(403);
+        }
+
+        $this->ensureCustomerAccess($customer);
 
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:5000'],
@@ -177,9 +114,7 @@ class CustomerNotesController extends Controller
         activity()
             ->causedBy($user)
             ->performedOn($note)
-            ->withProperties([
-                'customer_id' => $customer->id,
-            ])
+            ->withProperties(['customer_id' => $customer->id])
             ->log('ایجاد یادداشت');
 
         if ($request->expectsJson() || $request->ajax()) {
@@ -195,8 +130,11 @@ class CustomerNotesController extends Controller
     public function show(User $marketer, Customer $customer, CustomerNote $note)
     {
         $this->ensureNestedMarketerCustomer($marketer, $customer);
-        $this->ensureCustomerCanBeViewed($customer);
-        $this->ensureNoteBelongsToCustomer($note, $customer);
+        $this->ensureCustomerAccess($customer);
+
+        if ((int) $note->customer_id !== (int) $customer->id) {
+            abort(404);
+        }
 
         if (Auth::user()->hasRole('Marketer')) {
             return view('marketer.customers.notes.show', compact('customer', 'note'));
@@ -208,9 +146,11 @@ class CustomerNotesController extends Controller
     public function edit(User $marketer, Customer $customer, CustomerNote $note)
     {
         $this->ensureNestedMarketerCustomer($marketer, $customer);
-        $this->ensureCustomerCanBeViewed($customer);
-        $this->ensureNoteBelongsToCustomer($note, $customer);
-        $this->ensureNoteEditable($customer);
+        $this->ensureCustomerAccess($customer);
+
+        if ((int) $note->customer_id !== (int) $customer->id) {
+            abort(404);
+        }
 
         if (Auth::user()->hasRole('Marketer')) {
             return view('marketer.customers.notes.edit', compact('customer', 'note'));
@@ -223,10 +163,16 @@ class CustomerNotesController extends Controller
     {
         $user = Auth::user();
 
+        if (!$this->canEditNotes($user)) {
+            abort(403);
+        }
+
         $this->ensureNestedMarketerCustomer($marketer, $customer);
-        $this->ensureCustomerCanBeViewed($customer);
-        $this->ensureNoteBelongsToCustomer($note, $customer);
-        $this->ensureNoteEditable($customer);
+        $this->ensureCustomerAccess($customer);
+
+        if ((int) $note->customer_id !== (int) $customer->id) {
+            abort(404);
+        }
 
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:5000'],
@@ -261,6 +207,14 @@ class CustomerNotesController extends Controller
     public function updateInline(Request $request, CustomerNote $note)
     {
         $user = Auth::user();
+
+        if (!$this->canEditNotes($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'شما اجازه ویرایش یادداشت را ندارید.'
+            ], 403);
+        }
+
         $customer = $note->customer;
 
         if (!$customer) {
@@ -270,12 +224,7 @@ class CustomerNotesController extends Controller
             ], 404);
         }
 
-        if (!$this->canEditNote($user, $customer)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'شما اجازه ویرایش این یادداشت را ندارید.'
-            ], 403);
-        }
+        $this->ensureCustomerAccess($customer);
 
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:5000'],
@@ -307,16 +256,20 @@ class CustomerNotesController extends Controller
     {
         $user = Auth::user();
 
+        if (!$this->canDeleteNotes($user)) {
+            abort(403);
+        }
+
         $this->ensureNestedMarketerCustomer($marketer, $customer);
-        $this->ensureNoteBelongsToCustomer($note, $customer);
-        $this->ensureNoteDeletable($customer);
+
+        if ((int) $note->customer_id !== (int) $customer->id) {
+            abort(404);
+        }
 
         activity()
             ->causedBy($user)
             ->performedOn($note)
-            ->withProperties([
-                'customer_id' => $customer->id,
-            ])
+            ->withProperties(['customer_id' => $customer->id])
             ->log('حذف یادداشت');
 
         $note->delete();
@@ -331,6 +284,14 @@ class CustomerNotesController extends Controller
     public function destroyInline(CustomerNote $note)
     {
         $user = Auth::user();
+
+        if (!$this->canDeleteNotes($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'شما اجازه حذف یادداشت را ندارید.'
+            ], 403);
+        }
+
         $customer = $note->customer;
 
         if (!$customer) {
@@ -340,19 +301,10 @@ class CustomerNotesController extends Controller
             ], 404);
         }
 
-        if (!$this->canDeleteNote($user, $customer)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'شما اجازه حذف یادداشت را ندارید.'
-            ], 403);
-        }
-
         activity()
             ->causedBy($user)
             ->performedOn($note)
-            ->withProperties([
-                'customer_id' => $customer->id,
-            ])
+            ->withProperties(['customer_id' => $customer->id])
             ->log('حذف یادداشت');
 
         $note->delete();
