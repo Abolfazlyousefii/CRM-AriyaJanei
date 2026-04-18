@@ -5,12 +5,17 @@ namespace App\Services;
 use App\Models\Notification;
 use App\Models\Task;
 use App\Models\User;
+use Illuminate\Support\Facades\Schema;
 
 class TaskOverdueNotificationService
 {
     public function syncForManager(User $manager): void
     {
         if (!$manager->hasRole('Manager')) {
+            return;
+        }
+
+        if (!Schema::hasColumn('tasks', 'due_at')) {
             return;
         }
 

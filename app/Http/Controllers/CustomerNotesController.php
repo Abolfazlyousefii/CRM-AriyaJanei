@@ -7,392 +7,358 @@ use App\Models\CustomerNote;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Spatie\Activitylog\Models\Activity;
+use Morilog\Jalali\Jalalian;
 
 class CustomerNotesController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'role:Admin|Marketer']);
+        $this->middleware('auth');
     }
 
-    /**
-     * Display a listing of the resource.
-     */
-   public function index(User $marketer, Customer $customer)
-{
-    // ✅ ذخیره مسیر قبلی اگر از لیست مشتریان اومده
-    if (url()->previous() && !str_contains(url()->previous(), 'notes')) {
-        session(['customers_previous_url' => url()->previous()]);
-    }
-
-    if (Auth::user()->hasrole('Admin')) {
-        if ($customer->user_id !== $marketer->id) abort(403);
-
-        $view = 'admin.marketers.customers.notes.index';
-        $notes = $customer->notes()->latest('created_at')->paginate(15);
-        return view($view, compact('customer', 'marketer', 'notes'));
-    }
-
-    if (Auth::user()->hasrole('Marketer')) {
-      
-
-        $view = 'marketer.customers.notes.index';
-        $notes = $customer->notes()->latest('created_at')->paginate(15);
-        return view($view, compact('customer', 'notes'));
-    }
-
-    abort(403);
-}
-
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create(User $marketer, Customer $customer)
+    private function isAdminLike(User $user): bool
     {
-        if (Auth::user()->hasrole('Admin')) {
-         
+        return $user->hasRole('Admin') || $user->hasRole('internalManager');
+    }
 
-            return view('admin.marketers.customers.notes.create', compact('customer', 'marketer'));
+    private function canViewCustomer(User $user, Customer $customer): bool
+    {
+        if (
+            $user->hasRole('Admin') ||
+            $user->hasRole('internalManager') ||
+            $user->hasRole('SaleManager')
+        ) {
+            return true;
         }
 
-        if (Auth::user()->hasrole('Marketer')) {
-         
+        if ($user->hasRole('Marketer')) {
+            return true;
+        }
 
+        return false;
+    }
+
+    private function canCreateNote(User $user, Customer $customer): bool
+    {
+        if (
+            $user->hasRole('Admin') ||
+            $user->hasRole('internalManager') ||
+            $user->hasRole('Marketer')
+        ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function canEditNote(User $user, Customer $customer): bool
+    {
+        if (
+            $user->hasRole('Admin') ||
+            $user->hasRole('internalManager')
+        ) {
+            return true;
+        }
+
+        if ($user->hasRole('Marketer')) {
+            return (int) $customer->user_id === (int) $user->id;
+        }
+
+        return false;
+    }
+
+    private function canDeleteNote(User $user, Customer $customer): bool
+    {
+        return $this->isAdminLike($user);
+    }
+
+    private function ensureCustomerCanBeViewed(Customer $customer): void
+    {
+        $user = Auth::user();
+
+        if (!$this->canViewCustomer($user, $customer)) {
+            abort(403);
+        }
+    }
+
+    private function ensureCustomerCanReceiveNote(Customer $customer): void
+    {
+        $user = Auth::user();
+
+        if (!$this->canCreateNote($user, $customer)) {
+            abort(403);
+        }
+    }
+
+    private function ensureNoteEditable(Customer $customer): void
+    {
+        $user = Auth::user();
+
+        if (!$this->canEditNote($user, $customer)) {
+            abort(403);
+        }
+    }
+
+    private function ensureNoteDeletable(Customer $customer): void
+    {
+        $user = Auth::user();
+
+        if (!$this->canDeleteNote($user, $customer)) {
+            abort(403);
+        }
+    }
+
+    private function ensureNestedMarketerCustomer(User $marketer, Customer $customer): void
+    {
+        if ((int) $customer->user_id !== (int) $marketer->id) {
+            abort(404);
+        }
+    }
+
+    private function ensureNoteBelongsToCustomer(CustomerNote $note, Customer $customer): void
+    {
+        if ((int) $note->customer_id !== (int) $customer->id) {
+            abort(404);
+        }
+    }
+
+    private function notePayload(CustomerNote $note): array
+    {
+        $note->loadMissing('user');
+
+        return [
+            'id' => $note->id,
+            'content' => $note->content,
+            'creator' => $note->user?->name ?? '-',
+            'creator_role' => $note->user?->getRoleNames()->first(),
+            'created_at' => Jalalian::fromDateTime($note->created_at)->format('Y/m/d H:i'),
+        ];
+    }
+
+    public function index(User $marketer, Customer $customer)
+    {
+      
+
+
+        $notes = $customer->notes()->latest('created_at')->paginate(15);
+
+        if (Auth::user()->hasRole('Marketer')) {
+            return view('marketer.customers.notes.index', compact('customer', 'notes'));
+        }
+
+        return view('admin.marketers.customers.notes.index', compact('customer', 'marketer', 'notes'));
+    }
+
+    public function create(User $marketer, Customer $customer)
+    {
+     
+        if (Auth::user()->hasRole('Marketer')) {
             return view('marketer.customers.notes.create', compact('customer'));
         }
 
-        abort(403);
+        return view('admin.marketers.customers.notes.create', compact('customer', 'marketer'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request, Customer $customer)
     {
-        $data = $request->validate([
-            'content' => 'required|string',
-        ]);
-
         $user = Auth::user();
 
-        if ($user->hasRole('Admin')) {
-            // اگر لازم است می‌توانید بررسی کنید مشتری به کدام مارکتر تعلق دارد
-            $note = $customer->notes()->create([
-                'user_id' => $user->id, // یا مارکتر مشخصی
-                'content' => $data['content'],
-            ]);
+        $this->ensureCustomerCanReceiveNote($customer);
 
-            activity()
-                ->causedBy($user)
-                ->performedOn($note)
-                ->withProperties(['customer_id' => $customer->id])
-                ->log('ایجاد یادداشت توسط ادمین');
-
-            return response()->json([
-                'success' => true,
-                'note' => [
-                    'id' => $note->id,
-                    'content' => $note->content,
-                    'creator' => $user->name,
-                    'created_at' => $note->created_at->format('Y-m-d H:i')
-                ]
-            ]);
-            return redirect()->route('admin.marketers.customers.notes.index', ['customer' => $customer, 'marketer' => $marketer])
-            ->with('success', 'یادداشت جدید با موفقیت افزوده شد');
-        }
-
-        if ($user->hasRole('Marketer')) {
-          
-
-            $note = $customer->notes()->create([
-                'user_id' => $user->id,
-                'content' => $data['content'],
-            ]);
-
-            activity()
-                ->causedBy($user)
-                ->performedOn($note)
-                ->withProperties(['customer_id' => $customer->id])
-                ->log('ایجاد یادداشت توسط بازاریاب');
-
-
-            return redirect()->route('marketer.customer.notes.index', ['customer' => $customer])
-            ->with('success', 'یادداشت جدید با موفقیت افزوده شد');
-        }
-
-        abort(403);
-    }
- public function store2(Request $request, Customer $customer)
-    {
-        $data = $request->validate([
-            'content' => 'required|string',
+        $validated = $request->validate([
+            'content' => ['required', 'string', 'max:5000'],
         ]);
 
-        $user = Auth::user();
-
-        if ($user->hasRole('Admin')) {
-            // اگر لازم است می‌توانید بررسی کنید مشتری به کدام مارکتر تعلق دارد
-            $note = $customer->notes()->create([
-                'user_id' => $user->id, // یا مارکتر مشخصی
-                'content' => $data['content'],
-            ]);
-
-            activity()
-                ->causedBy($user)
-                ->performedOn($note)
-                ->withProperties(['customer_id' => $customer->id])
-                ->log('ایجاد یادداشت توسط ادمین');
-
-            return response()->json([
-                'success' => true,
-                'note' => [
-                    'id' => $note->id,
-                    'content' => $note->content,
-                    'creator' => $user->name,
-                    'created_at' => $note->created_at->format('Y-m-d H:i')
-                ]
-            ]);
-            return redirect()->route('admin.marketers.customers.notes.index', ['customer' => $customer, 'marketer' => $marketer])
-            ->with('success', 'یادداشت جدید با موفقیت افزوده شد');
-        }
-
-        if ($user->hasRole('Marketer')) {
-          
-
-            $note = $customer->notes()->create([
-                'user_id' => $user->id,
-                'content' => $data['content'],
-            ]);
-
-            activity()
-                ->causedBy($user)
-                ->performedOn($note)
-                ->withProperties(['customer_id' => $customer->id])
-                ->log('ایجاد یادداشت توسط بازاریاب');
-
- return response()->json([
-                'success' => true,
-                'note' => [
-                    'id' => $note->id,
-                    'content' => $note->content,
-                    'creator' => $user->name,
-                    'created_at' => $note->created_at->format('Y-m-d H:i')
-                ]
-            ]);
-        }
-
-        abort(403);
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(User $marketer, Customer $customer, CustomerNote $note)
-    {
-        if (Auth::user()->hasrole('Admin')) {
-            if ($customer->user_id !== $marketer->id) abort(403);
-
-            return view('admin.marketers.customers.notes.show', compact('customer', 'marketer', 'note'));
-        }
-
-        if (Auth::user()->hasrole('Marketer')) {
-            if ($customer->user_id !== Auth::id()) abort(403);
-
-            return view('marketer.customers.notes.show', compact('customer', 'note'));
-        }
-
-        abort(403);
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(User $marketer, Customer $customer, CustomerNote $note)
-    {
-        if (Auth::user()->hasrole('Admin')) {
-            if ($customer->user_id !== $marketer->id) abort(403);
-
-            return view('admin.marketers.customers.notes.edit', compact('customer', 'marketer', 'note'));
-        }
-
-        if (Auth::user()->hasrole('Marketer')) {
-            if ($customer->user_id !== Auth::id()) abort(403);
-
-            return view('marketer.customers.notes.edit', compact('customer', 'note'));
-        }
-
-        abort(403);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, User $marketer, Customer $customer, CustomerNote $note)
-    {
-        $data = $request->validate([
-            'content' => 'required|string',
-        ]);
-
-        if (Auth::user()->hasRole('Admin')) {
-           // if ($customer->user_id !== $marketer->id) abort(403);
-
-            $oldData = $note->getOriginal();
-
-            $note->update([
-                'user_id' => $marketer->id,
-                'content' => $data['content'],
-            ]);
-
-            activity()
-                ->causedBy(Auth::user())
-                ->performedOn($note)
-                ->withProperties(['old' => $oldData, 'new' => $data, 'customer_id' => $customer->id])
-                ->log('ویرایش یادداشت توسط ادمین');
-
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'content' => $note->content
-                ]);
-            }
-
-            return redirect()->route('admin.marketers.customers.notes.index', ['customer' => $customer, 'marketer' => $marketer])
-                             ->with('success', 'یادداشت با موفقیت بروزرسانی شد');
-        }
-
-        if (Auth::user()->hasRole('Marketer')) {
-            if ($customer->user_id !== Auth::id()) abort(403);
-
-            $oldData = $note->getOriginal();
-
-            $note->update([
-                'user_id' => Auth::id(),
-                'content' => $data['content'],
-            ]);
-
-            activity()
-                ->causedBy(Auth::user())
-                ->performedOn($note)
-                ->withProperties(['old' => $oldData, 'new' => $data, 'customer_id' => $customer->id])
-                ->log('ویرایش یادداشت توسط بازاریاب');
-
-            if ($request->expectsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'content' => $note->content
-                ]);
-            }
-
-            return redirect()->route('marketer.customer.notes.index', ['customer' => $customer])
-                             ->with('success', 'یادداشت با موفقیت بروزرسانی شد');
-        }
-
-        abort(403);
-    }
-
-    public function updateInline(Request $request, CustomerNote $note)
-    {
-        $data = $request->validate([
-            'content' => 'required|string',
-        ]);
-
-        $customer = $note->customer;
-        $user = Auth::user();
-
-        if ($user->hasRole('Marketer') && $customer->user_id !== $user->id) {
-            abort(403);
-        }
-
-        $oldData = $note->getOriginal();
-
-        $note->update([
+        $note = $customer->notes()->create([
             'user_id' => $user->id,
-            'content' => $data['content'],
+            'content' => $validated['content'],
         ]);
 
         activity()
             ->causedBy($user)
             ->performedOn($note)
-            ->withProperties(['old' => $oldData, 'new' => $data, 'customer_id' => $customer?->id])
+            ->withProperties([
+                'customer_id' => $customer->id,
+            ])
+            ->log('ایجاد یادداشت');
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'note' => $this->notePayload($note),
+            ]);
+        }
+
+        return back()->with('success', 'یادداشت جدید با موفقیت ثبت شد.');
+    }
+
+    public function show(User $marketer, Customer $customer, CustomerNote $note)
+    {
+        $this->ensureNestedMarketerCustomer($marketer, $customer);
+        $this->ensureCustomerCanBeViewed($customer);
+        $this->ensureNoteBelongsToCustomer($note, $customer);
+
+        if (Auth::user()->hasRole('Marketer')) {
+            return view('marketer.customers.notes.show', compact('customer', 'note'));
+        }
+
+        return view('admin.marketers.customers.notes.show', compact('customer', 'marketer', 'note'));
+    }
+
+    public function edit(User $marketer, Customer $customer, CustomerNote $note)
+    {
+        $this->ensureNestedMarketerCustomer($marketer, $customer);
+        $this->ensureCustomerCanBeViewed($customer);
+        $this->ensureNoteBelongsToCustomer($note, $customer);
+        $this->ensureNoteEditable($customer);
+
+        if (Auth::user()->hasRole('Marketer')) {
+            return view('marketer.customers.notes.edit', compact('customer', 'note'));
+        }
+
+        return view('admin.marketers.customers.notes.edit', compact('customer', 'marketer', 'note'));
+    }
+
+    public function update(Request $request, User $marketer, Customer $customer, CustomerNote $note)
+    {
+        $user = Auth::user();
+
+        $this->ensureNestedMarketerCustomer($marketer, $customer);
+        $this->ensureCustomerCanBeViewed($customer);
+        $this->ensureNoteBelongsToCustomer($note, $customer);
+        $this->ensureNoteEditable($customer);
+
+        $validated = $request->validate([
+            'content' => ['required', 'string', 'max:5000'],
+        ]);
+
+        $oldData = $note->only(['content']);
+
+        $note->update([
+            'content' => $validated['content'],
+        ]);
+
+        activity()
+            ->causedBy($user)
+            ->performedOn($note)
+            ->withProperties([
+                'old' => $oldData,
+                'new' => ['content' => $validated['content']],
+                'customer_id' => $customer->id,
+            ])
+            ->log('ویرایش یادداشت');
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'content' => $note->content,
+            ]);
+        }
+
+        return back()->with('success', 'یادداشت با موفقیت بروزرسانی شد.');
+    }
+
+    public function updateInline(Request $request, CustomerNote $note)
+    {
+        $user = Auth::user();
+        $customer = $note->customer;
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'مشتری مربوط به این یادداشت پیدا نشد.'
+            ], 404);
+        }
+
+        if (!$this->canEditNote($user, $customer)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'شما اجازه ویرایش این یادداشت را ندارید.'
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'content' => ['required', 'string', 'max:5000'],
+        ]);
+
+        $oldData = $note->only(['content']);
+
+        $note->update([
+            'content' => $validated['content'],
+        ]);
+
+        activity()
+            ->causedBy($user)
+            ->performedOn($note)
+            ->withProperties([
+                'old' => $oldData,
+                'new' => ['content' => $validated['content']],
+                'customer_id' => $customer->id,
+            ])
             ->log('ویرایش یادداشت');
 
         return response()->json([
             'success' => true,
-            'content' => $note->content
+            'content' => $note->content,
         ]);
     }
 
+    public function destroy(User $marketer, Customer $customer, CustomerNote $note)
+    {
+        $user = Auth::user();
 
-    /**
-     * Remove the specified resource from storage.
-     */
-
-     public function destroy(User $marketer, Customer $customer, CustomerNote $note)
-{
-    if (Auth::user()->hasRole('Admin')) {
-        if ($customer->user_id !== $marketer->id) abort(403);
+        $this->ensureNestedMarketerCustomer($marketer, $customer);
+        $this->ensureNoteBelongsToCustomer($note, $customer);
+        $this->ensureNoteDeletable($customer);
 
         activity()
-            ->causedBy(Auth::user())
+            ->causedBy($user)
             ->performedOn($note)
-            ->withProperties(['customer_id' => $customer->id])
-            ->log('حذف یادداشت توسط ادمین');
+            ->withProperties([
+                'customer_id' => $customer->id,
+            ])
+            ->log('حذف یادداشت');
 
         $note->delete();
 
-        if (request()->expectsJson()) {
+        if (request()->expectsJson() || request()->ajax()) {
             return response()->json(['success' => true]);
         }
 
-        return redirect()->route('admin.marketers.customers.notes.index', ['customer' => $customer, 'marketer' => $marketer]);
+        return back()->with('success', 'یادداشت حذف شد.');
     }
-
-    if (Auth::user()->hasRole('Marketer')) {
-        if ($customer->user_id !== Auth::id()) abort(403);
-
-        if (request()->expectsJson()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'بازاریاب اجازه حذف یادداشت را ندارد و فقط می‌تواند آن را ویرایش کند.'
-            ], 403);
-        }
-
-        return redirect()
-            ->route('marketer.customer.notes.index', ['customer' => $customer])
-            ->with('error', 'شما اجازه حذف یادداشت را ندارید. فقط امکان ویرایش وجود دارد.');
-    }
-
-    abort(403);
-}
 
     public function destroyInline(CustomerNote $note)
     {
         $user = Auth::user();
         $customer = $note->customer;
 
-        if ($user->hasRole('Marketer')) {
-            if ($customer && $customer->user_id !== $user->id) {
-                abort(403);
-            }
-
+        if (!$customer) {
             return response()->json([
                 'success' => false,
-                'message' => 'بازاریاب اجازه حذف یادداشت را ندارد و فقط می‌تواند آن را ویرایش کند.'
+                'message' => 'مشتری مربوط به این یادداشت پیدا نشد.'
+            ], 404);
+        }
+
+        if (!$this->canDeleteNote($user, $customer)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'شما اجازه حذف یادداشت را ندارید.'
             ], 403);
         }
 
         activity()
             ->causedBy($user)
             ->performedOn($note)
-            ->withProperties(['customer_id' => $customer?->id])
-            ->log('حذف یادداشت توسط ادمین');
+            ->withProperties([
+                'customer_id' => $customer->id,
+            ])
+            ->log('حذف یادداشت');
 
         $note->delete();
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'success' => true
+        ]);
     }
-
-
 }

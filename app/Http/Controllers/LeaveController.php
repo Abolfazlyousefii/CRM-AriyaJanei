@@ -22,6 +22,7 @@ class LeaveController extends Controller
             $leaves = Leave::with(['user', 'substituteUser'])
                 ->where(function ($q) use ($user) {
                     $q->where('manager_id', $user->id)
+                        ->orWhere('user_id', $user->id)
                         ->orWhere('substitute_user_id', $user->id);
                 })
                 ->latest()
@@ -104,6 +105,7 @@ class LeaveController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
+        $isManagerRequester = $user->hasRole('Manager');
 
         $request->validate([
             'leave_type' => 'required|string|max:255',
@@ -145,8 +147,10 @@ class LeaveController extends Controller
             'start_time' => $request->start_time,
             'end_time' => $request->end_time,
             'reason' => $request->reason,
-            'manager_id' => $user->manager_id,
-            'status' => $substitute ? 'pending' : 'manager_approved',
+            'manager_id' => $isManagerRequester ? $user->id : $user->manager_id,
+            'status' => $substitute
+                ? 'pending'
+                : ($isManagerRequester ? 'internal_approved' : 'manager_approved'),
         ]);
 
         if ($substitute) {
@@ -167,7 +171,7 @@ class LeaveController extends Controller
             return redirect()->route('leaves')->with('success', 'درخواست مرخصی ثبت شد و برای فرد جایگزین ارسال گردید.');
         }
 
-        if ($leave->manager_id) {
+        if (!$isManagerRequester && $leave->manager_id) {
             $this->notifyUser(
                 $leave->manager_id,
                 'درخواست مرخصی بدون جایگزین',
@@ -176,14 +180,33 @@ class LeaveController extends Controller
             );
         }
 
+        if ($isManagerRequester) {
+            $internalIds = User::role(['Admin', 'internalManager', 'InternalManager'])->pluck('id')->unique();
+            foreach ($internalIds as $id) {
+                $this->notifyUser(
+                    $id,
+                    'درخواست مرخصی مدیر واحد',
+                    "{$user->name} یک درخواست مرخصی ثبت کرده و منتظر تایید مدیر داخلی است.",
+                    $leave->id
+                );
+            }
+        }
+
         $this->notifyUser(
             $user->id,
             'مرخصی ثبت شد',
-            'درخواست مرخصی بدون جایگزین ثبت شد و مستقیماً برای مدیر واحد ارسال شد.',
+            $isManagerRequester
+                ? 'درخواست مرخصی شما ثبت شد و مستقیماً برای مدیر داخلی ارسال گردید.'
+                : 'درخواست مرخصی بدون جایگزین ثبت شد و مستقیماً برای مدیر واحد ارسال شد.',
             $leave->id
         );
 
-        return redirect()->route('leaves')->with('success', 'درخواست مرخصی بدون جایگزین ثبت شد و برای مدیر واحد ارسال گردید.');
+        return redirect()->route('leaves')->with(
+            'success',
+            $isManagerRequester
+                ? 'درخواست مرخصی ثبت شد و برای مدیر داخلی ارسال گردید.'
+                : 'درخواست مرخصی بدون جایگزین ثبت شد و برای مدیر واحد ارسال گردید.'
+        );
     }
 
     public function approve(Leave $leave)
@@ -191,9 +214,10 @@ class LeaveController extends Controller
         $user = auth()->user();
 
         if ($leave->status === 'pending' && (int) $leave->substitute_user_id === (int) $user->id) {
-            $leave->update(['status' => 'manager_approved']);
+            $isManagerLeave = $leave->user && $leave->user->hasRole('Manager');
+            $leave->update(['status' => $isManagerLeave ? 'internal_approved' : 'manager_approved']);
 
-            if ($leave->manager_id) {
+            if (!$isManagerLeave && $leave->manager_id) {
                 $this->notifyUser(
                     $leave->manager_id,
                     'تایید مرخصی توسط جایگزین',
@@ -202,10 +226,24 @@ class LeaveController extends Controller
                 );
             }
 
+            if ($isManagerLeave) {
+                $internalIds = User::role(['Admin', 'internalManager', 'InternalManager'])->pluck('id')->unique();
+                foreach ($internalIds as $id) {
+                    $this->notifyUser(
+                        $id,
+                        'مرخصی مدیر واحد آماده تایید داخلی',
+                        "مرخصی {$leave->user->name} توسط جایگزین تایید شد و منتظر تایید مدیر داخلی است.",
+                        $leave->id
+                    );
+                }
+            }
+
             $this->notifyUser(
                 $leave->user_id,
                 'مرخصی شما توسط جایگزین تایید شد',
-                'درخواست مرخصی شما وارد مرحله تایید مدیر واحد شد.',
+                $isManagerLeave
+                    ? 'درخواست مرخصی شما مستقیماً وارد مرحله تایید مدیر داخلی شد.'
+                    : 'درخواست مرخصی شما وارد مرحله تایید مدیر واحد شد.',
                 $leave->id
             );
         } elseif ($user->hasRole('Manager') && $leave->status === 'manager_approved' && (int) $leave->manager_id === (int) $user->id) {
@@ -300,7 +338,11 @@ class LeaveController extends Controller
 
         if ($user->hasRole('Admin')) {
         } elseif ($user->hasRole('Manager')) {
-            $query->where('manager_id', $user->id);
+            $query->where(function ($q) use ($user) {
+                $q->where('manager_id', $user->id)
+                    ->orWhere('user_id', $user->id)
+                    ->orWhere('substitute_user_id', $user->id);
+            });
         } elseif ($user->hasRole('User')) {
             $query->where('user_id', $user->id);
         } else {

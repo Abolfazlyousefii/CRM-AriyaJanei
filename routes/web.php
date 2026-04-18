@@ -105,15 +105,16 @@ Route::prefix('admin')->name('admin.')->middleware('role:Admin')->group(function
     Route::get('/users/{manager}/create-employee', [UserManagementController::class, 'createEmployee'])->name('users.createEmployee');
     Route::post('/users/{manager}/store-employee', [UserManagementController::class, 'storeEmployee'])->name('users.storeEmployee');
 });
-Route::prefix('admin/customers')->name('admin.customers.')->group(function() {
-    Route::post('{customer}/notes', [CustomerNotesController::class, 'store'])->name('notes.store');
-    Route::patch('notes/{note}', [CustomerNotesController::class, 'updateInline'])->name('notes.update');
-    Route::delete('notes/{note}', [CustomerNotesController::class, 'destroyInline'])->name('notes.destroy');
-});
-Route::prefix('admin/customers')->name('admin.customers.')->group(function() {
-    Route::post('{customer}/notes2', [CustomerNotesController::class, 'store2'])->name('notes.store2');
 
-});
+
+Route::middleware(['auth'])
+    ->prefix('admin/customers')
+    ->name('admin.customers.')
+    ->group(function () {
+        Route::post('{customer}/notes', [CustomerNotesController::class, 'store'])->name('notes.store');
+        Route::patch('notes/{note}', [CustomerNotesController::class, 'updateInline'])->name('notes.update');
+        Route::delete('notes/{note}', [CustomerNotesController::class, 'destroyInline'])->name('notes.destroy');
+    });
 
 // Marketer
 Route::middleware(['role:Marketer'])->group(function(){
