@@ -12,6 +12,7 @@
             'satisfaction_status' => '',
             'assigned_to_user_id' => '',
             'referral_note' => '',
+            'description' => '',
         ]]);
     @endphp
 
@@ -87,6 +88,11 @@
                                 <div class="mb-3">
                                     <label class="form-label">توضیح ارجاع (اختیاری)</label>
                                     <textarea name="customers[{{ $index }}][referral_note]" class="form-control" rows="3">{{ $customer['referral_note'] ?? '' }}</textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">توضیحات (اختیاری)</label>
+                                    <textarea name="customers[{{ $index }}][description]" class="form-control" rows="3">{{ $customer['description'] ?? '' }}</textarea>
                                 </div>
                             </div>
                         </details>
@@ -168,6 +174,11 @@
                 <div class="mb-3">
                     <label class="form-label">توضیح ارجاع (اختیاری)</label>
                     <textarea name="customers[__INDEX__][referral_note]" class="form-control" rows="3"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">توضیحات (اختیاری)</label>
+                    <textarea name="customers[__INDEX__][description]" class="form-control" rows="3"></textarea>
                 </div>
             </div>
         </details>
