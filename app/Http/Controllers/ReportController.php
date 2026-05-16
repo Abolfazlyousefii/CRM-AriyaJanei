@@ -109,7 +109,7 @@ class ReportController extends Controller
         $auth = Auth::user();
         $yesterday = Carbon::yesterday();
 
-        $excludedUserIds = [17, 43, 42, 32, 1, 30, 36, 26];
+        $excludedUserIds = [17, 43, 42, 32, 1, 30, 36, 26,47,39];
 
         $validated = $request->validate([
             'user_id'   => 'nullable|integer|exists:users,id',

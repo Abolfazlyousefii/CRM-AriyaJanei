@@ -14,8 +14,25 @@
             return 2;
         })->values();
 
-        function managerBadgeMeta($manager)
-        {
+        $ownerManagers = $sortedManagers
+            ->filter(fn ($manager) => $manager->roles->contains('name', 'Owner'))
+            ->values();
+
+        $internalManagers = $sortedManagers
+            ->filter(fn ($manager) =>
+                !$manager->roles->contains('name', 'Owner') &&
+                $manager->roles->contains('name', 'InternalManager')
+            )
+            ->values();
+
+        $otherManagers = $sortedManagers
+            ->reject(fn ($manager) =>
+                $manager->roles->contains('name', 'Owner') ||
+                $manager->roles->contains('name', 'InternalManager')
+            )
+            ->values();
+
+        $managerBadgeMeta = function ($manager) {
             $roleNames = $manager->roles->pluck('name');
 
             if ($roleNames->contains('Owner')) {
@@ -36,14 +53,16 @@
                 'label' => 'مدیر',
                 'class' => 'default',
             ];
-        }
+        };
+
+        $otherManagersEmployeesCount = $otherManagers->sum(fn ($manager) => $manager->employees->count());
     @endphp
 
     <x-slot name="header">
         <div class="users-header">
             <div>
                 <h2 class="users-title mb-0">مدیریت کاربران</h2>
-                <div class="users-subtitle">مدیران، کارمندان و نقش‌های دسترسی</div>
+                <div class="users-subtitle">نمایش ساختار سازمانی به‌صورت درخت افقی</div>
             </div>
 
             <a href="{{ route('admin.users.createManager') }}" class="btn btn-primary users-add-btn">
@@ -53,62 +72,53 @@
         </div>
     </x-slot>
 
-    <div class="container py-4 users-page" dir="rtl">
+    <div class="container py-4 users-tree-page" dir="rtl">
         @if(session('success'))
-            <div class="alert alert-success border-0 shadow-sm rounded-4">
+            <div class="alert alert-success border-0 shadow-sm rounded-4 mb-4">
                 {{ session('success') }}
             </div>
         @endif
 
-        <div class="users-search-box mb-4">
-            <div class="search-input-wrap">
-                <span class="search-icon">🔍</span>
-                <input
-                    type="text"
-                    id="userSearchInput"
-                    class="form-control users-search-input"
-                    placeholder="جستجو بر اساس نام، شماره یا نقش..."
-                    autocomplete="off"
-                >
-            </div>
-        </div>
-
         @if($sortedManagers->isEmpty())
             <div class="users-empty">
-                <div class="users-empty__icon">👥</div>
+                <div class="users-empty__icon">🌳</div>
                 <h4 class="fw-bold mb-2">هنوز مدیری ثبت نشده</h4>
-                <p class="text-muted mb-4">برای شروع، یک مدیر جدید ایجاد کنید.</p>
+                <p class="text-muted mb-4">برای ساخت درخت سازمانی، ابتدا یک مدیر ایجاد کنید.</p>
 
                 <a href="{{ route('admin.users.createManager') }}" class="btn btn-primary rounded-pill px-4">
                     ایجاد مدیر جدید
                 </a>
             </div>
         @else
-            <div id="defaultManagersSection">
-                <div class="section-head mb-3">
+            <div class="tree-board">
+                <div class="tree-board__head">
                     <div>
-                        <h5 class="fw-bold mb-1">لیست مدیران</h5>
-                        <div class="text-muted small">مدیر کل و مدیر داخلی در بالاترین اولویت نمایش داده می‌شوند.</div>
+                        <h5 class="fw-bold mb-1">ساختار کاربران</h5>
+                       
                     </div>
                 </div>
 
-                <div class="row g-4" id="managerGrid">
-                    @foreach($sortedManagers as $manager)
-                        @php
-                            $badgeMeta = managerBadgeMeta($manager);
-                        @endphp
+                <div class="org-tree-horizontal">
+                    {{-- ستون مدیر کل --}}
+                    <div class="tree-column tree-column--root">
+                        <div class="tree-column__title">
+                            <span class="tree-column__emoji">👑</span>
+                            <span>مدیر کل</span>
+                        </div>
 
-                        <div class="col-12 col-md-6 col-xl-4">
-                            <div class="manager-card h-100">
-                                <div class="manager-card__top">
-                                    <div class="manager-card__identity">
-                                        <div class="manager-avatar">
+                        <div class="tree-column__body">
+                            @forelse($ownerManagers as $manager)
+                                @php $badgeMeta = $managerBadgeMeta($manager); @endphp
+
+                                <div class="tree-node tree-node--root">
+                                    <div class="tree-node__head">
+                                        <div class="tree-avatar">
                                             {{ mb_substr($manager->name, 0, 1) }}
                                         </div>
 
-                                        <div class="manager-meta">
-                                            <div class="manager-name">{{ $manager->name }}</div>
-                                            <div class="manager-phone">{{ $manager->phone }}</div>
+                                        <div class="tree-node__meta">
+                                            <div class="tree-node__name">{{ $manager->name }}</div>
+                                            <div class="tree-node__phone">{{ $manager->phone }}</div>
 
                                             @if($manager->roles->count())
                                                 <div class="role-badges mt-2">
@@ -120,274 +130,48 @@
                                         </div>
                                     </div>
 
-                                    <div class="manager-card__badges">
+                                    <div class="tree-node__footer">
                                         <span class="soft-badge role-state {{ $badgeMeta['class'] }}">
                                             {{ $badgeMeta['label'] }}
                                         </span>
-                                        <span class="soft-badge primary">{{ $manager->employees->count() }} کارمند</span>
-                                    </div>
-                                </div>
 
-                                <div class="manager-card__footer">
-                                    <button
-                                        type="button"
-                                        class="btn btn-primary rounded-pill px-4"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#managerModal{{ $manager->id }}"
-                                    >
-                                        مشاهده جزئیات
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-
-            <div id="searchResultsSection" class="d-none">
-                <div class="section-head mb-3">
-                    <div>
-                        <h5 class="fw-bold mb-1">نتایج جستجو</h5>
-                        <div class="text-muted small">مدیرها و کارمندها جداگانه نمایش داده می‌شوند.</div>
-                    </div>
-                    <div class="search-result-counter" id="searchResultCounter">0 نتیجه</div>
-                </div>
-
-                <div class="row g-3" id="searchResultsGrid">
-                    @foreach($sortedManagers as $manager)
-                        @php
-                            $badgeMeta = managerBadgeMeta($manager);
-
-                            $managerSearch = $manager->name . ' ' . $manager->phone;
-                            foreach ($manager->roles as $role) {
-                                $managerSearch .= ' ' . $role->name;
-                            }
-                        @endphp
-
-                        <div
-                            class="col-12 col-md-6 col-xl-4 search-result-item d-none"
-                            data-search-type="manager"
-                            data-search="{{ mb_strtolower($managerSearch) }}"
-                        >
-                            <div class="search-user-card h-100">
-                                <div class="search-user-card__head">
-                                    <div class="search-user-card__identity">
-                                        <div class="manager-avatar">
-                                            {{ mb_substr($manager->name, 0, 1) }}
-                                        </div>
-
-                                        <div class="search-user-meta">
-                                            <div class="search-user-name">{{ $manager->name }}</div>
-                                            <div class="search-user-phone">{{ $manager->phone }}</div>
-
-                                            @if($manager->roles->count())
-                                                <div class="role-badges mt-2">
-                                                    @foreach($manager->roles as $role)
-                                                        <span class="role-badge">{{ $role->name }}</span>
-                                                    @endforeach
-                                                </div>
-                                            @endif
-                                        </div>
-                                    </div>
-
-                                    <div class="search-user-badges">
-                                        <span class="soft-badge role-state {{ $badgeMeta['class'] }}">
-                                            {{ $badgeMeta['label'] }}
+                                        <span class="soft-badge primary">
+                                            {{ $manager->employees->count() }} کارمند
                                         </span>
-                                        <span class="soft-badge primary">{{ $manager->employees->count() }} کارمند</span>
-                                    </div>
-                                </div>
-
-                                <div class="search-user-card__footer">
-                                    <button
-                                        type="button"
-                                        class="btn btn-primary rounded-pill px-4"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#managerModal{{ $manager->id }}"
-                                    >
-                                        مشاهده جزئیات
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        @foreach($manager->employees as $employee)
-                            @php
-                                $employeeSearch = $employee->name . ' ' . $employee->phone . ' ' . $manager->name . ' ' . $manager->phone;
-                                foreach ($employee->roles as $role) {
-                                    $employeeSearch .= ' ' . $role->name;
-                                }
-                            @endphp
-
-                            <div
-                                class="col-12 col-md-6 col-xl-4 search-result-item d-none"
-                                data-search-type="employee"
-                                data-search="{{ mb_strtolower($employeeSearch) }}"
-                            >
-                                <div class="search-user-card employee h-100">
-                                    <div class="search-user-card__head">
-                                        <div class="search-user-card__identity">
-                                            <div class="employee-avatar lg">👤</div>
-
-                                            <div class="search-user-meta">
-                                                <div class="search-user-name">{{ $employee->name }}</div>
-                                                <div class="search-user-phone">{{ $employee->phone }}</div>
-                                                <div class="search-user-parent">
-                                                    مدیر مربوطه:
-                                                    <strong>{{ $manager->name }}</strong>
-                                                </div>
-
-                                                @if($employee->roles->count())
-                                                    <div class="role-badges mt-2">
-                                                        @foreach($employee->roles as $role)
-                                                            <span class="role-badge">{{ $role->name }}</span>
-                                                        @endforeach
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        </div>
-
-                                        <div class="search-user-badges">
-                                            <span class="soft-badge">کارمند</span>
-                                        </div>
                                     </div>
 
-                                    <div class="search-user-card__footer">
-                                        <div class="d-flex flex-wrap gap-2">
-                                            <button
-                                                type="button"
-                                                class="btn btn-outline-secondary rounded-pill px-3"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#rolesModal{{ $employee->id }}"
-                                            >
-                                                نقش‌ها
-                                            </button>
-
-                                            <div class="dropdown">
-                                                <button
-                                                    class="btn btn-user-action rounded-pill px-3 dropdown-toggle"
-                                                    type="button"
-                                                    data-bs-toggle="dropdown"
-                                                    aria-expanded="false"
-                                                >
-                                                    عملیات
-                                                </button>
-
-                                                <ul class="dropdown-menu dropdown-menu-end text-end shadow-sm border-0 rounded-4">
-                                                    <li>
-                                                        <a class="dropdown-item py-2"
-                                                           href="{{ route('admin.users.editEmployee', $employee->id) }}">
-                                                            ✏️ ویرایش
-                                                        </a>
-                                                    </li>
-                                                    <li>
-                                                        <button
-                                                            class="dropdown-item py-2"
-                                                            type="button"
-                                                            data-bs-toggle="modal"
-                                                            data-bs-target="#resetEmployeeModal{{ $employee->id }}"
-                                                        >
-                                                            🔑 ریست پسورد
-                                                        </button>
-                                                    </li>
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    <li>
-                                                        <button
-                                                            class="dropdown-item text-danger py-2"
-                                                            type="button"
-                                                            data-bs-toggle="modal"
-                                                            data-bs-target="#deleteEmployeeModal{{ $employee->id }}"
-                                                        >
-                                                            🗑 حذف
-                                                        </button>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    @endforeach
-                </div>
-
-                <div id="managerNoResult" class="users-empty d-none mt-4">
-                    <div class="users-empty__icon">🔎</div>
-                    <h4 class="fw-bold mb-2">کاربری پیدا نشد</h4>
-                    <p class="text-muted mb-0">نام، شماره یا نقش دیگری را جستجو کنید.</p>
-                </div>
-            </div>
-
-            @foreach($sortedManagers as $manager)
-                @php
-                    $badgeMeta = managerBadgeMeta($manager);
-                @endphp
-
-                <div class="modal fade" id="managerModal{{ $manager->id }}" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-                        <div class="modal-content border-0 shadow rounded-4 users-modal">
-                            <div class="modal-header users-modal-header">
-                                <div class="manager-modal-head">
-                                    <div class="manager-avatar lg">
-                                        {{ mb_substr($manager->name, 0, 1) }}
-                                    </div>
-
-                                    <div>
-                                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                            <h5 class="modal-title mb-0">{{ $manager->name }}</h5>
-                                            <span class="soft-badge role-state {{ $badgeMeta['class'] }}">
-                                                {{ $badgeMeta['label'] }}
-                                            </span>
-                                        </div>
-
-                                        <div class="manager-phone">{{ $manager->phone }}</div>
-
-                                        @if($manager->roles->count())
-                                            <div class="role-badges mt-2">
-                                                @foreach($manager->roles as $role)
-                                                    <span class="role-badge">{{ $role->name }}</span>
-                                                @endforeach
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
-
-                                <button type="button" class="btn-close m-0" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-
-                            <div class="modal-body">
-                                <div class="manager-toolbar">
-                                    <div class="manager-toolbar__left">
-                                        <a href="{{ route('admin.users.createEmployee', $manager->id) }}"
-                                           class="btn btn-sm btn-light rounded-pill px-3">
-                                            افزودن کارمند
-                                        </a>
+                                    <div class="tree-node__actions">
+                                        <button
+                                            type="button"
+                                            class="btn btn-primary btn-sm rounded-pill px-3"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#employeesModal{{ $manager->id }}"
+                                        >
+                                            زیرمجموعه
+                                        </button>
 
                                         <button
                                             type="button"
-                                            class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                            class="btn btn-outline-secondary btn-sm rounded-pill px-3"
                                             data-bs-toggle="modal"
                                             data-bs-target="#rolesModalManager{{ $manager->id }}"
                                         >
                                             نقش‌ها
                                         </button>
-                                    </div>
 
-                                    <div class="manager-toolbar__right">
                                         <div class="dropdown">
                                             <button
-                                                class="btn btn-sm btn-user-action rounded-pill px-3 dropdown-toggle"
+                                                class="btn btn-user-action btn-sm rounded-pill px-3 dropdown-toggle"
                                                 type="button"
                                                 data-bs-toggle="dropdown"
                                                 aria-expanded="false"
                                             >
-                                                عملیات مدیر
+                                                عملیات
                                             </button>
 
                                             <ul class="dropdown-menu dropdown-menu-end text-end shadow-sm border-0 rounded-4">
                                                 <li>
-                                                    <a class="dropdown-item py-2"
-                                                       href="{{ route('admin.users.editManager', $manager->id) }}">
+                                                    <a class="dropdown-item py-2" href="{{ route('admin.users.editManager', $manager->id) }}">
                                                         ✏️ ویرایش مدیر
                                                     </a>
                                                 </li>
@@ -416,27 +200,358 @@
                                         </div>
                                     </div>
                                 </div>
+                            @empty
+                                <div class="tree-node tree-node--placeholder">
+                                    <div class="tree-node__placeholder-text">
+                                        مدیر کل تعریف نشده است
+                                    </div>
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
 
-                                <div class="employee-section">
-                                    <div class="employee-section__head">
-                                        <div>
-                                            <h6 class="fw-bold mb-1">کارمندان زیرمجموعه</h6>
-                                            <small class="text-muted">لیست کارمندان این مدیر</small>
+                    {{-- ستون مدیر داخلی --}}
+                    <div class="tree-column tree-column--internal">
+                        <div class="tree-column__title">
+                            <span class="tree-column__emoji">🏢</span>
+                            <span>مدیر داخلی</span>
+                        </div>
+
+                        <div class="tree-column__body">
+                            @forelse($internalManagers as $manager)
+                                @php $badgeMeta = $managerBadgeMeta($manager); @endphp
+
+                                <div class="tree-node tree-node--internal">
+                                    <div class="tree-node__head">
+                                        <div class="tree-avatar">
+                                            {{ mb_substr($manager->name, 0, 1) }}
+                                        </div>
+
+                                        <div class="tree-node__meta">
+                                            <div class="tree-node__name">{{ $manager->name }}</div>
+                                            <div class="tree-node__phone">{{ $manager->phone }}</div>
+
+                                            @if($manager->roles->count())
+                                                <div class="role-badges mt-2">
+                                                    @foreach($manager->roles as $role)
+                                                        <span class="role-badge">{{ $role->name }}</span>
+                                                    @endforeach
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
 
-                                    @if($manager->employees->isEmpty())
-                                        <div class="employees-empty">
-                                            هیچ کارمندی برای این مدیر ثبت نشده است.
-                                        </div>
-                                    @else
-                                        <div class="employee-list">
-                                            @foreach($manager->employees as $employee)
-                                                <div class="employee-card">
-                                                    <div class="employee-card__main">
-                                                        <div class="employee-avatar">👤</div>
+                                    <div class="tree-node__footer">
+                                        <span class="soft-badge role-state {{ $badgeMeta['class'] }}">
+                                            {{ $badgeMeta['label'] }}
+                                        </span>
 
-                                                        <div class="employee-meta">
+                                        <span class="soft-badge primary">
+                                            {{ $manager->employees->count() }} کارمند
+                                        </span>
+                                    </div>
+
+                                    <div class="tree-node__actions">
+                                        <button
+                                            type="button"
+                                            class="btn btn-primary btn-sm rounded-pill px-3"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#employeesModal{{ $manager->id }}"
+                                        >
+                                            زیرمجموعه
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#rolesModalManager{{ $manager->id }}"
+                                        >
+                                            نقش‌ها
+                                        </button>
+
+                                        <div class="dropdown">
+                                            <button
+                                                class="btn btn-user-action btn-sm rounded-pill px-3 dropdown-toggle"
+                                                type="button"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false"
+                                            >
+                                                عملیات
+                                            </button>
+
+                                            <ul class="dropdown-menu dropdown-menu-end text-end shadow-sm border-0 rounded-4">
+                                                <li>
+                                                    <a class="dropdown-item py-2" href="{{ route('admin.users.editManager', $manager->id) }}">
+                                                        ✏️ ویرایش مدیر
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <button
+                                                        class="dropdown-item py-2"
+                                                        type="button"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#resetManagerModal{{ $manager->id }}"
+                                                    >
+                                                        🔑 ریست پسورد
+                                                    </button>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <button
+                                                        class="dropdown-item text-danger py-2"
+                                                        type="button"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#deleteManagerModal{{ $manager->id }}"
+                                                    >
+                                                        🗑 حذف مدیر
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="tree-node tree-node--placeholder">
+                                    <div class="tree-node__placeholder-text">
+                                        مدیر داخلی ثبت نشده است
+                                    </div>
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    {{-- ستون سایر مدیران به‌صورت خلاصه --}}
+                    <div class="tree-column tree-column--others">
+                        <div class="tree-column__title">
+                            <span class="tree-column__emoji">👥</span>
+                            <span>سایر مدیران</span>
+                        </div>
+
+                        <div class="tree-column__body">
+                            @if($otherManagers->isNotEmpty())
+                                <div class="tree-node tree-node--group">
+                                    <div class="tree-node__head">
+                                        <div class="tree-avatar tree-avatar--group">
+                                            {{ $otherManagers->count() }}
+                                        </div>
+
+                                        <div class="tree-node__meta">
+                                            <div class="tree-node__name"> سایر مدیران</div>
+
+                                            <div class="group-preview mt-2">
+                                                @foreach($otherManagers->take(3) as $manager)
+                                                    <span class="role-badge">{{ $manager->name }}</span>
+                                                @endforeach
+
+                                                @if($otherManagers->count() > 3)
+                                                    <span class="role-badge">+{{ $otherManagers->count() - 3 }} نفر دیگر</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="tree-node__footer">
+                                        <span class="soft-badge role-state default">
+                                            {{ $otherManagers->count() }} مدیر
+                                        </span>
+
+                                        <span class="soft-badge primary">
+                                            {{ $otherManagersEmployeesCount }} کارمند
+                                        </span>
+                                    </div>
+
+                                    <div class="tree-node__actions">
+                                        <button
+                                            type="button"
+                                            class="btn btn-primary btn-sm rounded-pill px-3"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#otherManagersModal"
+                                        >
+                                            مشاهده سایر مدیران
+                                        </button>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="tree-node tree-node--placeholder">
+                                    <div class="tree-node__placeholder-text">
+                                        مدیر دیگری ثبت نشده است
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- مودال سایر مدیران --}}
+            @if($otherManagers->isNotEmpty())
+                <div class="modal fade" id="otherManagersModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                        <div class="modal-content border-0 shadow rounded-4 users-modal">
+                            <div class="modal-header">
+                                <div>
+                                    <h5 class="modal-title mb-1">سایر مدیران</h5>
+                                    <div class="text-muted small">
+                                        تعداد مدیران: {{ $otherManagers->count() }} |
+                                        مجموع کارمندان: {{ $otherManagersEmployeesCount }}
+                                    </div>
+                                </div>
+
+                                <button type="button" class="btn-close m-0" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                <div class="row g-3">
+                                    @foreach($otherManagers as $manager)
+                                        @php $badgeMeta = $managerBadgeMeta($manager); @endphp
+
+                                        <div class="col-12 col-md-6">
+                                            <div class="employee-popup-card h-100 other-manager-card">
+                                                <div class="employee-popup-card__top">
+                                                    <div class="employee-avatar lg">
+                                                        {{ mb_substr($manager->name, 0, 1) }}
+                                                    </div>
+
+                                                    <div class="employee-popup-card__meta">
+                                                        <div class="employee-name">{{ $manager->name }}</div>
+                                                        <div class="employee-phone">{{ $manager->phone }}</div>
+
+                                                        <div class="mt-2 d-flex flex-wrap gap-2">
+                                                            <span class="soft-badge role-state {{ $badgeMeta['class'] }}">
+                                                                {{ $badgeMeta['label'] }}
+                                                            </span>
+
+                                                            <span class="soft-badge primary">
+                                                                {{ $manager->employees->count() }} کارمند
+                                                            </span>
+                                                        </div>
+
+                                                        @if($manager->roles->count())
+                                                            <div class="role-badges mt-2">
+                                                                @foreach($manager->roles as $role)
+                                                                    <span class="role-badge">{{ $role->name }}</span>
+                                                                @endforeach
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                </div>
+
+                                                <div class="employee-popup-card__actions">
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-primary btn-sm rounded-pill px-3"
+                                                        data-bs-dismiss="modal"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#employeesModal{{ $manager->id }}"
+                                                    >
+                                                        زیرمجموعه
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-outline-secondary btn-sm rounded-pill px-3"
+                                                        data-bs-dismiss="modal"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#rolesModalManager{{ $manager->id }}"
+                                                    >
+                                                        نقش‌ها
+                                                    </button>
+
+                                                    <a href="{{ route('admin.users.editManager', $manager->id) }}"
+                                                       class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                                        ویرایش
+                                                    </a>
+
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-outline-warning btn-sm rounded-pill px-3"
+                                                        data-bs-dismiss="modal"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#resetManagerModal{{ $manager->id }}"
+                                                    >
+                                                        ریست پسورد
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-outline-danger btn-sm rounded-pill px-3"
+                                                        data-bs-dismiss="modal"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#deleteManagerModal{{ $manager->id }}"
+                                                    >
+                                                        حذف
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">
+                                    بستن
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            {{-- مودال‌های مدیران و کارمندان --}}
+            @foreach($sortedManagers as $manager)
+                @php $badgeMeta = $managerBadgeMeta($manager); @endphp
+
+                {{-- مودال زیرمجموعه مدیر --}}
+                <div class="modal fade" id="employeesModal{{ $manager->id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                        <div class="modal-content border-0 shadow rounded-4 users-modal">
+                            <div class="modal-header">
+                                <div>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                        <h5 class="modal-title mb-0">زیرمجموعه‌های {{ $manager->name }}</h5>
+                                        <span class="soft-badge role-state {{ $badgeMeta['class'] }}">
+                                            {{ $badgeMeta['label'] }}
+                                        </span>
+                                    </div>
+
+                                    <div class="text-muted small">
+                                        تعداد کارمندان: {{ $manager->employees->count() }}
+                                    </div>
+                                </div>
+
+                                <button type="button" class="btn-close m-0" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+
+                            <div class="modal-body">
+                                <div class="d-flex flex-wrap gap-2 mb-4">
+                                    <a href="{{ route('admin.users.createEmployee', $manager->id) }}"
+                                       class="btn btn-primary rounded-pill px-3">
+                                        افزودن کارمند
+                                    </a>
+
+                                    <a href="{{ route('admin.users.editManager', $manager->id) }}"
+                                       class="btn btn-outline-secondary rounded-pill px-3">
+                                        ویرایش مدیر
+                                    </a>
+                                </div>
+
+                                @if($manager->employees->isEmpty())
+                                    <div class="users-empty users-empty--sm">
+                                        <div class="users-empty__icon">👤</div>
+                                        <h6 class="fw-bold mb-2">برای این مدیر کارمندی ثبت نشده</h6>
+                                        <p class="text-muted mb-0">از دکمه «افزودن کارمند» استفاده کنید.</p>
+                                    </div>
+                                @else
+                                    <div class="row g-3">
+                                        @foreach($manager->employees as $employee)
+                                            <div class="col-12 col-md-6">
+                                                <div class="employee-popup-card h-100">
+                                                    <div class="employee-popup-card__top">
+                                                        <div class="employee-avatar lg">👤</div>
+
+                                                        <div class="employee-popup-card__meta">
                                                             <div class="employee-name">{{ $employee->name }}</div>
                                                             <div class="employee-phone">{{ $employee->phone }}</div>
 
@@ -450,62 +565,44 @@
                                                         </div>
                                                     </div>
 
-                                                    <div class="employee-card__actions">
+                                                    <div class="employee-popup-card__actions">
                                                         <button
                                                             type="button"
-                                                            class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                                            class="btn btn-outline-secondary btn-sm rounded-pill px-3"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#rolesModal{{ $employee->id }}"
                                                         >
                                                             نقش‌ها
                                                         </button>
 
-                                                        <div class="dropdown">
-                                                            <button
-                                                                class="btn btn-sm btn-user-action rounded-pill px-3 dropdown-toggle"
-                                                                type="button"
-                                                                data-bs-toggle="dropdown"
-                                                                aria-expanded="false"
-                                                            >
-                                                                عملیات
-                                                            </button>
+                                                        <a href="{{ route('admin.users.editEmployee', $employee->id) }}"
+                                                           class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                                            ویرایش
+                                                        </a>
 
-                                                            <ul class="dropdown-menu dropdown-menu-end text-end shadow-sm border-0 rounded-4">
-                                                                <li>
-                                                                    <a class="dropdown-item py-2"
-                                                                       href="{{ route('admin.users.editEmployee', $employee->id) }}">
-                                                                        ✏️ ویرایش
-                                                                    </a>
-                                                                </li>
-                                                                <li>
-                                                                    <button
-                                                                        class="dropdown-item py-2"
-                                                                        type="button"
-                                                                        data-bs-toggle="modal"
-                                                                        data-bs-target="#resetEmployeeModal{{ $employee->id }}"
-                                                                    >
-                                                                        🔑 ریست پسورد
-                                                                    </button>
-                                                                </li>
-                                                                <li><hr class="dropdown-divider"></li>
-                                                                <li>
-                                                                    <button
-                                                                        class="dropdown-item text-danger py-2"
-                                                                        type="button"
-                                                                        data-bs-toggle="modal"
-                                                                        data-bs-target="#deleteEmployeeModal{{ $employee->id }}"
-                                                                    >
-                                                                        🗑 حذف
-                                                                    </button>
-                                                                </li>
-                                                            </ul>
-                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            class="btn btn-outline-warning btn-sm rounded-pill px-3"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#resetEmployeeModal{{ $employee->id }}"
+                                                        >
+                                                            ریست پسورد
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            class="btn btn-outline-danger btn-sm rounded-pill px-3"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#deleteEmployeeModal{{ $employee->id }}"
+                                                        >
+                                                            حذف
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            @endforeach
-                                        </div>
-                                    @endif
-                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
                             </div>
 
                             <div class="modal-footer">
@@ -517,6 +614,7 @@
                     </div>
                 </div>
 
+                {{-- مودال نقش‌های مدیر --}}
                 <div class="modal fade" id="rolesModalManager{{ $manager->id }}" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
                         <div class="modal-content border-0 shadow rounded-4 users-modal">
@@ -560,6 +658,7 @@
                     </div>
                 </div>
 
+                {{-- مودال حذف مدیر --}}
                 <div class="modal fade" id="deleteManagerModal{{ $manager->id }}" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content border-0 shadow rounded-4 users-modal">
@@ -589,6 +688,7 @@
                     </div>
                 </div>
 
+                {{-- مودال ریست پسورد مدیر --}}
                 <div class="modal fade" id="resetManagerModal{{ $manager->id }}" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content border-0 shadow rounded-4 users-modal">
@@ -617,6 +717,7 @@
                     </div>
                 </div>
 
+                {{-- مودال‌های کارمندان --}}
                 @foreach($manager->employees as $employee)
                     <div class="modal fade" id="rolesModal{{ $employee->id }}" tabindex="-1" aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
@@ -724,41 +825,23 @@
 
     @push('styles')
         <style>
-            .users-page {
+            .users-tree-page {
                 --u-bg: #f6f8fc;
                 --u-card: #ffffff;
                 --u-card-2: #fbfcff;
-                --u-border: #e9eef5;
+                --u-border: #e6ebf3;
+                --u-line: #d7e0ea;
+                --u-line-strong: #9aa8bc;
                 --u-text: #111827;
                 --u-muted: #6b7280;
                 --u-soft: #f3f6fb;
-                --u-primary-soft: rgba(13, 110, 253, 0.10);
-                --u-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-                --u-owner-soft: rgba(220, 53, 69, 0.12);
-                --u-internal-soft: rgba(245, 158, 11, 0.16);
-            }
-
-            html.dark .users-page,
-            body.dark .users-page,
-            [data-bs-theme="dark"] .users-page {
-                --u-bg: #0f172a;
-                --u-card: #111827;
-                --u-card-2: #0b1220;
-                --u-border: #243041;
-                --u-text: #e5e7eb;
-                --u-muted: #94a3b8;
-                --u-soft: #1b2433;
-                --u-primary-soft: rgba(59, 130, 246, 0.16);
-                --u-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
-                --u-owner-soft: rgba(239, 68, 68, 0.15);
-                --u-internal-soft: rgba(245, 158, 11, 0.18);
-            }
-
-            .users-page {
-                background: transparent;
-                color: var(--u-text);
-                position: relative;
-                z-index: 1;
+                --u-primary-soft: rgba(13, 110, 253, .10);
+                --u-shadow: 0 14px 35px rgba(15, 23, 42, .07);
+                --u-owner-soft: rgba(220, 53, 69, .12);
+                --u-internal-soft: rgba(245, 158, 11, .16);
+                --u-owner-border: rgba(99, 102, 241, .24);
+                --u-internal-border: rgba(245, 158, 11, .24);
+                --u-group-border: rgba(59, 130, 246, .18);
             }
 
             .users-header {
@@ -790,131 +873,167 @@
                 font-weight: 700;
             }
 
-            .users-search-box {
-                display: flex;
-                justify-content: center;
-            }
-
-            .search-input-wrap {
-                position: relative;
-                width: 100%;
-                max-width: 760px;
-            }
-
-            .search-icon {
-                position: absolute;
-                top: 50%;
-                right: 16px;
-                transform: translateY(-50%);
-                font-size: 18px;
-                pointer-events: none;
-                opacity: .75;
-                z-index: 2;
-            }
-
-            .users-search-input {
-                height: 56px;
-                border-radius: 18px;
-                border: 1px solid var(--u-border);
-                background: var(--u-card);
-                color: var(--u-text);
-                padding-right: 48px;
-                box-shadow: var(--u-shadow);
-                font-size: .96rem;
-            }
-
-            .users-search-input::placeholder {
-                color: var(--u-muted);
-            }
-
-            .users-search-input:focus {
-                border-color: #3b82f6;
-                box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.12);
-                background: var(--u-card);
-                color: var(--u-text);
-            }
-
-            .section-head {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                gap: 12px;
-                flex-wrap: wrap;
-            }
-
-            .search-result-counter {
-                background: var(--u-soft);
-                border: 1px solid var(--u-border);
-                color: var(--u-text);
-                border-radius: 999px;
-                padding: 8px 14px;
-                font-size: .84rem;
-                font-weight: 700;
-            }
-
             .users-empty {
                 background: var(--u-card);
                 border: 1px solid var(--u-border);
-                border-radius: 24px;
+                border-radius: 28px;
                 padding: 48px 24px;
                 text-align: center;
                 box-shadow: var(--u-shadow);
             }
 
+            .users-empty--sm {
+                padding: 28px 18px;
+                border-radius: 22px;
+            }
+
             .users-empty__icon {
-                font-size: 48px;
+                font-size: 46px;
                 margin-bottom: 12px;
             }
 
-            .manager-card,
-            .search-user-card {
+            .tree-board {
+                background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+                border: 1px solid var(--u-border);
+                border-radius: 30px;
+                padding: 24px;
+                box-shadow: var(--u-shadow);
+                overflow: hidden;
+            }
+
+            .tree-board__head {
+                margin-bottom: 18px;
+            }
+
+            .org-tree-horizontal {
+                direction: ltr;
+                display: flex;
+                align-items: flex-start;
+                gap: 72px;
+                overflow-x: auto;
+                padding: 8px 8px 20px;
+            }
+
+            .tree-column {
+                position: relative;
+                flex: 0 0 310px;
+                min-width: 310px;
+            }
+
+            .tree-column:not(:first-child)::before {
+                content: '';
+                position: absolute;
+                top: 76px;
+                left: -72px;
+                width: 72px;
+                height: 2px;
+                background: linear-gradient(90deg, var(--u-line), var(--u-line-strong));
+            }
+
+            .tree-column__title {
+                background: var(--u-card);
+                border: 1px solid var(--u-border);
+                border-radius: 20px;
+                padding: 14px 16px;
+                min-height: 72px;
+                text-align: center;
+                font-weight: 900;
+                color: var(--u-text);
+                box-shadow: var(--u-shadow);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+            }
+
+            .tree-column__emoji {
+                font-size: 1.2rem;
+            }
+
+            .tree-column__body {
+                position: relative;
+                margin-top: 24px;
+                padding-top: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 22px;
+            }
+
+            .tree-column__body::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                bottom: 12px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 2px;
+                background: linear-gradient(180deg, var(--u-line-strong), var(--u-line));
+                border-radius: 999px;
+            }
+
+            .tree-node {
+                width: 100%;
+                position: relative;
                 background: linear-gradient(180deg, var(--u-card) 0%, var(--u-card-2) 100%);
                 border: 1px solid var(--u-border);
                 border-radius: 24px;
-                padding: 20px;
+                padding: 16px;
                 box-shadow: var(--u-shadow);
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-                gap: 18px;
-                transition: .2s ease;
-                height: 100%;
+                direction: rtl;
             }
 
-            .manager-card:hover,
-            .search-user-card:hover {
-                transform: translateY(-3px);
+            .tree-node::before {
+                content: '';
+                position: absolute;
+                top: -20px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 2px;
+                height: 20px;
+                background: var(--u-line-strong);
+                border-radius: 999px;
             }
 
-            .manager-card__top,
-            .search-user-card__head {
-                display: flex;
-                flex-direction: column;
-                gap: 16px;
+            .tree-node--root {
+                border-color: var(--u-owner-border);
+                background: linear-gradient(180deg, #ffffff 0%, #f5f7ff 100%);
             }
 
-            .manager-card__identity,
-            .search-user-card__identity {
+            .tree-node--internal {
+                border-color: var(--u-internal-border);
+                background: linear-gradient(180deg, #ffffff 0%, #fff9ef 100%);
+            }
+
+            .tree-node--group {
+                border-color: var(--u-group-border);
+                background: linear-gradient(180deg, #ffffff 0%, #f6fbff 100%);
+            }
+
+            .tree-node--placeholder {
+                border-style: dashed;
+                background: #fbfcfe;
+                min-height: 110px;
                 display: flex;
-                gap: 14px;
                 align-items: center;
+                justify-content: center;
+                text-align: center;
+            }
+
+            .tree-node__placeholder-text {
+                color: var(--u-muted);
+                font-weight: 700;
+                line-height: 1.9;
+            }
+
+            .tree-node__head {
+                display: flex;
+                align-items: center;
+                gap: 14px;
                 min-width: 0;
             }
 
-            .manager-card__badges,
-            .search-user-badges {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 8px;
-            }
-
-            .manager-card__footer,
-            .search-user-card__footer {
-                display: flex;
-                justify-content: flex-end;
-            }
-
-            .manager-avatar {
+            .tree-avatar {
                 width: 56px;
                 height: 56px;
                 min-width: 56px;
@@ -926,63 +1045,43 @@
                 font-weight: 900;
                 color: #fff;
                 background: linear-gradient(135deg, #2563eb, #3b82f6);
-                box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+                box-shadow: 0 10px 24px rgba(37, 99, 235, .22);
             }
 
-            .manager-avatar.lg {
-                width: 64px;
-                height: 64px;
-                min-width: 64px;
-                border-radius: 20px;
-                font-size: 26px;
+            .tree-avatar--group {
+                background: linear-gradient(135deg, #0f766e, #14b8a6);
+                box-shadow: 0 10px 24px rgba(20, 184, 166, .20);
             }
 
-            .employee-avatar {
-                width: 44px;
-                height: 44px;
-                min-width: 44px;
-                border-radius: 14px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: var(--u-soft);
-                border: 1px solid var(--u-border);
-                font-size: 18px;
-            }
-
-            .employee-avatar.lg {
-                width: 56px;
-                height: 56px;
-                min-width: 56px;
-                border-radius: 18px;
-                font-size: 22px;
-            }
-
-            .manager-meta,
-            .search-user-meta,
-            .employee-meta {
+            .tree-node__meta {
                 min-width: 0;
+                flex: 1;
             }
 
-            .manager-name,
-            .search-user-name {
-                font-size: 1.05rem;
+            .tree-node__name {
+                font-size: 1.02rem;
                 font-weight: 900;
                 color: var(--u-text);
                 margin-bottom: 4px;
             }
 
-            .manager-phone,
-            .search-user-phone,
-            .employee-phone {
+            .tree-node__phone {
                 color: var(--u-muted);
-                font-size: .94rem;
+                font-size: .92rem;
             }
 
-            .search-user-parent {
-                color: var(--u-muted);
-                font-size: .88rem;
-                margin-top: 6px;
+            .tree-node__footer {
+                margin-top: 14px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .tree-node__actions {
+                margin-top: 14px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
             }
 
             .soft-badge {
@@ -992,14 +1091,14 @@
                 border-radius: 999px;
                 background: var(--u-soft);
                 color: var(--u-text);
-                font-size: .84rem;
+                font-size: .82rem;
                 font-weight: 700;
                 border: 1px solid var(--u-border);
             }
 
             .soft-badge.primary {
                 background: var(--u-primary-soft);
-                color: #3b82f6;
+                color: #2563eb;
                 border-color: transparent;
             }
 
@@ -1020,13 +1119,8 @@
                 border-color: transparent;
             }
 
-            html.dark .soft-badge.role-state.internal,
-            body.dark .soft-badge.role-state.internal,
-            [data-bs-theme="dark"] .soft-badge.role-state.internal {
-                color: #fbbf24;
-            }
-
-            .role-badges {
+            .role-badges,
+            .group-preview {
                 display: flex;
                 flex-wrap: wrap;
                 gap: 8px;
@@ -1040,145 +1134,56 @@
                 background: var(--u-soft);
                 border: 1px solid var(--u-border);
                 color: var(--u-text);
-                font-size: .8rem;
+                font-size: .78rem;
                 font-weight: 700;
+            }
+
+            .btn-user-action {
+                background: var(--u-card);
+                color: var(--u-text);
+                border: 1px solid var(--u-border);
+            }
+
+            .btn-user-action:hover,
+            .btn-user-action:focus,
+            .btn-user-action:active,
+            .btn-user-action.show {
+                background: var(--u-soft) !important;
+                color: var(--u-text) !important;
+                border-color: var(--u-border) !important;
+                box-shadow: none !important;
+            }
+
+            .dropdown-menu {
+                border: 1px solid var(--u-border) !important;
+            }
+
+            .dropdown-item {
+                color: var(--u-text);
+            }
+
+            .dropdown-item:hover,
+            .dropdown-item:focus {
+                background: var(--u-soft);
+                color: var(--u-text);
+            }
+
+            .dropdown-divider {
+                border-color: var(--u-border);
             }
 
             .users-modal {
                 background: var(--u-card) !important;
                 color: var(--u-text);
-                overflow: hidden;
-                position: relative;
-                z-index: 2102;
-                
             }
 
             .users-modal .modal-header,
             .users-modal .modal-footer {
                 border-color: var(--u-border);
-                background: var(--u-card) !important;
-            }
-
-            .users-modal .modal-body {
-                background: var(--u-card) !important;
-                color: var(--u-text);
-                position: relative;
-                z-index: 1;
             }
 
             .users-modal .text-muted {
                 color: var(--u-muted) !important;
-            }
-
-            .users-modal-header {
-                align-items: flex-start;
-                background: var(--u-card) !important;
-                position: sticky;
-                top: 0;
-                z-index: 5;
-            }
-
-            .users-modal .modal-footer {
-                background: var(--u-card) !important;
-                position: sticky;
-                bottom: 0;
-                z-index: 5;
-            }
-
-            .manager-modal-head {
-                display: flex;
-                gap: 14px;
-                align-items: center;
-                position: relative;
-                z-index: 2;
-            }
-
-            .manager-toolbar {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                gap: 12px;
-                flex-wrap: wrap;
-                margin-bottom: 24px;
-                padding-bottom: 16px;
-                border-bottom: 1px solid var(--u-border);
-                position: relative;
-                z-index: 1;
-            }
-
-            .manager-toolbar__left,
-            .manager-toolbar__right {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                flex-wrap: wrap;
-            }
-
-            .employee-section {
-                position: relative;
-                z-index: 1;
-            }
-
-            .employee-section__head {
-                margin-bottom: 14px;
-            }
-
-            .employees-empty {
-                background: var(--u-card);
-                border: 1px dashed var(--u-border);
-                border-radius: 18px;
-                padding: 24px;
-                text-align: center;
-                color: var(--u-muted);
-            }
-
-            .employee-list {
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-                position: relative;
-                z-index: 1;
-            }
-
-            .employee-card {
-                background: var(--u-card-2);
-                border: 1px solid var(--u-border);
-                border-radius: 20px;
-                padding: 16px;
-                box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                gap: 14px;
-                position: relative;
-                z-index: 1;
-            }
-
-            html.dark .employee-card,
-            body.dark .employee-card,
-            [data-bs-theme="dark"] .employee-card {
-                box-shadow: none;
-            }
-
-            .employee-card__main {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                min-width: 0;
-            }
-
-            .employee-card__actions {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                flex-wrap: wrap;
-                justify-content: flex-end;
-            }
-
-            .employee-name {
-                font-weight: 800;
-                color: var(--u-text);
-                margin-bottom: 4px;
             }
 
             .role-check {
@@ -1198,127 +1203,102 @@
                 margin: 0;
             }
 
-            .btn-user-action {
-                background: var(--u-card);
-                color: var(--u-text);
-                border: 1px solid var(--u-border);
-                opacity: 1 !important;
-            }
-
-            .btn-user-action:hover,
-            .btn-user-action:focus,
-            .btn-user-action:active,
-            .btn-user-action.show {
-                background: var(--u-soft) !important;
-                color: var(--u-text) !important;
-                border-color: var(--u-border) !important;
-                box-shadow: none !important;
-            }
-
-            .btn-user-action.dropdown-toggle::after {
-                margin-right: 8px;
-            }
-
-            .dropdown-menu {
-             
-                border: 1px solid var(--u-border) !important;
-                z-index: 2200;
-            }
-
-            .dropdown-item {
-                color: var(--u-text);
-            }
-
-            .dropdown-item:hover,
-            .dropdown-item:focus {
+            .employee-avatar {
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
+                border-radius: 14px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
                 background: var(--u-soft);
+                border: 1px solid var(--u-border);
+                font-size: 18px;
+                font-weight: 900;
                 color: var(--u-text);
             }
 
-            .dropdown-divider {
-                border-color: var(--u-border);
+            .employee-avatar.lg {
+                width: 58px;
+                height: 58px;
+                min-width: 58px;
+                border-radius: 18px;
+                font-size: 22px;
             }
 
-            .modal-backdrop {
-                z-index: 2090 !important;
+            .employee-popup-card {
+                background: linear-gradient(180deg, var(--u-card) 0%, var(--u-card-2) 100%);
+                border: 1px solid var(--u-border);
+                border-radius: 22px;
+                padding: 16px;
+                box-shadow: var(--u-shadow);
             }
 
-            .modal-backdrop.show {
-                z-index: -1 !important;
-                opacity: .72 !important;
+            .other-manager-card {
+                border-color: rgba(59, 130, 246, .12);
             }
 
-            .modal {
-                z-index: 2100 !important;
+            .employee-popup-card__top {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                min-width: 0;
             }
 
-            .modal-dialog {
-                position: relative;
-                z-index: 2101 !important;
+            .employee-popup-card__meta {
+                min-width: 0;
+                flex: 1;
             }
 
-            .modal-content {
-                background: var(--u-card) !important;
-                border: 1px solid var(--u-border) !important;
-                overflow: hidden;
-                position: relative;
-                z-index: 2102 !important;
+            .employee-name {
+                font-weight: 900;
+                color: var(--u-text);
+                margin-bottom: 4px;
             }
 
-            .modal-dialog-scrollable .modal-content {
-                overflow: hidden;
-                max-height: calc(100vh - 2rem);
+            .employee-phone {
+                color: var(--u-muted);
+                font-size: .92rem;
             }
 
-            .modal-dialog-scrollable .modal-body {
-                overflow-y: auto;
-                overscroll-behavior: contain;
-            }
-
-            header,
-            .navbar,
-            .topbar,
-            .app-header,
-            .main-header {
-                z-index: 1030 !important;
+            .employee-popup-card__actions {
+                margin-top: 14px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
             }
 
             @media (max-width: 992px) {
-                .manager-toolbar {
-                    flex-direction: column;
-                    align-items: stretch;
+                .org-tree-horizontal {
+                    gap: 48px;
                 }
 
-                .manager-toolbar__left,
-                .manager-toolbar__right {
-                    width: 100%;
+                .tree-column {
+                    flex-basis: 280px;
+                    min-width: 280px;
+                }
+
+                .tree-column:not(:first-child)::before {
+                    left: -48px;
+                    width: 48px;
                 }
             }
 
             @media (max-width: 768px) {
-                .manager-avatar {
-                    width: 48px;
-                    height: 48px;
-                    min-width: 48px;
-                    font-size: 18px;
-                    border-radius: 16px;
+                .tree-board {
+                    padding: 18px;
                 }
 
-                .manager-avatar.lg {
-                    width: 54px;
-                    height: 54px;
-                    min-width: 54px;
-                    font-size: 22px;
+                .tree-avatar {
+                    width: 50px;
+                    height: 50px;
+                    min-width: 50px;
+                    font-size: 20px;
                 }
 
-                .employee-card {
-                    flex-direction: column;
-                    align-items: stretch;
-                }
-
-                .employee-card__actions {
-                    justify-content: flex-start;
-                    padding-top: 4px;
+                .tree-node__actions > *,
+                .employee-popup-card__actions > * {
+                    flex: 1 1 100%;
                 }
             }
 
@@ -1331,210 +1311,9 @@
                     width: 100%;
                     justify-content: center;
                 }
-
-                .manager-card__footer .btn,
-                .search-user-card__footer .btn {
-                    width: 100%;
-                }
-
-                .manager-toolbar__left > *,
-                .manager-toolbar__right > *,
-                .employee-card__actions > * {
-                    width: 100%;
-                }
-
-                .manager-toolbar__left .dropdown .btn,
-                .manager-toolbar__right .dropdown .btn,
-                .employee-card__actions .dropdown .btn {
-                    width: 100%;
-                }
-
-                .employee-card__actions .btn {
-                    width: 100%;
-                }
-
-                .manager-modal-head {
-                    align-items: flex-start;
-                }
-
-                /* کارت‌ها نباید منوی دراپ‌دان را قطع کنند */
-.manager-card,
-.search-user-card,
-.employee-card,
-.users-modal,
-.modal-content,
-.modal-body,
-.employee-list,
-.employee-section {
-    overflow: visible !important;
-}
-
-/* اگر قبلاً isolation گذاشتی، برای والدهایی که استک جدید می‌سازند حذفش کن */
-.users-modal,
-.modal-content,
-.employee-card,
-.search-user-card,
-.manager-card {
-    isolation: auto !important;
-}
-
-/* والد دکمه عملیات باید مرجع درست برای منو باشد */
-.dropdown {
-    position: relative;
-    z-index: 3000;
-}
-
-/* خود منو همیشه بالاتر از کارت‌ها و محتوا باشد */
-.dropdown-menu {
-    position: absolute !important;
-    z-index: 4000 !important;
-    background: var(--u-card) !important;
-    border: 1px solid var(--u-border) !important;
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18) !important;
-}
-
-/* وقتی داخل مودال هستیم، باز هم بالاتر بماند */
-.modal .dropdown-menu {
-    z-index: 5000 !important;
-}
-
-/* این بخش‌ها لازم نیست z-index بگیرند؛ برداشتن‌شان جلوی تداخل را می‌گیرد */
-.manager-toolbar,
-.employee-section,
-.employee-list,
-.employee-card,
-.manager-modal-head {
-    z-index: auto !important;
-}
-
-/* اگر روی کارت‌ها transform داری، استک جدید می‌سازد؛ hover را سبک نگه دار */
-.manager-card:hover,
-.search-user-card:hover {
-    transform: translateY(-3px);
-    z-index: 1;
-}
-
-.employee-card:hover {
-    z-index: 1;
-}
             }
         </style>
     @endpush
 
-    @push('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const searchInput = document.getElementById('userSearchInput');
-                const defaultSection = document.getElementById('defaultManagersSection');
-                const searchSection = document.getElementById('searchResultsSection');
-                const resultItems = document.querySelectorAll('.search-result-item');
-                const noResultBox = document.getElementById('managerNoResult');
-                const resultCounter = document.getElementById('searchResultCounter');
-
-                function normalizeText(text) {
-                    return (text || '')
-                        .toString()
-                        .trim()
-                        .toLowerCase()
-                        .replace(/ي/g, 'ی')
-                        .replace(/ك/g, 'ک');
-                }
-
-                function setDefaultView() {
-                    if (defaultSection) defaultSection.classList.remove('d-none');
-                    if (searchSection) searchSection.classList.add('d-none');
-
-                    resultItems.forEach(item => item.classList.add('d-none'));
-
-                    if (noResultBox) noResultBox.classList.add('d-none');
-                    if (resultCounter) resultCounter.textContent = '0 نتیجه';
-                }
-
-                function runSearch(query) {
-                    let visibleCount = 0;
-
-                    resultItems.forEach(item => {
-                        const searchData = normalizeText(item.getAttribute('data-search'));
-                        const matched = searchData.includes(query);
-
-                        item.classList.toggle('d-none', !matched);
-
-                        if (matched) visibleCount++;
-                    });
-
-                    if (defaultSection) defaultSection.classList.add('d-none');
-                    if (searchSection) searchSection.classList.remove('d-none');
-
-                    if (noResultBox) {
-                        noResultBox.classList.toggle('d-none', visibleCount !== 0);
-                    }
-
-                    if (resultCounter) {
-                        resultCounter.textContent = `${visibleCount} نتیجه`;
-                    }
-                }
-
-                if (searchInput) {
-                    searchInput.addEventListener('input', function () {
-                        const query = normalizeText(this.value);
-
-                        if (!query.length) {
-                            setDefaultView();
-                            return;
-                        }
-
-                        runSearch(query);
-                    });
-                }
-
-                document.querySelectorAll('.modal').forEach(modalEl => {
-                    modalEl.addEventListener('show.bs.modal', function () {
-                        document.body.classList.add('modal-open-fix');
-                    });
-
-                    modalEl.addEventListener('hidden.bs.modal', function () {
-                        if (!document.querySelector('.modal.show')) {
-                            document.body.classList.remove('modal-open-fix');
-                        }
-                    });
-                });
-            });
-        </script>
-    @endpush
-
     @stack('styles')
-    @stack('scripts')
 </x-layouts.app>
-
-<script>
-document.addEventListener('shown.bs.dropdown', function (event) {
-    const toggle = event.target;
-    const dropdown = toggle.closest('.dropdown');
-    const menu = dropdown ? dropdown.querySelector('.dropdown-menu') : null;
-
-    if (!menu) return;
-
-    document.body.appendChild(menu);
-
-    const rect = toggle.getBoundingClientRect();
-    menu.style.position = 'fixed';
-    menu.style.top = (rect.bottom + 6) + 'px';
-    menu.style.left = (rect.left + rect.width - menu.offsetWidth) + 'px';
-    menu.style.zIndex = '99999';
-});
-
-document.addEventListener('hide.bs.dropdown', function (event) {
-    const toggle = event.target;
-    const dropdown = toggle.closest('.dropdown');
-    const menu = document.body.querySelector('.dropdown-menu.show');
-
-    if (!dropdown || !menu) return;
-
-    dropdown.appendChild(menu);
-    menu.style.position = '';
-    menu.style.top = '';
-    menu.style.left = '';
-    menu.style.zIndex = '';
-});
-</script>
-
