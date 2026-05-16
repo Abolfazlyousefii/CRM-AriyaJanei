@@ -47,12 +47,12 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/reminders/{reminder}/seen', [RemindersController::class, 'markAsSeen'])->name('reminders.markAsSeen');
 
 });
-Route::resource('leaves', LeaveController::class);
-Route::patch('leaves/{leave}/approve', [LeaveController::class,'approve'])->name('leaves.approve');
-Route::patch('leaves/{leave}/reject', [LeaveController::class,'reject'])->name('leaves.reject');
 
-Route::get('leaves', [LeaveController::class,'index'])->name('leaves');
-
+Route::get('/leaves', [LeaveController::class, 'index'])->name('leaves'); // This route lists all leaves (GET)
+Route::get('/leaves/create', [LeaveController::class, 'create'])->name('leaves.create'); // This route is for showing the form to create a new leave (GET)
+Route::post('/leaves', [LeaveController::class, 'store'])->name('leaves.store'); // This route handles the form submission (POST)
+Route::patch('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve'); // This route approves the leave (PATCH)
+Route::patch('leaves/{leave}/reject', [LeaveController::class, 'reject'])->name('leaves.reject'); // This route rejects the leave (PATCH)
 Route::get('/', function () {
     return view('welcome');
 })->name('welcome');

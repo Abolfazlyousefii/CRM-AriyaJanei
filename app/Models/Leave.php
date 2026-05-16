@@ -18,6 +18,7 @@ class Leave extends Model
         'substitute_user_id',
         'leave_type',
         'start_date',
+          'leave_unit',
         'end_date',
         'start_time',
         'end_time',

@@ -215,7 +215,38 @@
             }
         }
     @endphp
-
+    @if($todayReminders->count() > 0)
+   
+    <div class="modal fade" id="reminderModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">یادآورهای امروز</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <ul class="list-group">
+              @foreach($todayReminders as $reminder)
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  <div>
+                      <strong>{{ $reminder->title }}</strong><br>
+                      <small>{{ $reminder->description }}</small><br>
+                      <small>{{ \Hekmatinasser\Verta\Verta::instance($reminder->remind_at)->format('Y/m/d H:i') }}</small>
+                  </div>
+                  <form action="{{ route('reminders.markAsSeen', $reminder->id) }}" method="POST">
+                    @csrf
+                    @method('PATCH')
+                    <button type="submit" class="btn btn-success btn-sm">خواندم</button>
+                  </form>
+                </li>
+              @endforeach
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    @endif
+    
     <x-slot name="header">
         <div class="smart-dashboard dashboard-rtl">
             <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-sm-between gap-2">
@@ -225,7 +256,11 @@
                         خوش آمدی <span class="fw-semibold sd-text">{{ Auth::user()->name }}</span>
                     </div>
                 </div>
-
+ <a href="http://192.168.1.30:8080/"
+   class="btn btn-primary align-items-center gap-2 ">
+    <i class="bi bi-speedometer2"></i>
+    <span>ورود به سیستم انبار</span>
+</a>
                 <div class="sd-muted small text-end">
                     {{ \Hekmatinasser\Verta\Verta::now()->format('l، j F Y') }}
                 </div>
@@ -1136,44 +1171,7 @@
                                     </div>
                                 @endif
 
-                                @if(($todayReminders->count() ?? 0) > 0)
-                                    <div class="sd-modal-section">
-                                        <div class="sd-modal-section-title">یادآورها</div>
-
-                                        @foreach($todayReminders as $reminder)
-                                            <div class="sd-notice-item">
-                                                <div class="flex-grow-1 sd-text-end">
-                                                    <div class="sd-notice-title">{{ $reminder->title }}</div>
-
-                                                    @if($reminder->description)
-                                                        <div class="sd-notice-desc">{{ $reminder->description }}</div>
-                                                    @endif
-
-                                                    <div class="sd-notice-meta">
-                                                        زمان یادآوری:
-                                                        {{ \Hekmatinasser\Verta\Verta::instance($reminder->remind_at)->format('Y/m/d H:i') }}
-                                                    </div>
-
-                                                    <div class="sd-notice-actions">
-                                                        <form action="{{ route('reminders.markAsSeen', $reminder->id) }}" method="POST">
-                                                            @csrf
-                                                            @method('PATCH')
-                                                            <button type="submit" class="btn btn-sm btn-success">خواندم</button>
-                                                        </form>
-
-                                                        <a href="{{ route('reminders.index') }}" class="btn btn-sm btn-outline-primary">
-                                                            مدیریت یادآورها
-                                                        </a>
-                                                    </div>
-                                                </div>
-
-                                                <div class="sd-icon-wrap tone-warning">
-                                                    {!! dash_icon_pro('bell') !!}
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endif
+                              
 
                                 @if(($groupedNotifications->count() ?? 0) > 0)
                                     <div class="sd-modal-section">
@@ -1259,6 +1257,10 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+            @if($todayReminders->count() > 0)
+    const reminderModal = new bootstrap.Modal(document.getElementById('reminderModal'));
+    reminderModal.show();
+@endif
             const csrf = '{{ csrf_token() }}';
 
             @if($showTasksModalOnLogin)

@@ -117,13 +117,13 @@
                 </a>
             @else
                 <a href="{{ route('login') }}" class="button button-primary">
-                    ورود
+                    ورود به CRM
                 </a>
-                @if (Route::has('register'))
-                    <a href="{{ route('register') }}" class="button button-secondary">
-                        ثبت‌نام
+               
+                    <a href="http://192.168.1.30:8080/" class="button button-primary">
+                        ورود به سیستم انبار
                     </a>
-                @endif
+               
             @endauth
         </div>
 

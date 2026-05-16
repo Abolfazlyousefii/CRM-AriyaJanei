@@ -901,11 +901,15 @@
                 <a href="{{ route('dashboard') }}"
                    class="btn btn-primary d-none d-sm-inline-flex align-items-center gap-2 mx-header__dashboard-btn {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                     <i class="bi bi-speedometer2"></i>
-                    <span>داشبورد</span>
+                    <span>داشبورد CRM</span>
                 </a>
-            </div>
 
+              
+            </div>
+ 
             <div class="d-none d-sm-flex mx-header__actions">
+
+            
                 <button type="button" class="btn mx-icon-btn" data-bs-toggle="modal" data-bs-target="#headerAnnouncementsModal" aria-label="اطلاعیه‌ها" title="اطلاعیه‌ها">
                     <i class="bi bi-megaphone"></i>
                     @if($announcementsCount > 0)

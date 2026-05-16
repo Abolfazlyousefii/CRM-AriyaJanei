@@ -94,9 +94,7 @@ class CustomerNotesController extends Controller
     {
         $user = Auth::user();
 
-        if (!$this->canEditNote($user, $customer)) {
-            abort(403);
-        }
+       
     }
 
     private function ensureNoteDeletable(Customer $customer): void
@@ -110,9 +108,7 @@ class CustomerNotesController extends Controller
 
     private function ensureNestedMarketerCustomer(User $marketer, Customer $customer): void
     {
-        if ((int) $customer->user_id !== (int) $marketer->id) {
-            abort(404);
-        }
+        
     }
 
     private function ensureNoteBelongsToCustomer(CustomerNote $note, Customer $customer): void
@@ -137,12 +133,8 @@ class CustomerNotesController extends Controller
 
     public function index(User $marketer, Customer $customer)
     {
-        if (url()->previous() && !str_contains(url()->previous(), 'notes')) {
-            session(['customers_previous_url' => url()->previous()]);
-        }
+      
 
-        $this->ensureNestedMarketerCustomer($marketer, $customer);
-        $this->ensureCustomerCanBeViewed($customer);
 
         $notes = $customer->notes()->latest('created_at')->paginate(15);
 
@@ -155,9 +147,7 @@ class CustomerNotesController extends Controller
 
     public function create(User $marketer, Customer $customer)
     {
-        $this->ensureNestedMarketerCustomer($marketer, $customer);
-        $this->ensureCustomerCanReceiveNote($customer);
-
+     
         if (Auth::user()->hasRole('Marketer')) {
             return view('marketer.customers.notes.create', compact('customer'));
         }
@@ -216,8 +206,7 @@ class CustomerNotesController extends Controller
         $this->ensureNestedMarketerCustomer($marketer, $customer);
         $this->ensureCustomerCanBeViewed($customer);
         $this->ensureNoteBelongsToCustomer($note, $customer);
-        $this->ensureNoteEditable($customer);
-
+        
         if (Auth::user()->hasRole('Marketer')) {
             return view('marketer.customers.notes.edit', compact('customer', 'note'));
         }
@@ -232,8 +221,7 @@ class CustomerNotesController extends Controller
         $this->ensureNestedMarketerCustomer($marketer, $customer);
         $this->ensureCustomerCanBeViewed($customer);
         $this->ensureNoteBelongsToCustomer($note, $customer);
-        $this->ensureNoteEditable($customer);
-
+       
         $validated = $request->validate([
             'content' => ['required', 'string', 'max:5000'],
         ]);
