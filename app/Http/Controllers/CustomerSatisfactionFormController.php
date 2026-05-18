@@ -63,14 +63,17 @@ return view('customer-satisfaction-forms.index', compact('forms', 'groupedForms'
 
     $validated = $request->validate([
         'customers' => ['required', 'array', 'min:1'],
-        'customers.*.submitted_at' => ['required', 'date'],
-        'customers.*.shipment_sent_at_fa' => ['required', 'string'],
-        'customers.*.customer_full_name' => ['required', 'string', 'max:255'],
-        'customers.*.shipping_method' => ['required', 'in:barbari,tipax,rahmati,ghafari,nadi,hozori'],
+        'customers.*.submitted_at' => ['nullable', 'date'],
+        'customers.*.shipment_sent_at_fa' => ['nullable', 'string'],
+        'customers.*.customer_full_name' => ['nullable', 'string', 'max:255'],
         'customers.*.satisfaction_status' => ['nullable', 'in:satisfied,unsatisfied,a,'],
         'customers.*.assigned_to_user_id' => ['nullable', 'integer'],
-        'customers.*.referral_note' => ['nullable', 'string'],
         'customers.*.description' => ['nullable', 'string'],
+        'customers.*.operator_communication_score' => ['nullable', 'integer', 'between:1,5'],
+        'customers.*.shipment_score' => ['nullable', 'integer', 'between:1,5'],
+        'customers.*.product_quality_score' => ['nullable', 'integer', 'between:1,5'],
+        'customers.*.needs_consultation' => ['nullable', 'in:yes,no'],
+        'customers.*.wants_in_person_purchase' => ['nullable', 'in:in_person,website,phone'],
     ]);
 
     foreach ($validated['customers'] as $formData) {
@@ -79,23 +82,26 @@ return view('customer-satisfaction-forms.index', compact('forms', 'groupedForms'
             $assignedUser = User::role('customer_review')->findOrFail($formData['assigned_to_user_id']);
         }
 
-        $fullName = preg_replace('/\s+/', ' ', trim($formData['customer_full_name']));
-        $nameParts = explode(' ', $fullName, 2);
+        $fullName = preg_replace('/\s+/', ' ', trim($formData['customer_full_name'] ?? ''));
+        $nameParts = $fullName !== '' ? explode(' ', $fullName, 2) : ['', ''];
 
         // اگر satisfaction_status خالی باشد، مقدار آن را به null تنظیم کنید
         $satisfactionStatus = $formData['satisfaction_status'] ?? null;
 
         CustomerSatisfactionForm::create([
-            'submitted_at' => $formData['submitted_at'],
-            'shipment_sent_at' => Verta::parse($formData['shipment_sent_at_fa'])->datetime()->format('Y-m-d'),
-            'customer_name' => $nameParts[0],
-            'customer_family' => $nameParts[1] ?? '',
-            'shipping_method' => $formData['shipping_method'],
+            'submitted_at' => $formData['submitted_at'] ?? null,
+            'shipment_sent_at' => ! empty($formData['shipment_sent_at_fa']) ? Verta::parse($formData['shipment_sent_at_fa'])->datetime()->format('Y-m-d') : null,
+            'customer_name' => $nameParts[0] !== '' ? $nameParts[0] : null,
+            'customer_family' => ($nameParts[1] ?? '') !== '' ? ($nameParts[1] ?? '') : null,
             'satisfaction_status' => $satisfactionStatus,
             'assigned_to_user_id' => $assignedUser ? $assignedUser->id : null,
             'created_by_user_id' => $user->id,
-            'referral_note' => $formData['referral_note'] ?? null,
             'description' => $formData['description'] ?? null,
+            'operator_communication_score' => $formData['operator_communication_score'] ?? null,
+            'shipment_score' => $formData['shipment_score'] ?? null,
+            'product_quality_score' => $formData['product_quality_score'] ?? null,
+            'needs_consultation' => $formData['needs_consultation'] ?? null,
+            'wants_in_person_purchase' => $formData['wants_in_person_purchase'] ?? null,
         ]);
     }
 

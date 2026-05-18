@@ -26,8 +26,7 @@
                         <th>تاریخ فرم</th>
                         <th>تاریخ ارسال بار</th>
                         <th>مشتری</th>
-                        <th>روش ارسال</th>
-                        <th>رضایت</th>
+                                                <th>رضایت</th>
                         <th>ارجاع به</th>
                         <th>ثبت‌کننده</th>
                         <th>نتیجه</th>
@@ -39,7 +38,7 @@
 
     {{-- ردیف جداکننده/تیتر تاریخ --}}
     <tr style="background-color: #6d6d6d;">
-        <td colspan="10" class="fw-bold">
+        <td colspan="9" class="fw-bold">
             تاریخ فرم: {{ $date }}
         </td>
     </tr>
@@ -50,16 +49,6 @@
             <td>{{ \Hekmatinasser\Verta\Verta::instance($form->submitted_at)->format('Y/m/d') }}</td>
             <td>{{ $form->shipment_sent_at ? \Hekmatinasser\Verta\Verta::instance($form->shipment_sent_at)->format('Y/m/d') : '—' }}</td>
             <td>{{ $form->customer_full_name }}</td>
-            <td>
-                @switch($form->shipping_method)
-                    @case('barbari') باربری @break
-                    @case('tipax') تیپاکس @break
-                    @case('rahmati') رحمتی @break
-                    @case('ghafari') غفاری @break
-                    @case('nadi') نادی @break
-                    @default حضوری
-                @endswitch
-            </td>
             <td>
                 @if($form->satisfaction_status === 'satisfied')
                     <span class="badge bg-success">راضی</span>
@@ -88,7 +77,7 @@
 
 @empty
     <tr>
-        <td colspan="10" class="text-center text-muted">فرمی ثبت نشده است.</td>
+        <td colspan="9" class="text-center text-muted">فرمی ثبت نشده است.</td>
     </tr>
 @endforelse
 </tbody>
