@@ -70,6 +70,7 @@ return view('customer-satisfaction-forms.index', compact('forms', 'groupedForms'
         'customers.*.satisfaction_status' => ['nullable', 'in:satisfied,unsatisfied,a,'],
         'customers.*.assigned_to_user_id' => ['nullable', 'integer'],
         'customers.*.referral_note' => ['nullable', 'string'],
+        'customers.*.description' => ['nullable', 'string'],
     ]);
 
     foreach ($validated['customers'] as $formData) {
@@ -94,6 +95,7 @@ return view('customer-satisfaction-forms.index', compact('forms', 'groupedForms'
             'assigned_to_user_id' => $assignedUser ? $assignedUser->id : null,
             'created_by_user_id' => $user->id,
             'referral_note' => $formData['referral_note'] ?? null,
+            'description' => $formData['description'] ?? null,
         ]);
     }
 

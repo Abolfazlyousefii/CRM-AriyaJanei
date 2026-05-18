@@ -15,8 +15,8 @@
             ['title' => 'لاگ فعالیت‌ها', 'route' => 'admin.activity_logs.index', 'icon' => 'clipboard'],
             ['title' => 'دسته‌بندی‌ها', 'route' => 'admin.categories.index', 'icon' => 'tag'],
             ['title' => 'نحوه آشنایی', 'route' => 'admin.referenceType.index', 'icon' => 'question'],
-            ['title' => 'مدیریت فرم‌های ارزیابی', 'route' => 'admin.evaluations.forms.index', 'icon' => 'doc'],
-            ['title' => 'نتایج ارزیابی', 'route' => 'admin.evaluations.monthly', 'icon' => 'doc'],
+          
+         
             ['title' => 'گزارش‌های مدیریتی', 'route' => 'admin.reports', 'icon' => 'chart'],
             ['title' => 'فرم رضایت مشتری', 'route' => 'customer-satisfaction-forms.index', 'icon' => 'doc'],
             ['title' => 'مدیریت اطلاعیه‌ها', 'route' => 'announcements.index', 'icon' => 'megaphone'],
@@ -41,7 +41,7 @@
         ];
 
         if ($showEvalCard) {
-            $linksUser[] = ['title' => 'فرم‌های ارزیابی', 'route' => 'evaluations.index', 'icon' => 'doc'];
+         
         }
 
         $linksManager = [

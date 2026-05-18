@@ -19,6 +19,7 @@ class CustomerSatisfactionForm extends Model
         'assigned_to_user_id',
         'created_by_user_id',
         'referral_note',
+        'description',
         'result',
         'result_filled_at',
         'referral_seen_at',

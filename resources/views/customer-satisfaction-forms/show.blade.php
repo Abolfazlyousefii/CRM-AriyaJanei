@@ -53,6 +53,10 @@
                     <td>{{ $form->referral_note ?? '—' }}</td>
                 </tr>
                 <tr>
+                    <th>توضیحات</th>
+                    <td>{{ $form->description ?? '—' }}</td>
+                </tr>
+                <tr>
                     <th>نتیجه ثبت‌شده</th>
                     <td>{{ $form->result ?? 'هنوز ثبت نشده است.' }}</td>
                 </tr>
