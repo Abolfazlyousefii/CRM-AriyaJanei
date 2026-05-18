@@ -73,7 +73,7 @@ return view('customer-satisfaction-forms.index', compact('forms', 'groupedForms'
         'customers.*.shipment_score' => ['nullable', 'integer', 'between:1,5'],
         'customers.*.product_quality_score' => ['nullable', 'integer', 'between:1,5'],
         'customers.*.needs_consultation' => ['nullable', 'in:yes,no'],
-        'customers.*.wants_in_person_purchase' => ['nullable', 'in:in_person,website,phone'],
+        'customers.*.wants_in_person_purchase' => ['nullable', 'in:yes,no'],
     ]);
 
     foreach ($validated['customers'] as $formData) {

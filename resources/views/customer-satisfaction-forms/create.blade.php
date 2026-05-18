@@ -103,46 +103,6 @@
                                     </select>
                                 </div>
 
-
-                                <div class="mb-3">
-                                    <label class="form-label">ارتباط با اپراتور (از 5)</label>
-                                    <select name="customers[{{ $index }}][operator_communication_score]" class="form-select">
-                                        <option value="">انتخاب کنید</option>
-                                        @for($i = 1; $i <= 5; $i++)
-                                            <option value="{{ $i }}" @selected((string) ($customer['operator_communication_score'] ?? '') === (string) $i)>{{ $i }}</option>
-                                        @endfor
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">ارسال بار (از 5)</label>
-                                    <select name="customers[{{ $index }}][shipment_score]" class="form-select">
-                                        <option value="">انتخاب کنید</option>
-                                        @for($i = 1; $i <= 5; $i++)
-                                            <option value="{{ $i }}" @selected((string) ($customer['shipment_score'] ?? '') === (string) $i)>{{ $i }}</option>
-                                        @endfor
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">کیفیت محصول (از 5)</label>
-                                    <select name="customers[{{ $index }}][product_quality_score]" class="form-select">
-                                        <option value="">انتخاب کنید</option>
-                                        @for($i = 1; $i <= 5; $i++)
-                                            <option value="{{ $i }}" @selected((string) ($customer['product_quality_score'] ?? '') === (string) $i)>{{ $i }}</option>
-                                        @endfor
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">نیاز به مشاوره</label>
-                                    <select name="customers[{{ $index }}][needs_consultation]" class="form-select">
-                                        <option value="">انتخاب کنید</option>
-                                        <option value="yes" @selected(($customer['needs_consultation'] ?? '') === 'yes')>دارد</option>
-                                        <option value="no" @selected(($customer['needs_consultation'] ?? '') === 'no')>ندارد</option>
-                                    </select>
-                                </div>
-
                                 <div class="mb-3">
                                     <label class="form-label">تمایل به خرید حضوری</label>
                                     <select name="customers[{{ $index }}][wants_in_person_purchase]" class="form-select">
@@ -153,15 +113,6 @@
                                 </div>
 
 
-                                <div class="mb-3">
-                                    <label class="form-label">تمایل به خرید</label>
-                                    <select name="customers[{{ $index }}][wants_in_person_purchase]" class="form-select">
-                                        <option value="">انتخاب کنید</option>
-                                        <option value="in_person" @selected(($customer['wants_in_person_purchase'] ?? '') === 'in_person')>حضوری</option>
-                                        <option value="website" @selected(($customer['wants_in_person_purchase'] ?? '') === 'website')>سایت</option>
-                                        <option value="phone" @selected(($customer['wants_in_person_purchase'] ?? '') === 'phone')>تلفنی</option>
-                                    </select>
-                                </div>
 
 
                                 <div class="mb-3">
@@ -274,55 +225,6 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">تمایل به خرید</label>
-                    <select name="customers[__INDEX__][wants_in_person_purchase]" class="form-select">
-                        <option value="">انتخاب کنید</option>
-                        <option value="in_person">حضوری</option>
-                        <option value="website">سایت</option>
-                        <option value="phone">تلفنی</option>
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">ارتباط با اپراتور (از 5)</label>
-                    <select name="customers[__INDEX__][operator_communication_score]" class="form-select">
-                        <option value="">انتخاب کنید</option>
-                        @for($i = 1; $i <= 5; $i++)
-                            <option value="{{ $i }}">{{ $i }}</option>
-                        @endfor
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">ارسال بار (از 5)</label>
-                    <select name="customers[__INDEX__][shipment_score]" class="form-select">
-                        <option value="">انتخاب کنید</option>
-                        @for($i = 1; $i <= 5; $i++)
-                            <option value="{{ $i }}">{{ $i }}</option>
-                        @endfor
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">کیفیت محصول (از 5)</label>
-                    <select name="customers[__INDEX__][product_quality_score]" class="form-select">
-                        <option value="">انتخاب کنید</option>
-                        @for($i = 1; $i <= 5; $i++)
-                            <option value="{{ $i }}">{{ $i }}</option>
-                        @endfor
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">نیاز به مشاوره</label>
-                    <select name="customers[__INDEX__][needs_consultation]" class="form-select">
-                        <option value="">انتخاب کنید</option>
-                        <option value="yes">دارد</option>
-                        <option value="no">ندارد</option>
-                    </select>
-                </div>
-
-                <div class="mb-3">
                     <label class="form-label">تمایل به خرید حضوری</label>
                     <select name="customers[__INDEX__][wants_in_person_purchase]" class="form-select">
                         <option value="">انتخاب کنید</option>
@@ -330,6 +232,8 @@
                         <option value="no">ندارد</option>
                     </select>
                 </div>
+
+
 
                 <div class="mb-3">
                     <label class="form-label">ارجاع به کاربر </label>
