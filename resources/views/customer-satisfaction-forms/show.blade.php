@@ -24,6 +24,19 @@
                     <td>{{ $form->customer_full_name }}</td>
                 </tr>
                 <tr>
+                    <th>روش ارسال</th>
+                    <td>
+                        @switch($form->shipping_method)
+                            @case('barbari') باربری @break
+                            @case('tipax') تیپاکس @break
+                            @case('rahmati') رحمتی @break
+                            @case('ghafari') غفاری @break
+                            @case('nadi') نادی @break
+                            @default حضوری
+                        @endswitch
+                    </td>
+                </tr>
+                <tr>
                     <th>وضعیت رضایت</th>
                     <td>{{ $form->satisfaction_status === 'satisfied' ? 'راضی' : ($form->satisfaction_status === 'unsatisfied' ? 'ناراضی' : '—') }}</td>
                 </tr>
@@ -45,8 +58,8 @@
                     <td>{{ $form->needs_consultation === 'yes' ? 'دارد' : ($form->needs_consultation === 'no' ? 'ندارد' : '—') }}</td>
                 </tr>
                 <tr>
-                    <th>تمایل به خرید</th>
-                    <td>{{ $form->wants_in_person_purchase === 'in_person' ? 'حضوری' : ($form->wants_in_person_purchase === 'website' ? 'سایت' : ($form->wants_in_person_purchase === 'phone' ? 'تلفنی' : '—')) }}</td>
+                    <th>تمایل به خرید حضوری</th>
+                    <td>{{ $form->wants_in_person_purchase === 'yes' ? 'دارد' : ($form->wants_in_person_purchase === 'no' ? 'ندارد' : '—') }}</td>
                 </tr>
 
                 <tr>
@@ -56,6 +69,10 @@
                 <tr>
                     <th>ارجاع به</th>
                     <td>{{ optional($form->assignedToUser)->name ?? '—' }}</td>
+                </tr>
+                <tr>
+                    <th>توضیح ارجاع</th>
+                    <td>{{ $form->referral_note ?? '—' }}</td>
                 </tr>
                 <tr>
                     <th>توضیحات</th>

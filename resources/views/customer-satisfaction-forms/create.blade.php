@@ -8,8 +8,10 @@
             'submitted_at' => now()->toDateString(),
             'shipment_sent_at_fa' => '',
             'customer_full_name' => '',
+            'shipping_method' => '',
             'satisfaction_status' => '',
             'assigned_to_user_id' => '',
+            'referral_note' => '',
             'description' => '',
             'operator_communication_score' => '',
             'shipment_score' => '',
@@ -52,6 +54,19 @@
                                 <div class="mb-3">
                                     <label class="form-label">نام و نام خانوادگی مشتری</label>
                                     <input type="text" name="customers[{{ $index }}][customer_full_name]" class="form-control" value="{{ $customer['customer_full_name'] ?? '' }}">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">روش ارسال</label>
+                                    <select name="customers[{{ $index }}][shipping_method]" class="form-select">
+                                        <option value="">انتخاب کنید</option>
+                                        <option value="barbari" @selected(($customer['shipping_method'] ?? '') === 'barbari')>باربری</option>
+                                        <option value="tipax" @selected(($customer['shipping_method'] ?? '') === 'tipax')>تیپاکس</option>
+                                        <option value="rahmati" @selected(($customer['shipping_method'] ?? '') === 'rahmati')>رحمتی</option>
+                                        <option value="ghafari" @selected(($customer['shipping_method'] ?? '') === 'ghafari')>غفاری</option>
+                                        <option value="nadi" @selected(($customer['shipping_method'] ?? '') === 'nadi')>نادی</option>
+                                        <option value="hozori" @selected(($customer['shipping_method'] ?? '') === 'hozori')>حضوری</option>
+                                    </select>
                                 </div>
 
                                 <div class="mb-3">
@@ -104,12 +119,11 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label">تمایل به خرید</label>
+                                    <label class="form-label">تمایل به خرید حضوری</label>
                                     <select name="customers[{{ $index }}][wants_in_person_purchase]" class="form-select">
                                         <option value="">انتخاب کنید</option>
-                                        <option value="in_person" @selected(($customer['wants_in_person_purchase'] ?? '') === 'in_person')>حضوری</option>
-                                        <option value="website" @selected(($customer['wants_in_person_purchase'] ?? '') === 'website')>سایت</option>
-                                        <option value="phone" @selected(($customer['wants_in_person_purchase'] ?? '') === 'phone')>تلفنی</option>
+                                        <option value="yes" @selected(($customer['wants_in_person_purchase'] ?? '') === 'yes')>دارد</option>
+                                        <option value="no" @selected(($customer['wants_in_person_purchase'] ?? '') === 'no')>ندارد</option>
                                     </select>
                                 </div>
 
@@ -124,6 +138,11 @@
                                             </option>
                                         @endforeach
                                     </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">توضیح ارجاع (اختیاری)</label>
+                                    <textarea name="customers[{{ $index }}][referral_note]" class="form-control" rows="3">{{ $customer['referral_note'] ?? '' }}</textarea>
                                 </div>
 
                                 <div class="mb-3">
@@ -176,6 +195,19 @@
                 </div>
 
                 <div class="mb-3">
+                    <label class="form-label">روش ارسال</label>
+                    <select name="customers[__INDEX__][shipping_method]" class="form-select">
+                        <option value="">انتخاب کنید</option>
+                        <option value="barbari">باربری</option>
+                        <option value="tipax">تیپاکس</option>
+                        <option value="rahmati">رحمتی</option>
+                        <option value="ghafari">غفاری</option>
+                        <option value="nadi">نادی</option>
+                        <option value="hozori">حضوری</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
                     <label class="form-label">وضعیت رضایت</label>
                     <select name="customers[__INDEX__][satisfaction_status]" class="form-select" >
                         <option value="">انتخاب کنید</option>
@@ -224,12 +256,11 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">تمایل به خرید</label>
+                    <label class="form-label">تمایل به خرید حضوری</label>
                     <select name="customers[__INDEX__][wants_in_person_purchase]" class="form-select">
                         <option value="">انتخاب کنید</option>
-                        <option value="in_person">حضوری</option>
-                        <option value="website">سایت</option>
-                        <option value="phone">تلفنی</option>
+                        <option value="yes">دارد</option>
+                        <option value="no">ندارد</option>
                     </select>
                 </div>
 
@@ -241,6 +272,11 @@
                             <option value="{{ $reviewUser->id }}">{{ $reviewUser->name }}</option>
                         @endforeach
                     </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">توضیح ارجاع (اختیاری)</label>
+                    <textarea name="customers[__INDEX__][referral_note]" class="form-control" rows="3"></textarea>
                 </div>
 
                 <div class="mb-3">
