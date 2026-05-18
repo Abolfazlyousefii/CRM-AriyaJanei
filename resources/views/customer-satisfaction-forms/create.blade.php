@@ -104,14 +104,15 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label">تمایل به خرید</label>
+                                    <label class="form-label">تمایل به خرید حضوری</label>
                                     <select name="customers[{{ $index }}][wants_in_person_purchase]" class="form-select">
                                         <option value="">انتخاب کنید</option>
-                                        <option value="in_person" @selected(($customer['wants_in_person_purchase'] ?? '') === 'in_person')>حضوری</option>
-                                        <option value="website" @selected(($customer['wants_in_person_purchase'] ?? '') === 'website')>سایت</option>
-                                        <option value="phone" @selected(($customer['wants_in_person_purchase'] ?? '') === 'phone')>تلفنی</option>
+                                        <option value="yes" @selected(($customer['wants_in_person_purchase'] ?? '') === 'yes')>دارد</option>
+                                        <option value="no" @selected(($customer['wants_in_person_purchase'] ?? '') === 'no')>ندارد</option>
                                     </select>
                                 </div>
+
+
 
 
 
@@ -226,12 +227,11 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">تمایل به خرید</label>
+                    <label class="form-label">تمایل به خرید حضوری</label>
                     <select name="customers[__INDEX__][wants_in_person_purchase]" class="form-select">
                         <option value="">انتخاب کنید</option>
-                        <option value="in_person">حضوری</option>
-                        <option value="website">سایت</option>
-                        <option value="phone">تلفنی</option>
+                        <option value="yes">دارد</option>
+                        <option value="no">ندارد</option>
                     </select>
                 </div>
 
