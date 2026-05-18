@@ -38,8 +38,30 @@
                 </tr>
                 <tr>
                     <th>وضعیت رضایت</th>
-                    <td>{{ $form->satisfaction_status === 'satisfied' ? 'راضی' : 'ناراضی' }}</td>
+                    <td>{{ $form->satisfaction_status === 'satisfied' ? 'راضی' : ($form->satisfaction_status === 'unsatisfied' ? 'ناراضی' : '—') }}</td>
                 </tr>
+
+                <tr>
+                    <th>ارتباط با اپراتور</th>
+                    <td>{{ $form->operator_communication_score ? $form->operator_communication_score . ' از 5' : '—' }}</td>
+                </tr>
+                <tr>
+                    <th>ارسال بار</th>
+                    <td>{{ $form->shipment_score ? $form->shipment_score . ' از 5' : '—' }}</td>
+                </tr>
+                <tr>
+                    <th>کیفیت محصول</th>
+                    <td>{{ $form->product_quality_score ? $form->product_quality_score . ' از 5' : '—' }}</td>
+                </tr>
+                <tr>
+                    <th>نیاز به مشاوره</th>
+                    <td>{{ $form->needs_consultation === 'yes' ? 'دارد' : ($form->needs_consultation === 'no' ? 'ندارد' : '—') }}</td>
+                </tr>
+                <tr>
+                    <th>تمایل به خرید حضوری</th>
+                    <td>{{ $form->wants_in_person_purchase === 'yes' ? 'دارد' : ($form->wants_in_person_purchase === 'no' ? 'ندارد' : '—') }}</td>
+                </tr>
+
                 <tr>
                     <th>ثبت‌کننده</th>
                     <td>{{ optional($form->createdByUser)->name ?? '—' }}</td>

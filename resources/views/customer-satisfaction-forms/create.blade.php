@@ -13,6 +13,11 @@
             'assigned_to_user_id' => '',
             'referral_note' => '',
             'description' => '',
+            'operator_communication_score' => '',
+            'shipment_score' => '',
+            'product_quality_score' => '',
+            'needs_consultation' => '',
+            'wants_in_person_purchase' => '',
         ]]);
     @endphp
 
@@ -29,7 +34,7 @@
                             <div class="mt-3">
                                 <div class="mb-3 hidden">
                                     <label class="form-label">تاریخ ثبت فرم</label>
-                                    <input type="date" name="customers[{{ $index }}][submitted_at]" class="form-control" value="{{ $customer['submitted_at'] ?? now()->toDateString() }}" required>
+                                    <input type="date" name="customers[{{ $index }}][submitted_at]" class="form-control" value="{{ $customer['submitted_at'] ?? now()->toDateString() }}">
                                 </div>
 
                                 <div class="mb-3">
@@ -42,18 +47,18 @@
                                         autocomplete="off"
                                         placeholder="مثال: 1404/11/21"
                                         value="{{ $customer['shipment_sent_at_fa'] ?? '' }}"
-                                        required
+                                       
                                     >
                                 </div>
 
                                 <div class="mb-3">
                                     <label class="form-label">نام و نام خانوادگی مشتری</label>
-                                    <input type="text" name="customers[{{ $index }}][customer_full_name]" class="form-control" value="{{ $customer['customer_full_name'] ?? '' }}" required>
+                                    <input type="text" name="customers[{{ $index }}][customer_full_name]" class="form-control" value="{{ $customer['customer_full_name'] ?? '' }}">
                                 </div>
 
                                 <div class="mb-3">
                                     <label class="form-label">روش ارسال</label>
-                                    <select name="customers[{{ $index }}][shipping_method]" class="form-select" required>
+                                    <select name="customers[{{ $index }}][shipping_method]" class="form-select">
                                         <option value="">انتخاب کنید</option>
                                         <option value="barbari" @selected(($customer['shipping_method'] ?? '') === 'barbari')>باربری</option>
                                         <option value="tipax" @selected(($customer['shipping_method'] ?? '') === 'tipax')>تیپاکس</option>
@@ -72,6 +77,56 @@
                                         <option value="unsatisfied" @selected(($customer['satisfaction_status'] ?? '') === 'unsatisfied')>ناراضی</option>
                                     </select>
                                 </div>
+
+
+                                <div class="mb-3">
+                                    <label class="form-label">ارتباط با اپراتور (از 5)</label>
+                                    <select name="customers[{{ $index }}][operator_communication_score]" class="form-select">
+                                        <option value="">انتخاب کنید</option>
+                                        @for($i = 1; $i <= 5; $i++)
+                                            <option value="{{ $i }}" @selected((string) ($customer['operator_communication_score'] ?? '') === (string) $i)>{{ $i }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">ارسال بار (از 5)</label>
+                                    <select name="customers[{{ $index }}][shipment_score]" class="form-select">
+                                        <option value="">انتخاب کنید</option>
+                                        @for($i = 1; $i <= 5; $i++)
+                                            <option value="{{ $i }}" @selected((string) ($customer['shipment_score'] ?? '') === (string) $i)>{{ $i }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">کیفیت محصول (از 5)</label>
+                                    <select name="customers[{{ $index }}][product_quality_score]" class="form-select">
+                                        <option value="">انتخاب کنید</option>
+                                        @for($i = 1; $i <= 5; $i++)
+                                            <option value="{{ $i }}" @selected((string) ($customer['product_quality_score'] ?? '') === (string) $i)>{{ $i }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">نیاز به مشاوره</label>
+                                    <select name="customers[{{ $index }}][needs_consultation]" class="form-select">
+                                        <option value="">انتخاب کنید</option>
+                                        <option value="yes" @selected(($customer['needs_consultation'] ?? '') === 'yes')>دارد</option>
+                                        <option value="no" @selected(($customer['needs_consultation'] ?? '') === 'no')>ندارد</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">تمایل به خرید حضوری</label>
+                                    <select name="customers[{{ $index }}][wants_in_person_purchase]" class="form-select">
+                                        <option value="">انتخاب کنید</option>
+                                        <option value="yes" @selected(($customer['wants_in_person_purchase'] ?? '') === 'yes')>دارد</option>
+                                        <option value="no" @selected(($customer['wants_in_person_purchase'] ?? '') === 'no')>ندارد</option>
+                                    </select>
+                                </div>
+
 
                                 <div class="mb-3">
                                     <label class="form-label">ارجاع به کاربر </label>
@@ -118,7 +173,7 @@
             <div class="mt-3">
                 <div class="mb-3">
                     <label class="form-label">تاریخ ثبت فرم</label>
-                    <input type="date" name="customers[__INDEX__][submitted_at]" class="form-control" value="{{ now()->toDateString() }}" required>
+                    <input type="date" name="customers[__INDEX__][submitted_at]" class="form-control" value="{{ now()->toDateString() }}">
                 </div>
 
                 <div class="mb-3">
@@ -130,18 +185,18 @@
                         data-jdp
                         autocomplete="off"
                         placeholder="مثال: 1404/11/21"
-                        required
+                       
                     >
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">نام و نام خانوادگی مشتری</label>
-                    <input type="text" name="customers[__INDEX__][customer_full_name]" class="form-control" required>
+                    <input type="text" name="customers[__INDEX__][customer_full_name]" class="form-control">
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">روش ارسال</label>
-                    <select name="customers[__INDEX__][shipping_method]" class="form-select" required>
+                    <select name="customers[__INDEX__][shipping_method]" class="form-select">
                         <option value="">انتخاب کنید</option>
                         <option value="barbari">باربری</option>
                         <option value="tipax">تیپاکس</option>
@@ -158,6 +213,54 @@
                         <option value="">انتخاب کنید</option>
                         <option value="satisfied">راضی</option>
                         <option value="unsatisfied">ناراضی</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">ارتباط با اپراتور (از 5)</label>
+                    <select name="customers[__INDEX__][operator_communication_score]" class="form-select">
+                        <option value="">انتخاب کنید</option>
+                        @for($i = 1; $i <= 5; $i++)
+                            <option value="{{ $i }}">{{ $i }}</option>
+                        @endfor
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">ارسال بار (از 5)</label>
+                    <select name="customers[__INDEX__][shipment_score]" class="form-select">
+                        <option value="">انتخاب کنید</option>
+                        @for($i = 1; $i <= 5; $i++)
+                            <option value="{{ $i }}">{{ $i }}</option>
+                        @endfor
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">کیفیت محصول (از 5)</label>
+                    <select name="customers[__INDEX__][product_quality_score]" class="form-select">
+                        <option value="">انتخاب کنید</option>
+                        @for($i = 1; $i <= 5; $i++)
+                            <option value="{{ $i }}">{{ $i }}</option>
+                        @endfor
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">نیاز به مشاوره</label>
+                    <select name="customers[__INDEX__][needs_consultation]" class="form-select">
+                        <option value="">انتخاب کنید</option>
+                        <option value="yes">دارد</option>
+                        <option value="no">ندارد</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">تمایل به خرید حضوری</label>
+                    <select name="customers[__INDEX__][wants_in_person_purchase]" class="form-select">
+                        <option value="">انتخاب کنید</option>
+                        <option value="yes">دارد</option>
+                        <option value="no">ندارد</option>
                     </select>
                 </div>
 
