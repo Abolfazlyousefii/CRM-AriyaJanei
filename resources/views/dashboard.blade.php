@@ -256,7 +256,8 @@
                         خوش آمدی <span class="fw-semibold sd-text">{{ Auth::user()->name }}</span>
                     </div>
                 </div>
- <a href="http://192.168.1.30:8080/"
+<a href="http://192.168.1.30:8080/"
+   id="autoLoginBtn"
    class="btn btn-primary align-items-center gap-2 ">
     <i class="bi bi-speedometer2"></i>
     <span>ورود به سیستم انبار</span>
@@ -1393,4 +1394,18 @@
             });
         });
     </script>
+    <script>
+document.addEventListener("DOMContentLoaded", function () {
+    const btn = document.getElementById('autoLoginBtn');
+    if (!btn) return;
+
+    // شماره تماس کاربر از سرور Blade
+    const phoneNumber = "{{ Auth::user()->phone }}";
+
+    // اضافه کردن شماره تماس به لینک
+    btn.href = btn.href.replace(/\/$/, '') + '/auto-login?phone=' + phoneNumber;
+
+  
+});
+</script>
 </x-app-layout>

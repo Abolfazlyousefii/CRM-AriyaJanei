@@ -12,15 +12,16 @@ class CustomerSatisfactionForm extends Model
     protected $fillable = [
         'submitted_at',
         'customer_name',
-        'shipment_sent_at',
         'customer_family',
+        'shipment_sent_at',
         'satisfaction_status',
         'assigned_to_user_id',
         'operator_communication_score',
         'shipment_score',
         'product_quality_score',
         'needs_consultation',
-        'wants_in_person_purchase',
+        'wants_to_purchase',   // دارد / ندارد
+        'purchase_method',     // سایت / حضوری / تلفنی
         'created_by_user_id',
         'description',
         'result',
@@ -47,6 +48,21 @@ class CustomerSatisfactionForm extends Model
 
     public function getCustomerFullNameAttribute(): string
     {
-        return trim(($this->customer_name ?? '').' '.($this->customer_family ?? ''));
+        return trim(($this->customer_name ?? '') . ' ' . ($this->customer_family ?? ''));
+    }
+
+    public function getWantsToPurchaseLabelAttribute(): string
+    {
+        return $this->wants_to_purchase === 'yes' ? 'دارد' : 'ندارد';
+    }
+
+    public function getPurchaseMethodLabelAttribute(): string
+    {
+        switch ($this->purchase_method) {
+            case 'website': return 'سایت';
+            case 'in_person': return 'حضوری';
+            case 'phone': return 'تلفنی';
+            default: return '-';
+        }
     }
 }

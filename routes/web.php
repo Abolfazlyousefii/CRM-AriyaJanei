@@ -683,3 +683,5 @@ use App\Http\Controllers\PublicProductsController;
 
 Route::get('/public/products', [PublicProductsController::class, 'index']);
 Route::get('/public/products/{ariya_id}', [PublicProductsController::class, 'show']);
+
+
