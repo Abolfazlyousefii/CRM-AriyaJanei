@@ -15,7 +15,8 @@
             'shipment_score' => '',
             'product_quality_score' => '',
             'needs_consultation' => '',
-            'wants_in_person_purchase' => '',
+            'wants_to_purchase' => '',
+            'purchase_method' => '',
         ]]);
     @endphp
 
@@ -32,37 +33,27 @@
                             <div class="mt-3">
                                 <div class="mb-3 hidden">
                                     <label class="form-label">تاریخ ثبت فرم</label>
-                                    <input type="date" name="customers[{{ $index }}][submitted_at]" class="form-control" value="{{ $customer['submitted_at'] ?? now()->toDateString() }}">
+                                    <input type="date" name="customers[{{ $index }}][submitted_at]" class="form-control" value="{{ $customer['submitted_at'] }}">
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label">تاریخ ارسال بار </label>
-                                    <input
-                                        type="text"
-                                        name="customers[{{ $index }}][shipment_sent_at_fa]"
-                                        class="form-control"
-                                        data-jdp
-                                        autocomplete="off"
-                                        placeholder="مثال: 1404/11/21"
-                                        value="{{ $customer['shipment_sent_at_fa'] ?? '' }}"
-                                       
-                                    >
+                                    <label class="form-label">تاریخ ارسال بار</label>
+                                    <input type="text" name="customers[{{ $index }}][shipment_sent_at_fa]" class="form-control" data-jdp autocomplete="off" placeholder="مثال: 1404/11/21" value="{{ $customer['shipment_sent_at_fa'] }}">
                                 </div>
 
                                 <div class="mb-3">
                                     <label class="form-label">نام و نام خانوادگی مشتری</label>
-                                    <input type="text" name="customers[{{ $index }}][customer_full_name]" class="form-control" value="{{ $customer['customer_full_name'] ?? '' }}">
+                                    <input type="text" name="customers[{{ $index }}][customer_full_name]" class="form-control" value="{{ $customer['customer_full_name'] }}">
                                 </div>
 
                                 <div class="mb-3">
                                     <label class="form-label">وضعیت رضایت</label>
-                                    <select name="customers[{{ $index }}][satisfaction_status]" class="form-select" >
+                                    <select name="customers[{{ $index }}][satisfaction_status]" class="form-select">
                                         <option value="">انتخاب کنید</option>
                                         <option value="satisfied" @selected(($customer['satisfaction_status'] ?? '') === 'satisfied')>راضی</option>
                                         <option value="unsatisfied" @selected(($customer['satisfaction_status'] ?? '') === 'unsatisfied')>ناراضی</option>
                                     </select>
                                 </div>
-
 
                                 <div class="mb-3">
                                     <label class="form-label">ارتباط با اپراتور (از 5)</label>
@@ -103,23 +94,30 @@
                                     </select>
                                 </div>
 
+                                <!-- تمایل به خرید -->
                                 <div class="mb-3">
-                                    <label class="form-label">تمایل به خرید حضوری</label>
-                                    <select name="customers[{{ $index }}][wants_in_person_purchase]" class="form-select">
+                                    <label class="form-label">تمایل به خرید</label>
+                                    <select name="customers[{{ $index }}][wants_to_purchase]" class="form-select purchase-toggle">
                                         <option value="">انتخاب کنید</option>
-                                        <option value="yes" @selected(($customer['wants_in_person_purchase'] ?? '') === 'yes')>دارد</option>
-                                        <option value="no" @selected(($customer['wants_in_person_purchase'] ?? '') === 'no')>ندارد</option>
+                                        <option value="yes" @selected(($customer['wants_to_purchase'] ?? '') === 'yes')>دارد</option>
+                                        <option value="no" @selected(($customer['wants_to_purchase'] ?? '') === 'no')>ندارد</option>
                                     </select>
                                 </div>
 
-
-
-
-
+                                <!-- روش خرید -->
+                                <div class="mb-3 purchase-method-container" @if(($customer['wants_to_purchase'] ?? '') !== 'yes') style="display:none;" @endif>
+                                    <label class="form-label">روش خرید</label>
+                                    <select name="customers[{{ $index }}][purchase_method]" class="form-select">
+                                        <option value="">انتخاب کنید</option>
+                                        <option value="website" @selected(($customer['purchase_method'] ?? '') === 'website')>سایت</option>
+                                        <option value="in_person" @selected(($customer['purchase_method'] ?? '') === 'in_person')>حضوری</option>
+                                        <option value="phone" @selected(($customer['purchase_method'] ?? '') === 'phone')>تلفنی</option>
+                                    </select>
+                                </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label">ارجاع به کاربر </label>
-                                    <select name="customers[{{ $index }}][assigned_to_user_id]" class="form-select" >
+                                    <label class="form-label">ارجاع به کاربر</label>
+                                    <select name="customers[{{ $index }}][assigned_to_user_id]" class="form-select">
                                         <option value="">انتخاب کنید</option>
                                         @foreach($reviewUsers as $reviewUser)
                                             <option value="{{ $reviewUser->id }}" @selected((int) ($customer['assigned_to_user_id'] ?? 0) === $reviewUser->id)>
@@ -150,10 +148,10 @@
         </div>
     </div>
 
+    <!-- قالب مشتری جدید -->
     <template id="customer-template">
         <details class="border rounded p-3 customer-card" open>
             <summary class="fw-bold cursor-pointer">مشتری __INDEX_DISPLAY__</summary>
-
             <div class="mt-3">
                 <div class="mb-3">
                     <label class="form-label">تاریخ ثبت فرم</label>
@@ -161,16 +159,8 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">تاریخ ارسال بار </label>
-                    <input
-                        type="text"
-                        name="customers[__INDEX__][shipment_sent_at_fa]"
-                        class="form-control"
-                        data-jdp
-                        autocomplete="off"
-                        placeholder="مثال: 1404/11/21"
-                       
-                    >
+                    <label class="form-label">تاریخ ارسال بار</label>
+                    <input type="text" name="customers[__INDEX__][shipment_sent_at_fa]" class="form-control" data-jdp autocomplete="off" placeholder="مثال: 1404/11/21">
                 </div>
 
                 <div class="mb-3">
@@ -180,7 +170,7 @@
 
                 <div class="mb-3">
                     <label class="form-label">وضعیت رضایت</label>
-                    <select name="customers[__INDEX__][satisfaction_status]" class="form-select" >
+                    <select name="customers[__INDEX__][satisfaction_status]" class="form-select">
                         <option value="">انتخاب کنید</option>
                         <option value="satisfied">راضی</option>
                         <option value="unsatisfied">ناراضی</option>
@@ -227,19 +217,27 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">تمایل به خرید حضوری</label>
-                    <select name="customers[__INDEX__][wants_in_person_purchase]" class="form-select">
+                    <label class="form-label">تمایل به خرید</label>
+                    <select name="customers[__INDEX__][wants_to_purchase]" class="form-select purchase-toggle">
                         <option value="">انتخاب کنید</option>
                         <option value="yes">دارد</option>
                         <option value="no">ندارد</option>
                     </select>
                 </div>
 
-
+                <div class="mb-3 purchase-method-container" style="display:none;">
+                    <label class="form-label">روش خرید</label>
+                    <select name="customers[__INDEX__][purchase_method]" class="form-select">
+                        <option value="">انتخاب کنید</option>
+                        <option value="website">سایت</option>
+                        <option value="in_person">حضوری</option>
+                        <option value="phone">تلفنی</option>
+                    </select>
+                </div>
 
                 <div class="mb-3">
-                    <label class="form-label">ارجاع به کاربر </label>
-                    <select name="customers[__INDEX__][assigned_to_user_id]" class="form-select" >
+                    <label class="form-label">ارجاع به کاربر</label>
+                    <select name="customers[__INDEX__][assigned_to_user_id]" class="form-select">
                         <option value="">انتخاب کنید</option>
                         @foreach($reviewUsers as $reviewUser)
                             <option value="{{ $reviewUser->id }}">{{ $reviewUser->name }}</option>
@@ -262,6 +260,30 @@
         const template = document.getElementById('customer-template');
         const addCustomerBtn = document.getElementById('add-customer-btn');
 
+        const updatePurchaseVisibility = (container) => {
+            const toggle = container.querySelector('.purchase-toggle');
+            const methodContainer = container.querySelector('.purchase-method-container');
+
+            if (!toggle || !methodContainer) return;
+
+            toggle.addEventListener('change', function () {
+                if (this.value === 'yes') {
+                    methodContainer.style.display = 'block';
+                } else {
+                    methodContainer.style.display = 'none';
+                    methodContainer.querySelector('select').value = '';
+                }
+            });
+
+            if (toggle.value === 'yes') {
+                methodContainer.style.display = 'block';
+            } else {
+                methodContainer.style.display = 'none';
+            }
+        };
+
+        document.querySelectorAll('.customer-card').forEach(updatePurchaseVisibility);
+
         addCustomerBtn.addEventListener('click', function () {
             const nextIndex = container.querySelectorAll('.customer-card').length;
             const html = template.innerHTML
@@ -270,6 +292,9 @@
 
             container.insertAdjacentHTML('beforeend', html);
             jalaliDatepicker.startWatch();
+
+            const newCard = container.querySelectorAll('.customer-card')[nextIndex];
+            updatePurchaseVisibility(newCard);
         });
 
         jalaliDatepicker.startWatch();

@@ -11,60 +11,86 @@
         <div class="bg-white shadow-sm rounded-lg p-6 mb-4">
             <table class="table table-bordered align-middle">
                 <tbody>
-                <tr>
-                    <th>تاریخ</th>
-                    <td>{{ \Hekmatinasser\Verta\Verta::instance($form->submitted_at)->format('Y/m/d') }}</td>
-                </tr>
-                <tr>
-                    <th>تاریخ ارسال بار</th>
-                    <td>{{ $form->shipment_sent_at ? \Hekmatinasser\Verta\Verta::instance($form->shipment_sent_at)->format('Y/m/d') : '—' }}</td>
-                </tr>
-                <tr>
-                    <th>نام و نام خانوادگی مشتری</th>
-                    <td>{{ $form->customer_full_name }}</td>
-                </tr>
-                <tr>
-                    <th>وضعیت رضایت</th>
-                    <td>{{ $form->satisfaction_status === 'satisfied' ? 'راضی' : ($form->satisfaction_status === 'unsatisfied' ? 'ناراضی' : '—') }}</td>
-                </tr>
-
-                <tr>
-                    <th>ارتباط با اپراتور</th>
-                    <td>{{ $form->operator_communication_score ? $form->operator_communication_score . ' از 5' : '—' }}</td>
-                </tr>
-                <tr>
-                    <th>ارسال بار</th>
-                    <td>{{ $form->shipment_score ? $form->shipment_score . ' از 5' : '—' }}</td>
-                </tr>
-                <tr>
-                    <th>کیفیت محصول</th>
-                    <td>{{ $form->product_quality_score ? $form->product_quality_score . ' از 5' : '—' }}</td>
-                </tr>
-                <tr>
-                    <th>نیاز به مشاوره</th>
-                    <td>{{ $form->needs_consultation === 'yes' ? 'دارد' : ($form->needs_consultation === 'no' ? 'ندارد' : '—') }}</td>
-                </tr>
-                <tr>
-                    <th>تمایل به خرید حضوری</th>
-                    <td>{{ $form->wants_in_person_purchase === 'yes' ? 'دارد' : ($form->wants_in_person_purchase === 'no' ? 'ندارد' : '—') }}</td>
-                </tr>
-
-                <tr>
-                    <th>ثبت‌کننده</th>
-                    <td>{{ optional($form->createdByUser)->name ?? '—' }}</td>
-                </tr>
-                <tr>
-                    <th>ارجاع به</th>
-                    <td>{{ optional($form->assignedToUser)->name ?? '—' }}</td>
-                </tr>
-                <tr>
-                    <th>توضیحات</th>
-                    <td>{{ $form->description ?? '—' }}</td>
-                </tr>
-                <tr>
-                    <th>نتیجه ثبت‌شده</th>
-                    <td>{{ $form->result ?? 'هنوز ثبت نشده است.' }}</td>
-                </tr>
+                    <tr>
+                        <th>تاریخ</th>
+                        <td>{{ $form->submitted_at ? \Hekmatinasser\Verta\Verta::instance($form->submitted_at)->format('Y/m/d') : '—' }}</td>
+                    </tr>
+                    <tr>
+                        <th>تاریخ ارسال بار</th>
+                        <td>{{ $form->shipment_sent_at ? \Hekmatinasser\Verta\Verta::instance($form->shipment_sent_at)->format('Y/m/d') : '—' }}</td>
+                    </tr>
+                    <tr>
+                        <th>نام و نام خانوادگی مشتری</th>
+                        <td>{{ $form->customer_full_name ?? '—' }}</td>
+                    </tr>
+                    <tr>
+                        <th>وضعیت رضایت</th>
+                        <td>
+                            @if($form->satisfaction_status === 'satisfied')
+                                راضی
+                            @elseif($form->satisfaction_status === 'unsatisfied')
+                                ناراضی
+                            @else
+                                —
+                            @endif
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>ارتباط با اپراتور</th>
+                        <td>{{ $form->operator_communication_score ? $form->operator_communication_score . ' از 5' : '—' }}</td>
+                    </tr>
+                    <tr>
+                        <th>ارسال بار</th>
+                        <td>{{ $form->shipment_score ? $form->shipment_score . ' از 5' : '—' }}</td>
+                    </tr>
+                    <tr>
+                        <th>کیفیت محصول</th>
+                        <td>{{ $form->product_quality_score ? $form->product_quality_score . ' از 5' : '—' }}</td>
+                    </tr>
+                    <tr>
+                        <th>نیاز به مشاوره</th>
+                        <td>{{ $form->needs_consultation === 'yes' ? 'دارد' : ($form->needs_consultation === 'no' ? 'ندارد' : '—') }}</td>
+                    </tr>
+                    <tr>
+                        <th>تمایل به خرید</th>
+                        <td>{{ $form->wants_to_purchase === 'yes' ? 'دارد' : ($form->wants_to_purchase === 'no' ? 'ندارد' : '—') }}</td>
+                    </tr>
+                    @if($form->wants_to_purchase === 'yes')
+                        <tr>
+                            <th>روش خرید</th>
+                            <td>
+                                @switch($form->purchase_method)
+                                    @case('website')
+                                        سایت
+                                        @break
+                                    @case('in_person')
+                                        حضوری
+                                        @break
+                                    @case('phone')
+                                        تلفنی
+                                        @break
+                                    @default
+                                        —
+                                @endswitch
+                            </td>
+                        </tr>
+                    @endif
+                    <tr>
+                        <th>ثبت‌کننده</th>
+                        <td>{{ optional($form->createdByUser)->name ?? '—' }}</td>
+                    </tr>
+                    <tr>
+                        <th>ارجاع به</th>
+                        <td>{{ optional($form->assignedToUser)->name ?? '—' }}</td>
+                    </tr>
+                    <tr>
+                        <th>توضیحات</th>
+                        <td>{{ $form->description ?? '—' }}</td>
+                    </tr>
+                    <tr>
+                        <th>نتیجه ثبت‌شده</th>
+                        <td>{{ $form->result ?? 'هنوز ثبت نشده است.' }}</td>
+                    </tr>
                 </tbody>
             </table>
         </div>

@@ -113,16 +113,14 @@
         <div class="button-group">
             @auth
                 <a href="{{ route('dashboard') }}" class="button button-primary">
-                    ورود به داشبورد
+                    ورود به سیستم
                 </a>
             @else
                 <a href="{{ route('login') }}" class="button button-primary">
-                    ورود به CRM
+                    ورود به سیستم
                 </a>
                
-                    <a href="http://192.168.1.30:8080/" class="button button-primary">
-                        ورود به سیستم انبار
-                    </a>
+                 
                
             @endauth
         </div>
