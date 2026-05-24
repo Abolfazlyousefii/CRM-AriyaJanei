@@ -31,6 +31,8 @@
 
         $linksSales = [
             ['title' => 'اطلاعات ثبت شده در فرم', 'route' => 'admin.contacts', 'icon' => 'users'],
+            ['title' => 'ثبت پیش فاکتور', 'url' => 'http://192.168.1.30:8080/preinvoice/create', 'icon' => 'doc'],
+            ['title' => 'نمایش کالا ها و موجودی', 'url' => 'http://192.168.1.30:8080/products', 'icon' => 'box'],
         ];
 
         $linksUser = [
@@ -74,7 +76,8 @@
         foreach ($roleLinks as $role => $links) {
             if ($user->hasRole($role)) {
                 foreach ($links as $item) {
-                    $allLinks[$item['route']] = $item;
+                    $linkKey = $item['route'] ?? $item['url'];
+                    $allLinks[$linkKey] = $item;
                 }
             }
         }
@@ -119,7 +122,7 @@
         ];
 
         foreach ($allLinks as $link) {
-            $route = $link['route'];
+            $route = $link['route'] ?? null;
 
             if (in_array($route, [
                 'marketer.customers.index',
@@ -1054,7 +1057,7 @@
                                 <div class="row g-3">
                                     @foreach($group['items'] as $item)
                                         <div class="col-12 col-md-6">
-                                            <a href="{{ route($item['route']) }}" class="sd-link-item">
+                                            <a href="{{ $item['url'] ?? route($item['route']) }}" class="sd-link-item" @if(isset($item['url'])) target="_blank" rel="noopener noreferrer" @endif>
                                                 <span class="sd-muted">‹</span>
 
                                                 <div class="sd-row-reverse gap-3">
