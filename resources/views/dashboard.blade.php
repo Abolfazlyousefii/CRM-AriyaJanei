@@ -24,15 +24,15 @@
 
         $linksMarketer = [
             ['title' => 'مشتریان من', 'route' => 'marketer.customers.index', 'icon' => 'users'],
-            ['title' => 'فروش (درحال توسعه)', 'route' => 'dashboard', 'icon' => 'chart'],
+         
             ['title' => 'مشتریان و شماره‌ها', 'route' => 'customersAdmin2.index', 'icon' => 'user-group'],
-            ['title' => 'ثبت سفارش', 'route' => 'marketer.orders.create', 'icon' => 'doc'],
+           ['title' => 'ثبت پیش فاکتور', 'url' => 'http://192.168.1.30:8080/preinvoice/create', 'icon' => 'doc'],
+            ['title' => 'نمایش کالا ها و موجودی', 'url' => 'http://192.168.1.30:8080/products', 'icon' => 'box'],
         ];
 
         $linksSales = [
             ['title' => 'اطلاعات ثبت شده در فرم', 'route' => 'admin.contacts', 'icon' => 'users'],
-            ['title' => 'ثبت پیش فاکتور', 'url' => 'http://192.168.1.30:8080/preinvoice/create', 'icon' => 'doc'],
-            ['title' => 'نمایش کالا ها و موجودی', 'url' => 'http://192.168.1.30:8080/products', 'icon' => 'box'],
+           
         ];
 
         $linksUser = [
