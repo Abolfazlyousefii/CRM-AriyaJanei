@@ -20,7 +20,7 @@ class LeaveController extends Controller
 
         $query = Leave::with(['user', 'substituteUser', 'manager'])->latest();
 
-        if ($user->hasRole('Admin') || $user->hasAnyRole(['internalManager', 'InternalManager'])) {
+        if ($user->hasAnyRole(['Admin', 'Accountant', 'internalManager', 'InternalManager'])) {
             // همه را می‌بیند
         } elseif ($user->hasRole('Manager')) {
             $query->where(function ($q) use ($user) {
@@ -410,7 +410,7 @@ class LeaveController extends Controller
 
         $query = Leave::query()->with(['user', 'manager']);
 
-        if ($user->hasRole('Admin') || $user->hasAnyRole(['internalManager', 'InternalManager'])) {
+        if ($user->hasAnyRole(['Admin', 'Accountant', 'internalManager', 'InternalManager'])) {
             // همه را می‌بیند
         } elseif ($user->hasRole('Manager')) {
             $query->where(function ($q) use ($user) {
@@ -479,7 +479,44 @@ class LeaveController extends Controller
         ]);
     }
 
-    private function validateLeaveForm(Request $request, User $user, ?int $leaveId = null): array
+    
+
+    public function printMonthly(Request $request)
+    {
+        $request->validate([
+            'month' => ['required', 'regex:/^\d{4}\/\d{2}$/'],
+        ], [
+            'month.required' => 'انتخاب ماه الزامی است.',
+            'month.regex' => 'فرمت ماه باید مانند 1405/02 باشد.',
+        ]);
+
+        $user = Auth::user();
+
+        if (! $user->hasRole('Accountant')) {
+            abort(403);
+        }
+
+        [$jy, $jm] = array_map('intval', explode('/', $request->month));
+
+        $monthStart = Carbon::instance(
+            Verta::parse(sprintf('%04d/%02d/01', $jy, $jm))->startMonth()->datetime()
+        )->startOfDay();
+
+        $monthEnd = Carbon::instance(
+            Verta::parse(sprintf('%04d/%02d/01', $jy, $jm))->endMonth()->datetime()
+        )->endOfDay();
+
+        $leaves = Leave::with(['user', 'substituteUser', 'manager'])
+            ->whereBetween('start_date', [$monthStart, $monthEnd])
+            ->latest()
+            ->get();
+
+        return view('Leaves.print-monthly', [
+            'leaves' => $leaves,
+            'month' => $request->month,
+        ]);
+    }
+private function validateLeaveForm(Request $request, User $user, ?int $leaveId = null): array
     {
         $validated = $request->validate([
             'leave_type'         => 'required|in:اضطراری,استعلاجی,استحقاقی',
