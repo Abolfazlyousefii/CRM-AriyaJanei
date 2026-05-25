@@ -498,8 +498,13 @@ class LeaveController extends Controller
 
         [$jy, $jm] = array_map('intval', explode('/', $request->month));
 
-        $monthStart = Verta::parse(sprintf('%04d/%02d/01', $jy, $jm))->startMonth()->datetime()->startOfDay();
-        $monthEnd = Verta::parse(sprintf('%04d/%02d/01', $jy, $jm))->endMonth()->datetime()->endOfDay();
+        $monthStart = Carbon::instance(
+            Verta::parse(sprintf('%04d/%02d/01', $jy, $jm))->startMonth()->datetime()
+        )->startOfDay();
+
+        $monthEnd = Carbon::instance(
+            Verta::parse(sprintf('%04d/%02d/01', $jy, $jm))->endMonth()->datetime()
+        )->endOfDay();
 
         $leaves = Leave::with(['user', 'substituteUser', 'manager'])
             ->whereBetween('start_date', [$monthStart, $monthEnd])
