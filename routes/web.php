@@ -597,6 +597,7 @@ Route::get('/admin/contacts/export', [FormController::class, 'exportCsv'])
 
 
 Route::get('/leaves/export/csv', [LeaveController::class, 'exportCsv'])->name('leaves.export.csv');
+Route::get('/leaves/print/monthly', [LeaveController::class, 'printMonthly'])->name('leaves.print.monthly')->middleware(['auth','role:Accountant']);
 
 
 Route::post('/admin/access-code', function (\Illuminate\Http\Request $request) {

@@ -20,6 +20,35 @@
 
         <a href="{{ route('leaves.create') }}" class="btn btn-primary mb-4">ایجاد مرخصی جدید</a>
 
+
+
+        @if(auth()->user()->hasRole('Accountant'))
+            <div class="card mb-3 shadow-sm">
+                <div class="card-body">
+                    <form method="GET" action="{{ route('leaves.print.monthly') }}" target="_blank" class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label">ماه شمسی</label>
+                            <input
+                                type="text"
+                                name="month"
+                                class="form-control"
+                                value="{{ request('month') }}"
+                                placeholder="1405/02"
+                                pattern="\d{4}/\d{2}"
+                                required
+                            >
+                        </div>
+
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-secondary w-100">
+                                پرینت مرخصی‌های ماه
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        @endif
+
         <div class="card mb-3 shadow-sm">
             <div class="card-body">
                 <form method="GET" action="{{ route('leaves.export.csv') }}" class="row g-2 align-items-end">
