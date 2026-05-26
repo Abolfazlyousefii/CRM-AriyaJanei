@@ -134,6 +134,15 @@
             $addLink($item);
         }
 
+        if ($user) {
+            $addLink([
+                'title' => 'خروج از حساب کاربری',
+                'action' => 'logout',
+                'icon' => 'logout',
+                'group' => 'requests',
+            ]);
+        }
+
         $allLinks = array_values($allLinks);
 
         $groups = [
@@ -305,6 +314,7 @@
                     'bolt' => '<svg xmlns="http://www.w3.org/2000/svg" class="dash-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>',
                     'box' => '<svg xmlns="http://www.w3.org/2000/svg" class="dash-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M20 12l-8 5-8-5m16 0-8-5-8 5m16 0v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/></svg>',
                     'checklist' => '<svg xmlns="http://www.w3.org/2000/svg" class="dash-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M9 5h12M9 12h12M9 19h12M5 5h.01M5 12h.01M5 19h.01"/></svg>',
+                    'logout' => '<svg xmlns="http://www.w3.org/2000/svg" class="dash-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>',
                     'megaphone' => '<svg xmlns="http://www.w3.org/2000/svg" class="dash-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3 11v2a2 2 0 0 0 2 2h2l3 5h2l-1.5-5H15l4 3V6l-4 3H5a2 2 0 0 0-2 2z"/></svg>',
                 ];
 
@@ -1099,27 +1109,47 @@
                                         @endphp
 
                                         <div class="col-12 col-md-6">
-                                            <a href="{{ $href }}"
-                                               class="sd-link-item {{ $isInventoryLink ? 'js-inventory-auto-login' : '' }}"
-                                               @if($isExternalUrl) target="_blank" rel="noopener noreferrer" @endif
-                                               @if($isInventoryLink)
-                                                   data-auto-login-url="{{ $autoLoginUrl }}"
-                                                   data-target-url="{{ $targetUrl }}"
-                                                   data-phone="{{ $inventoryPhone }}"
-                                               @endif>
-                                                <span class="sd-muted">‹</span>
+                                            @if(($item['action'] ?? null) === 'logout')
+                                                <form method="POST" action="{{ route('logout') }}" class="m-0">
+                                                    @csrf
+                                                    <button type="submit" class="sd-link-item w-100 border-0 text-start">
+                                                        <span class="sd-muted">‹</span>
 
-                                                <div class="sd-row-reverse gap-3">
-                                                    <div class="sd-icon-wrap sd-surface-soft">
-                                                        {!! dash_icon_pro($item['icon'] ?? 'doc') !!}
-                                                    </div>
+                                                        <div class="sd-row-reverse gap-3">
+                                                            <div class="sd-icon-wrap sd-surface-soft">
+                                                                {!! dash_icon_pro($item['icon'] ?? 'doc') !!}
+                                                            </div>
 
-                                                    <div class="sd-text-end">
-                                                        <div class="sd-link-title fw-semibold">{{ $item['title'] }}</div>
-                                                        <div class="sd-link-subtitle small">ورود به بخش</div>
+                                                            <div class="sd-text-end">
+                                                                <div class="sd-link-title fw-semibold">{{ $item['title'] }}</div>
+                                                                <div class="sd-link-subtitle small">خروج از حساب</div>
+                                                            </div>
+                                                        </div>
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <a href="{{ $href }}"
+                                                   class="sd-link-item {{ $isInventoryLink ? 'js-inventory-auto-login' : '' }}"
+                                                   @if($isExternalUrl) target="_blank" rel="noopener noreferrer" @endif
+                                                   @if($isInventoryLink)
+                                                       data-auto-login-url="{{ $autoLoginUrl }}"
+                                                       data-target-url="{{ $targetUrl }}"
+                                                       data-phone="{{ $inventoryPhone }}"
+                                                   @endif>
+                                                    <span class="sd-muted">‹</span>
+
+                                                    <div class="sd-row-reverse gap-3">
+                                                        <div class="sd-icon-wrap sd-surface-soft">
+                                                            {!! dash_icon_pro($item['icon'] ?? 'doc') !!}
+                                                        </div>
+
+                                                        <div class="sd-text-end">
+                                                            <div class="sd-link-title fw-semibold">{{ $item['title'] }}</div>
+                                                            <div class="sd-link-subtitle small">ورود به بخش</div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </a>
+                                                </a>
+                                            @endif
                                         </div>
                                     @endforeach
                                 </div>
