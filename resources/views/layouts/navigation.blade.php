@@ -936,12 +936,9 @@
                         @endif
                     </button>
 
-                    <form method="POST" action="{{ route('logout') }}" class="m-0">
-                        @csrf
-                        <button type="submit" class="btn mx-icon-btn" aria-label="خروج" title="خروج">
-                            <i class="bi bi-box-arrow-right"></i>
-                        </button>
-                    </form>
+                    <button type="button" class="btn mx-icon-btn" onclick="window.history.back()" aria-label="بازگشت" title="بازگشت">
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
                 @endauth
             </div>
 
@@ -972,12 +969,9 @@
                         @endif
                     </button>
 
-                    <form method="POST" action="{{ route('logout') }}" class="m-0">
-                        @csrf
-                        <button type="submit" class="btn mx-icon-btn" aria-label="خروج" title="خروج">
-                            <i class="bi bi-box-arrow-right"></i>
-                        </button>
-                    </form>
+                    <button type="button" class="btn mx-icon-btn" onclick="window.history.back()" aria-label="بازگشت" title="بازگشت">
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
                 @endauth
             </div>
         </div>
