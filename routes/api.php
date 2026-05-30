@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ExternalCustomerSyncController;
 use App\Http\Controllers\Api\ExternalUserSyncController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -35,4 +36,6 @@ Route::post('/token-for-client', function (Request $request) {
 
     return response()->json(['token' => $token]);
 });
-    Route::get('/external/users', [ExternalUserSyncController::class, 'index']);
+Route::get('/external/users', [ExternalUserSyncController::class, 'index']);
+Route::get('/external/customers', [ExternalCustomerSyncController::class, 'index']);
+Route::post('/external/customers', [ExternalCustomerSyncController::class, 'store']);
