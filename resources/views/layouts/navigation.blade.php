@@ -936,8 +936,8 @@
                         @endif
                     </button>
 
-                    <button type="button" class="btn mx-icon-btn" onclick="window.history.back()" aria-label="بازگشت" title="بازگشت">
-                        <i class="bi bi-arrow-right"></i>
+                    <button type="button" class="btn  mx-icon-btn" onclick="window.history.back()" aria-label="بازگشت" title="بازگشت" style:"background-color:="" #0f172a"="" style="background-color: #3d3d3d !important;">
+                        <i class="bi bi-arrow-left"></i>
                     </button>
                 @endauth
             </div>

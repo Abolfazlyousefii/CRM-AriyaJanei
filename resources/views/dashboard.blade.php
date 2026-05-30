@@ -139,7 +139,7 @@
                 'title' => 'خروج از حساب کاربری',
                 'action' => 'logout',
                 'icon' => 'logout',
-                'group' => 'requests',
+                'group' => 'management',
             ]);
         }
 
