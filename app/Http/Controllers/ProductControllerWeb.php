@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CustomProduct;
+use App\Models\ProductPriceOverride;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -166,6 +167,55 @@ class ProductControllerWeb extends Controller
             'q' => $validated['redirect_q'] ?? null,
             'category' => $categoryValue ?: ($validated['redirect_category'] ?? null),
         ]))->with('success', 'محصول جدید به لیست اضافه شد.');
+    }
+
+    public function updatePricing(Request $request)
+    {
+        $validated = $request->validate([
+            'product_key' => ['required', 'string', 'max:255'],
+            'base_price' => ['nullable', 'integer', 'min:0'],
+            'discount' => ['nullable', 'integer', 'min:0'],
+            'final_price' => ['nullable', 'integer', 'min:0'],
+            'quantity' => ['nullable', 'integer', 'min:0'],
+            'redirect_q' => ['nullable', 'string', 'max:255'],
+            'redirect_category' => ['nullable', 'string', 'max:255'],
+            'redirect_page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $basePrice = (int) ($validated['base_price'] ?? 0);
+        $discount = (int) ($validated['discount'] ?? 0);
+        $finalPrice = (int) ($validated['final_price'] ?? 0);
+        if ($finalPrice === 0 && $basePrice > 0) {
+            $finalPrice = max(0, $basePrice - $discount);
+        }
+        $quantity = (int) ($validated['quantity'] ?? 0);
+        $productKey = $validated['product_key'];
+
+        if (Str::startsWith($productKey, 'custom:')) {
+            $customProductId = (int) Str::after($productKey, 'custom:');
+            CustomProduct::whereKey($customProductId)->update([
+                'base_price' => $basePrice,
+                'discount' => $discount,
+                'final_price' => $finalPrice,
+                'quantity' => $quantity,
+            ]);
+        } else {
+            ProductPriceOverride::updateOrCreate(
+                ['product_key' => $productKey],
+                [
+                    'base_price' => $basePrice,
+                    'discount' => $discount,
+                    'final_price' => $finalPrice,
+                    'quantity' => $quantity,
+                ]
+            );
+        }
+
+        return redirect()->route('products.index', array_filter([
+            'q' => $validated['redirect_q'] ?? null,
+            'category' => $validated['redirect_category'] ?? null,
+            'page' => $validated['redirect_page'] ?? null,
+        ]))->with('success', 'قیمت و موجودی محصول ذخیره شد.');
     }
 
     public function show(string $slug)
@@ -450,6 +500,29 @@ class ProductControllerWeb extends Controller
         return $slug;
     }
 
+    protected function applyPriceOverride(array $product): array
+    {
+        $printKey = (string) ($product['__print_key'] ?? '');
+        if ($printKey === '' || Str::startsWith($printKey, 'custom:')) {
+            return $product;
+        }
+
+        $override = ProductPriceOverride::where('product_key', $printKey)->first();
+        if (!$override) {
+            return $product;
+        }
+
+        $product['__pricing'] = [
+            'base' => (int) $override->base_price,
+            'final' => (int) $override->final_price,
+            'discount' => (int) $override->discount,
+        ];
+        $product['quantity'] = (int) $override->quantity;
+        $product['__has_price_override'] = true;
+
+        return $product;
+    }
+
     /** نرمال‌سازی نام دسته و قیمت‌های محصول و تنوع‌ها */
     protected function normalizeProduct(array $p, array $catById): array
     {
@@ -492,6 +565,6 @@ class ProductControllerWeb extends Controller
         $p['__pricing']       = ['base' => $base, 'final' => $final, 'discount' => $disc];
         $p['varieties']       = $varieties;
 
-        return $p;
+        return $this->applyPriceOverride($p);
     }
 }

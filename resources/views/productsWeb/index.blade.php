@@ -30,6 +30,8 @@
             }
             .product-select-cell { width: 52px; }
             .product-image-cell { width: 150px; }
+            .product-price-input { min-width: 110px; }
+            .product-quantity-input { min-width: 90px; }
         </style>
 
         <div class="row">
@@ -130,8 +132,9 @@
                     <input type="hidden" name="q" value="{{ $query }}">
                     <input type="hidden" name="category" value="{{ $category }}">
                     <input type="hidden" name="page" value="{{ $pagination['current_page'] ?? 1 }}">
+                </form>
 
-                    <div class="card shadow-sm">
+                <div class="card shadow-sm">
                         <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center gap-2 flex-wrap">
                             <div>
                                 <span>لیست محصولات</span>
@@ -144,7 +147,7 @@
                                     <input class="form-check-input" type="checkbox" id="selectAllProducts">
                                     <label class="form-check-label small" for="selectAllProducts">انتخاب همه</label>
                                 </div>
-                                <button class="btn btn-sm btn-danger" type="submit">
+                                <button class="btn btn-sm btn-danger" type="submit" form="productsPrintForm">
                                     پرینت / PDF موارد انتخاب‌شده
                                 </button>
                             </div>
@@ -162,16 +165,20 @@
                                         <th>تخفیف</th>
                                         <th>قیمت نهایی</th>
                                         <th>موجودی</th>
+                                        <th>ذخیره</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($products as $product)
                                         <tr class="table-primary">
-                                            <td colspan="8" class="text-start">
+                                            <td colspan="9" class="text-start">
                                                 <strong>{{ $product['title'] ?? '—' }}</strong>
                                                 <small class="text-muted">({{ $product['slug'] ?? '' }})</small>
                                                 @if(!empty($product['__is_custom']))
                                                     <span class="badge bg-info text-dark ms-2">افزوده‌شده</span>
+                                                @endif
+                                                @if(!empty($product['__has_price_override']))
+                                                    <span class="badge bg-warning text-dark ms-2">قیمت/موجودی ویرایش‌شده</span>
                                                 @endif
                                             </td>
                                         </tr>
@@ -180,10 +187,12 @@
                                             $pBase  = data_get($product, '__pricing.base', 0);
                                             $pFinal = data_get($product, '__pricing.final', $pBase);
                                             $pDisc  = data_get($product, '__pricing.discount', max(0, $pBase - $pFinal));
+                                            $printKey = $product['__print_key'] ?? ($product['slug'] ?? '');
+                                            $editFormId = 'product-pricing-' . $loop->iteration;
                                         @endphp
                                         <tr>
                                             <td>
-                                                <input class="form-check-input product-print-checkbox" type="checkbox" name="selected[]" value="{{ $product['__print_key'] ?? ($product['slug'] ?? '') }}">
+                                                <input class="form-check-input product-print-checkbox" type="checkbox" name="selected[]" value="{{ $printKey }}" form="productsPrintForm">
                                             </td>
                                             <td>
                                                 @if(!empty($product['__image_url']))
@@ -194,10 +203,28 @@
                                             </td>
                                             <td>{{ $product['title'] ?? '—' }}</td>
                                             <td>—</td>
-                                            <td>{{ number_format($pBase) }} تومان</td>
-                                            <td>{{ $pDisc > 0 ? number_format($pDisc).' تومان' : '—' }}</td>
-                                            <td>{{ number_format($pFinal) }} تومان</td>
-                                            <td>{{ $product['quantity'] ?? '—' }}</td>
+                                            <td>
+                                                <input class="form-control form-control-sm text-center product-price-input" type="number" name="base_price" value="{{ $pBase }}" min="0" form="{{ $editFormId }}">
+                                            </td>
+                                            <td>
+                                                <input class="form-control form-control-sm text-center product-price-input" type="number" name="discount" value="{{ $pDisc }}" min="0" form="{{ $editFormId }}">
+                                            </td>
+                                            <td>
+                                                <input class="form-control form-control-sm text-center product-price-input" type="number" name="final_price" value="{{ $pFinal }}" min="0" form="{{ $editFormId }}">
+                                            </td>
+                                            <td>
+                                                <input class="form-control form-control-sm text-center product-quantity-input" type="number" name="quantity" value="{{ $product['quantity'] ?? 0 }}" min="0" form="{{ $editFormId }}">
+                                            </td>
+                                            <td>
+                                                <form id="{{ $editFormId }}" method="POST" action="{{ route('products.pricing.update') }}">
+                                                    @csrf
+                                                    <input type="hidden" name="product_key" value="{{ $printKey }}">
+                                                    <input type="hidden" name="redirect_q" value="{{ $query }}">
+                                                    <input type="hidden" name="redirect_category" value="{{ $category }}">
+                                                    <input type="hidden" name="redirect_page" value="{{ $pagination['current_page'] ?? 1 }}">
+                                                    <button class="btn btn-sm btn-success" type="submit">ذخیره</button>
+                                                </form>
+                                            </td>
                                         </tr>
 
                                         @forelse($product['varieties'] ?? [] as $variety)
@@ -227,12 +254,13 @@
                                                 <td>{{ $vDisc > 0 ? number_format($vDisc).' تومان' : '—' }}</td>
                                                 <td>{{ number_format($vFinal) }} تومان</td>
                                                 <td>{{ $variety['quantity'] ?? 0 }}</td>
+                                                <td></td>
                                             </tr>
                                         @empty
                                             {{-- اگر تنوعی نبود، همان ردیف کلی کفایت می‌کند --}}
                                         @endforelse
                                     @empty
-                                        <tr><td colspan="8">هیچ محصولی موجود نیست. از فرم بالا می‌توانید محصول اضافه کنید.</td></tr>
+                                        <tr><td colspan="9">هیچ محصولی موجود نیست. از فرم بالا می‌توانید محصول اضافه کنید.</td></tr>
                                     @endforelse
                                 </tbody>
                             </table>
