@@ -70,16 +70,16 @@
             font-weight: 700;
         }
         .product-image {
-            width: 68px;
-            height: 68px;
+            width: 120px;
+            height: 120px;
             object-fit: cover;
             border: 1px solid #d1d5db;
             border-radius: 8px;
             background: #f9fafb;
         }
         .image-placeholder {
-            width: 68px;
-            height: 68px;
+            width: 120px;
+            height: 120px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -108,6 +108,7 @@
                     @if(!empty($query)) | جستجو: {{ $query }} @endif
                     @if(!empty($category)) | دسته: {{ $category }} @endif
                     | صفحه: {{ $pagination['current_page'] ?? 1 }} از {{ $pagination['last_page'] ?? 1 }}
+                    | تعداد انتخاب‌شده: {{ count($selected ?? []) }}
                 </p>
             </div>
             <button type="button" class="btn no-print" onclick="window.print()">چاپ / ذخیره PDF</button>
@@ -184,7 +185,7 @@
                     @empty
                     @endforelse
                 @empty
-                    <tr><td colspan="7">هیچ محصولی موجود نیست.</td></tr>
+                    <tr><td colspan="7">هیچ محصولی برای پرینت انتخاب نشده است.</td></tr>
                 @endforelse
             </tbody>
         </table>
