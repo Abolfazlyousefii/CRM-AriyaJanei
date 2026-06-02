@@ -278,7 +278,7 @@
                             </table>
                         </div>
                     </div>
-                </div>
+                </form>
 
                 {{-- صفحه‌بندی --}}
                 <div class="mt-3 d-flex justify-content-center">
