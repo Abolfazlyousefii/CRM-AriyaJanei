@@ -7,7 +7,28 @@
         @if(session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
         @if(session('error'))   <div class="alert alert-danger">{{ session('error') }}</div>   @endif
 
-        
+        <style>
+            .product-thumb {
+                width: 72px;
+                height: 72px;
+                object-fit: cover;
+                border-radius: .5rem;
+                border: 1px solid #dee2e6;
+                background: #f8f9fa;
+            }
+            .product-thumb-placeholder {
+                width: 72px;
+                height: 72px;
+                border-radius: .5rem;
+                border: 1px dashed #ced4da;
+                background: #f8f9fa;
+                color: #adb5bd;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+            }
+        </style>
 
         <div class="row">
             {{-- سایدبار دسته‌ها --}}
@@ -40,17 +61,23 @@
             {{-- جدول محصولات --}}
             <section class="col-12 col-lg-9">
                 <div class="card shadow-sm">
-                    <div class="card-header bg-light fw-bold d-flex justify-content-between">
-                        <span>لیست محصولات</span>
-                        @if(!empty($category))
-                            <small class="text-primary">فیلتر دسته: {{ $category }}</small>
-                        @endif
+                    <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                        <div>
+                            <span>لیست محصولات</span>
+                            @if(!empty($category))
+                                <small class="text-primary me-2">فیلتر دسته: {{ $category }}</small>
+                            @endif
+                        </div>
+                        <a class="btn btn-sm btn-danger" target="_blank" href="{{ route('products.pdf', request()->only(['q', 'category', 'page'])) }}">
+                            خروجی PDF
+                        </a>
                     </div>
 
                     <div class="card-body p-0">
                         <table class="table table-bordered table-hover mb-0 text-center align-middle">
                             <thead class="table-secondary">
                                 <tr>
+                                    <th>عکس</th>
                                     <th>نام محصول</th>
                                   
                                     <th>تنوع‌ها / ویژگی</th>
@@ -64,7 +91,7 @@
                             <tbody>
                                 @forelse($products as $product)
                                     <tr class="table-primary">
-                                        <td colspan="8" class="text-start">
+                                        <td colspan="7" class="text-start">
                                             <strong>{{ $product['title'] ?? '—' }}</strong>
                                             <small class="text-muted">({{ $product['slug'] ?? '' }})</small>
                                         </td>
@@ -76,6 +103,13 @@
                                         $pDisc  = data_get($product, '__pricing.discount', max(0, $pBase - $pFinal));
                                     @endphp
                                     <tr>
+                                        <td>
+                                            @if(!empty($product['__image_url']))
+                                                <img class="product-thumb" src="{{ $product['__image_url'] }}" alt="{{ $product['title'] ?? 'تصویر محصول' }}" loading="lazy">
+                                            @else
+                                                <span class="product-thumb-placeholder" title="تصویر موجود نیست">🖼️</span>
+                                            @endif
+                                        </td>
                                         <td>{{ $product['title'] ?? '—' }}</td>
                                      
                                         <td>—</td>
@@ -93,6 +127,7 @@
                                             $vDisc  = data_get($variety, '__pricing.discount', max(0, $vBase - $vFinal));
                                         @endphp
                                         <tr>
+                                            <td></td>
                                             <td>—</td>
                                           
                                             <td>
@@ -118,7 +153,7 @@
                                         {{-- اگر تنوعی نبود، همان ردیف کلی کفایت می‌کند --}}
                                     @endforelse
                                 @empty
-                                    <tr><td colspan="8">هیچ محصولی موجود نیست.</td></tr>
+                                    <tr><td colspan="7">هیچ محصولی موجود نیست.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>

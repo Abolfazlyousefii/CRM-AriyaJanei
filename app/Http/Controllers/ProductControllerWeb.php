@@ -60,6 +60,50 @@ class ProductControllerWeb extends Controller
         ]);
     }
 
+    public function pdf(Request $request)
+    {
+        $page     = (int) $request->get('page', 1);
+        $query    = trim((string) $request->get('q', ''));
+        $category = trim((string) $request->get('category', ''));
+
+        [$categories, $catById, $catBySlug] = $this->fetchAndMapCategories();
+
+        $filterId = null;
+        $filterSlug = null;
+        if ($category !== '') {
+            if (ctype_digit($category)) {
+                $filterId = (int) $category;
+                if (isset($catById[$filterId]['slug'])) {
+                    $filterSlug = $catById[$filterId]['slug'];
+                }
+            } else {
+                $filterSlug = $category;
+                if (isset($catBySlug[$filterSlug]['id'])) {
+                    $filterId = (int) $catBySlug[$filterSlug]['id'];
+                }
+            }
+        }
+
+        [$products, $pagination] = $this->fetchProductsSmart($page, $query, $filterId, $filterSlug);
+
+        if ($category !== '' && empty($products)) {
+            [$all, $pagination] = $this->fetchProductsSmart($page, $query, null, null);
+            $products = $this->localFilterByCategory($all, $filterId, $filterSlug);
+        }
+
+        $products = array_map(function ($p) use ($catById) {
+            return $this->normalizeProduct($p, $catById);
+        }, $products);
+
+        return view('productsWeb.pdf', [
+            'products' => $products,
+            'pagination' => $pagination,
+            'query' => $query,
+            'category' => $category,
+            'generatedAt' => now(),
+        ]);
+    }
+
     public function show(string $slug)
     {
         try {
@@ -234,6 +278,45 @@ class ProductControllerWeb extends Controller
         })->values()->all();
     }
 
+
+    protected function extractProductImageUrl(array $product): ?string
+    {
+        $candidate = data_get($product, 'image')
+            ?? data_get($product, 'image_url')
+            ?? data_get($product, 'thumbnail')
+            ?? data_get($product, 'thumbnail_url')
+            ?? data_get($product, 'cover')
+            ?? data_get($product, 'cover_url')
+            ?? data_get($product, 'main_image')
+            ?? data_get($product, 'main_image.url')
+            ?? data_get($product, 'media.0.url')
+            ?? data_get($product, 'images.0.url')
+            ?? data_get($product, 'images.0.path')
+            ?? data_get($product, 'images.0')
+            ?? data_get($product, 'gallery.0.url')
+            ?? data_get($product, 'gallery.0.path')
+            ?? data_get($product, 'photos.0.url')
+            ?? data_get($product, 'photos.0.path');
+
+        if (is_array($candidate)) {
+            $candidate = data_get($candidate, 'url')
+                ?? data_get($candidate, 'path')
+                ?? data_get($candidate, 'src')
+                ?? data_get($candidate, 'file');
+        }
+
+        if (!is_string($candidate) || trim($candidate) === '') {
+            return null;
+        }
+
+        $candidate = trim($candidate);
+        if (Str::startsWith($candidate, ['http://', 'https://', 'data:'])) {
+            return $candidate;
+        }
+
+        return rtrim('https://api.ariyajanebi.ir', '/') . '/' . ltrim($candidate, '/');
+    }
+
     /** نرمال‌سازی نام دسته و قیمت‌های محصول و تنوع‌ها */
     protected function normalizeProduct(array $p, array $catById): array
     {
@@ -268,6 +351,8 @@ class ProductControllerWeb extends Controller
             $varieties[] = $v;
         }
 
+
+        $p['__image_url']     = $this->extractProductImageUrl($p);
         $p['__category_name'] = $categoryName;
         $p['__category_slug'] = $categorySlug;
         $p['__pricing']       = ['base' => $base, 'final' => $final, 'discount' => $disc];
