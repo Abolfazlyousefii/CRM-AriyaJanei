@@ -152,7 +152,7 @@
                         <td>{{ number_format($pBase) }} تومان</td>
                         <td>{{ $pDisc > 0 ? number_format($pDisc).' تومان' : '—' }}</td>
                         <td>{{ number_format($pFinal) }} تومان</td>
-                        <td>—</td>
+                        <td>{{ $product['quantity'] ?? 0 }}</td>
                     </tr>
 
                     @forelse($product['varieties'] ?? [] as $variety)

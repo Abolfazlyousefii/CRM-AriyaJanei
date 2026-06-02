@@ -552,6 +552,14 @@ class ProductControllerWeb extends Controller
         $product['quantity'] = (int) $override->quantity;
         $product['__has_price_override'] = true;
 
+        $product['varieties'] = array_map(function ($variety) use ($product) {
+            $variety['__pricing'] = $product['__pricing'];
+            $variety['quantity'] = $product['quantity'];
+            $variety['__has_price_override'] = true;
+
+            return $variety;
+        }, (array) ($product['varieties'] ?? []));
+
         return $product;
     }
 
