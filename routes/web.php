@@ -444,6 +444,9 @@ use App\Http\Controllers\ProductControllerWeb;
 
 
 Route::get('/products', [ProductControllerWeb::class, 'index'])->name('products.index');
+Route::get('/products/pdf', [ProductControllerWeb::class, 'pdf'])->name('products.pdf');
+Route::post('/products/custom', [ProductControllerWeb::class, 'storeCustom'])->name('products.custom.store');
+Route::post('/products/pricing', [ProductControllerWeb::class, 'updatePricing'])->name('products.pricing.update');
 Route::get('/products/{slug}', [ProductControllerWeb::class, 'show'])->name('products.show');
 
 

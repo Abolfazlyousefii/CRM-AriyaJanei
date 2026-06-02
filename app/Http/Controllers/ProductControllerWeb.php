@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CustomProduct;
+use App\Models\ProductPriceOverride;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProductControllerWeb extends Controller
@@ -51,6 +54,8 @@ class ProductControllerWeb extends Controller
             return $this->normalizeProduct($p, $catById);
         }, $products);
 
+        $products = array_merge($products, $this->fetchCustomProducts($query, $category));
+
         return view('productsWeb.index', [
             'products'   => $products,
             'pagination' => $pagination,
@@ -58,6 +63,144 @@ class ProductControllerWeb extends Controller
             'query'      => $query,
             'category'   => $category, // برای وضعیت انتخاب شده‌ی UI
         ]);
+    }
+
+    public function pdf(Request $request)
+    {
+        $page     = (int) $request->get('page', 1);
+        $query    = trim((string) $request->get('q', ''));
+        $category = trim((string) $request->get('category', ''));
+
+        [$categories, $catById, $catBySlug] = $this->fetchAndMapCategories();
+
+        $filterId = null;
+        $filterSlug = null;
+        if ($category !== '') {
+            if (ctype_digit($category)) {
+                $filterId = (int) $category;
+                if (isset($catById[$filterId]['slug'])) {
+                    $filterSlug = $catById[$filterId]['slug'];
+                }
+            } else {
+                $filterSlug = $category;
+                if (isset($catBySlug[$filterSlug]['id'])) {
+                    $filterId = (int) $catBySlug[$filterSlug]['id'];
+                }
+            }
+        }
+
+        $pagination = ['current_page' => $page, 'last_page' => $page];
+        $selected = array_values(array_unique(array_filter(array_map('strval', (array) $request->get('selected', [])))));
+        $products = !empty($selected)
+            ? $this->fetchSelectedProducts($selected, $catById)
+            : [];
+
+        return view('productsWeb.pdf', [
+            'products' => $products,
+            'pagination' => $pagination,
+            'query' => $query,
+            'category' => $category,
+            'generatedAt' => now(),
+            'selected' => $selected,
+        ]);
+    }
+
+    public function storeCustom(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'category_value' => ['nullable', 'string', 'max:255'],
+            'image' => ['nullable', 'image', 'max:4096'],
+            'base_price' => ['nullable', 'integer', 'min:0'],
+            'discount' => ['nullable', 'integer', 'min:0'],
+            'final_price' => ['nullable', 'integer', 'min:0'],
+            'quantity' => ['nullable', 'integer', 'min:0'],
+            'redirect_q' => ['nullable', 'string', 'max:255'],
+            'redirect_category' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        [$categories] = $this->fetchAndMapCategories();
+        $categoryValue = $validated['category_value'] ?? $validated['redirect_category'] ?? null;
+        $categoryValue = $categoryValue !== '' ? $categoryValue : null;
+
+        $categoryName = $this->findCategoryName($categories, $categoryValue);
+        $basePrice = (int) ($validated['base_price'] ?? 0);
+        $discount = (int) ($validated['discount'] ?? 0);
+        $finalPrice = (int) ($validated['final_price'] ?? 0);
+        if ($finalPrice === 0 && $basePrice > 0) {
+            $finalPrice = max(0, $basePrice - $discount);
+        }
+
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('custom_products', 'public');
+        }
+
+        CustomProduct::create([
+            'title' => $validated['title'],
+            'slug' => $this->uniqueCustomProductSlug($validated['title']),
+            'category_value' => $categoryValue,
+            'category_name' => $categoryName,
+            'image_path' => $imagePath,
+            'base_price' => $basePrice,
+            'discount' => $discount,
+            'final_price' => $finalPrice,
+            'quantity' => (int) ($validated['quantity'] ?? 0),
+        ]);
+
+        return redirect()->route('products.index', array_filter([
+            'q' => $validated['redirect_q'] ?? null,
+            'category' => $categoryValue ?: ($validated['redirect_category'] ?? null),
+        ]))->with('success', 'محصول جدید به لیست اضافه شد.');
+    }
+
+    public function updatePricing(Request $request)
+    {
+        $validated = $request->validate([
+            'product_key' => ['required', 'string', 'max:255'],
+            'base_price' => ['nullable', 'integer', 'min:0'],
+            'discount' => ['nullable', 'integer', 'min:0'],
+            'final_price' => ['nullable', 'integer', 'min:0'],
+            'quantity' => ['nullable', 'integer', 'min:0'],
+            'redirect_q' => ['nullable', 'string', 'max:255'],
+            'redirect_category' => ['nullable', 'string', 'max:255'],
+            'redirect_page' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $basePrice = (int) ($validated['base_price'] ?? 0);
+        $discount = (int) ($validated['discount'] ?? 0);
+        $finalPrice = (int) ($validated['final_price'] ?? 0);
+        if ($finalPrice === 0 && $basePrice > 0) {
+            $finalPrice = max(0, $basePrice - $discount);
+        }
+        $quantity = (int) ($validated['quantity'] ?? 0);
+        $productKey = $validated['product_key'];
+
+        if (Str::startsWith($productKey, 'custom:')) {
+            $customProductId = (int) Str::after($productKey, 'custom:');
+            CustomProduct::whereKey($customProductId)->update([
+                'base_price' => $basePrice,
+                'discount' => $discount,
+                'final_price' => $finalPrice,
+                'quantity' => $quantity,
+            ]);
+        } else {
+            ProductPriceOverride::updateOrCreate(
+                ['product_key' => $productKey],
+                [
+                    'base_price' => $basePrice,
+                    'discount' => $discount,
+                    'final_price' => $finalPrice,
+                    'quantity' => $quantity,
+                ]
+            );
+        }
+
+        return redirect()->route('products.index', array_filter([
+            'q' => $validated['redirect_q'] ?? null,
+            'category' => $validated['redirect_category'] ?? null,
+            'page' => $validated['redirect_page'] ?? null,
+        ]))->with('success', 'قیمت و موجودی محصول ذخیره شد.');
     }
 
     public function show(string $slug)
@@ -234,6 +377,184 @@ class ProductControllerWeb extends Controller
         })->values()->all();
     }
 
+
+    protected function extractProductImageUrl(array $product): ?string
+    {
+        $candidate = data_get($product, 'image')
+            ?? data_get($product, 'image_url')
+            ?? data_get($product, 'thumbnail')
+            ?? data_get($product, 'thumbnail_url')
+            ?? data_get($product, 'cover')
+            ?? data_get($product, 'cover_url')
+            ?? data_get($product, 'main_image')
+            ?? data_get($product, 'main_image.url')
+            ?? data_get($product, 'media.0.url')
+            ?? data_get($product, 'images.0.url')
+            ?? data_get($product, 'images.0.path')
+            ?? data_get($product, 'images.0')
+            ?? data_get($product, 'gallery.0.url')
+            ?? data_get($product, 'gallery.0.path')
+            ?? data_get($product, 'photos.0.url')
+            ?? data_get($product, 'photos.0.path');
+
+        if (is_array($candidate)) {
+            $candidate = data_get($candidate, 'url')
+                ?? data_get($candidate, 'path')
+                ?? data_get($candidate, 'src')
+                ?? data_get($candidate, 'file');
+        }
+
+        if (!is_string($candidate) || trim($candidate) === '') {
+            return null;
+        }
+
+        $candidate = trim($candidate);
+        if (Str::startsWith($candidate, ['http://', 'https://', 'data:'])) {
+            return $candidate;
+        }
+
+        return rtrim('https://api.ariyajanebi.ir', '/') . '/' . ltrim($candidate, '/');
+    }
+
+
+    protected function fetchSelectedProducts(array $selected, array $catById): array
+    {
+        $products = [];
+
+        foreach ($selected as $printKey) {
+            if (Str::startsWith($printKey, 'custom:')) {
+                $customProductId = (int) Str::after($printKey, 'custom:');
+                $customProduct = CustomProduct::find($customProductId);
+                if ($customProduct) {
+                    $products[] = $this->customProductToArray($customProduct);
+                }
+                continue;
+            }
+
+            if (Str::startsWith($printKey, 'api:')) {
+                $identifier = (string) Str::after($printKey, 'api:');
+                $apiProduct = $this->fetchApiProductByIdentifier($identifier);
+                if ($apiProduct) {
+                    $products[] = $this->normalizeProduct($apiProduct, $catById);
+                }
+            }
+        }
+
+        return $products;
+    }
+
+    protected function fetchApiProductByIdentifier(string $identifier): ?array
+    {
+        if ($identifier === '') {
+            return null;
+        }
+
+        try {
+            $res = Http::get("{$this->baseUrl}/products/{$identifier}");
+            if (!$res->successful()) {
+                return null;
+            }
+
+            $json = $res->json();
+            $product = data_get($json, 'data.product') ?? data_get($json, 'data') ?? $json;
+
+            return is_array($product) ? $product : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    protected function fetchCustomProducts(string $query = '', string $category = ''): array
+    {
+        $customProducts = CustomProduct::query()
+            ->when($query !== '', function ($builder) use ($query) {
+                $builder->where('title', 'like', "%{$query}%");
+            })
+            ->when($category !== '', function ($builder) use ($category) {
+                $builder->where('category_value', $category);
+            })
+            ->latest()
+            ->get();
+
+        return $customProducts->map(function (CustomProduct $product) {
+            return $this->customProductToArray($product);
+        })->all();
+    }
+
+    protected function customProductToArray(CustomProduct $product): array
+    {
+        $base = (int) $product->base_price;
+        $final = (int) ($product->final_price ?: max(0, $base - (int) $product->discount));
+        $discount = (int) ($product->discount ?: max(0, $base - $final));
+
+        return [
+            'id' => $product->id,
+            'title' => $product->title,
+            'slug' => $product->slug,
+            'quantity' => $product->quantity,
+            'varieties' => [],
+            '__is_custom' => true,
+            '__print_key' => 'custom:' . $product->id,
+            '__image_url' => $product->image_path ? Storage::disk('public')->url($product->image_path) : null,
+            '__category_name' => $product->category_name ?: 'بدون دسته',
+            '__category_slug' => $product->category_value,
+            '__pricing' => ['base' => $base, 'final' => $final, 'discount' => $discount],
+        ];
+    }
+
+    protected function findCategoryName(array $categories, ?string $categoryValue): ?string
+    {
+        if (!$categoryValue) {
+            return null;
+        }
+
+        foreach ($categories as $category) {
+            $value = !empty($category['slug']) ? $category['slug'] : (string) ($category['id'] ?? '');
+            if ($value === $categoryValue) {
+                return $category['name'] ?? null;
+            }
+        }
+
+        return $categoryValue;
+    }
+
+    protected function uniqueCustomProductSlug(string $title): string
+    {
+        $baseSlug = Str::slug($title) ?: 'custom-product';
+        $slug = $baseSlug;
+        $counter = 2;
+
+        while (CustomProduct::where('slug', $slug)->exists()) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
+    }
+
+    protected function applyPriceOverride(array $product): array
+    {
+        $printKey = (string) ($product['__print_key'] ?? '');
+        if ($printKey === '' || Str::startsWith($printKey, 'custom:')) {
+            return $product;
+        }
+
+        $override = ProductPriceOverride::where('product_key', $printKey)->first();
+        if (!$override) {
+            return $product;
+        }
+
+        $product['__pricing'] = [
+            'base' => (int) $override->base_price,
+            'final' => (int) $override->final_price,
+            'discount' => (int) $override->discount,
+        ];
+        $product['quantity'] = (int) $override->quantity;
+        $product['__has_price_override'] = true;
+
+        return $product;
+    }
+
     /** نرمال‌سازی نام دسته و قیمت‌های محصول و تنوع‌ها */
     protected function normalizeProduct(array $p, array $catById): array
     {
@@ -268,11 +589,14 @@ class ProductControllerWeb extends Controller
             $varieties[] = $v;
         }
 
+
+        $p['__print_key']     = 'api:' . (data_get($p, 'id') ?? data_get($p, 'slug') ?? md5(json_encode($p)));
+        $p['__image_url']     = $this->extractProductImageUrl($p);
         $p['__category_name'] = $categoryName;
         $p['__category_slug'] = $categorySlug;
         $p['__pricing']       = ['base' => $base, 'final' => $final, 'discount' => $disc];
         $p['varieties']       = $varieties;
 
-        return $p;
+        return $this->applyPriceOverride($p);
     }
 }
