@@ -32,6 +32,14 @@
             .product-image-cell { width: 150px; }
             .product-price-input { min-width: 110px; }
             .product-quantity-input { min-width: 90px; }
+            .selected-products-pill {
+                background: #e7f1ff;
+                border: 1px solid #b6d4fe;
+                border-radius: 999px;
+                color: #084298;
+                padding: .25rem .65rem;
+                font-size: .8rem;
+            }
         </style>
 
         <div class="row">
@@ -147,6 +155,10 @@
                                     <input class="form-check-input" type="checkbox" id="selectAllProducts">
                                     <label class="form-check-label small" for="selectAllProducts">انتخاب همه</label>
                                 </div>
+                                <span class="selected-products-pill" id="selectedProductsCount">۰ انتخاب</span>
+                                <button class="btn btn-sm btn-outline-secondary" type="button" id="clearSelectedProducts">
+                                    پاک کردن انتخاب‌ها
+                                </button>
                                 <button class="btn btn-sm btn-danger" type="submit" form="productsPrintForm">
                                     پرینت / PDF موارد انتخاب‌شده
                                 </button>
@@ -291,10 +303,89 @@
     </div>
 
     <script>
-        document.getElementById('selectAllProducts')?.addEventListener('change', function () {
-            document.querySelectorAll('.product-print-checkbox').forEach((checkbox) => {
-                checkbox.checked = this.checked;
+        (() => {
+            const storageKey = 'productsWeb.selectedPrintKeys';
+            const printForm = document.getElementById('productsPrintForm');
+            const selectAll = document.getElementById('selectAllProducts');
+            const clearButton = document.getElementById('clearSelectedProducts');
+            const selectedCount = document.getElementById('selectedProductsCount');
+            const checkboxes = Array.from(document.querySelectorAll('.product-print-checkbox'));
+
+            const loadSelected = () => {
+                try {
+                    return new Set(JSON.parse(localStorage.getItem(storageKey) || '[]'));
+                } catch (error) {
+                    return new Set();
+                }
+            };
+
+            const saveSelected = (selected) => {
+                localStorage.setItem(storageKey, JSON.stringify(Array.from(selected)));
+            };
+
+            const toPersianNumber = (value) => String(value).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[digit]);
+
+            const updateSelectionUi = () => {
+                const selected = loadSelected();
+                checkboxes.forEach((checkbox) => {
+                    checkbox.checked = selected.has(checkbox.value);
+                });
+
+                if (selectAll) {
+                    selectAll.checked = checkboxes.length > 0 && checkboxes.every((checkbox) => checkbox.checked);
+                    selectAll.indeterminate = checkboxes.some((checkbox) => checkbox.checked) && !selectAll.checked;
+                }
+
+                if (selectedCount) {
+                    selectedCount.textContent = `${toPersianNumber(selected.size)} انتخاب`;
+                }
+            };
+
+            checkboxes.forEach((checkbox) => {
+                checkbox.addEventListener('change', () => {
+                    const selected = loadSelected();
+                    if (checkbox.checked) {
+                        selected.add(checkbox.value);
+                    } else {
+                        selected.delete(checkbox.value);
+                    }
+                    saveSelected(selected);
+                    updateSelectionUi();
+                });
             });
-        });
+
+            selectAll?.addEventListener('change', () => {
+                const selected = loadSelected();
+                checkboxes.forEach((checkbox) => {
+                    checkbox.checked = selectAll.checked;
+                    if (selectAll.checked) {
+                        selected.add(checkbox.value);
+                    } else {
+                        selected.delete(checkbox.value);
+                    }
+                });
+                saveSelected(selected);
+                updateSelectionUi();
+            });
+
+            clearButton?.addEventListener('click', () => {
+                saveSelected(new Set());
+                updateSelectionUi();
+            });
+
+            printForm?.addEventListener('submit', () => {
+                printForm.querySelectorAll('.persisted-selected-product').forEach((input) => input.remove());
+                loadSelected().forEach((printKey) => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'selected[]';
+                    input.value = printKey;
+                    input.className = 'persisted-selected-product';
+                    printForm.appendChild(input);
+                });
+            });
+
+            updateSelectionUi();
+        })();
     </script>
 </x-layouts.app>

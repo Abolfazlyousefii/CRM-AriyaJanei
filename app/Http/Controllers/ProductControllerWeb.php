@@ -89,26 +89,11 @@ class ProductControllerWeb extends Controller
             }
         }
 
-        [$products, $pagination] = $this->fetchProductsSmart($page, $query, $filterId, $filterSlug);
-
-        if ($category !== '' && empty($products)) {
-            [$all, $pagination] = $this->fetchProductsSmart($page, $query, null, null);
-            $products = $this->localFilterByCategory($all, $filterId, $filterSlug);
-        }
-
-        $products = array_map(function ($p) use ($catById) {
-            return $this->normalizeProduct($p, $catById);
-        }, $products);
-
-        $products = array_merge($products, $this->fetchCustomProducts($query, $category));
-        $selected = array_filter((array) $request->get('selected', []));
-        if (!empty($selected)) {
-            $products = array_values(array_filter($products, function ($product) use ($selected) {
-                return in_array((string) ($product['__print_key'] ?? ''), array_map('strval', $selected), true);
-            }));
-        } else {
-            $products = [];
-        }
+        $pagination = ['current_page' => $page, 'last_page' => $page];
+        $selected = array_values(array_unique(array_filter(array_map('strval', (array) $request->get('selected', [])))));
+        $products = !empty($selected)
+            ? $this->fetchSelectedProducts($selected, $catById)
+            : [];
 
         return view('productsWeb.pdf', [
             'products' => $products,
@@ -431,6 +416,53 @@ class ProductControllerWeb extends Controller
         return rtrim('https://api.ariyajanebi.ir', '/') . '/' . ltrim($candidate, '/');
     }
 
+
+    protected function fetchSelectedProducts(array $selected, array $catById): array
+    {
+        $products = [];
+
+        foreach ($selected as $printKey) {
+            if (Str::startsWith($printKey, 'custom:')) {
+                $customProductId = (int) Str::after($printKey, 'custom:');
+                $customProduct = CustomProduct::find($customProductId);
+                if ($customProduct) {
+                    $products[] = $this->customProductToArray($customProduct);
+                }
+                continue;
+            }
+
+            if (Str::startsWith($printKey, 'api:')) {
+                $identifier = (string) Str::after($printKey, 'api:');
+                $apiProduct = $this->fetchApiProductByIdentifier($identifier);
+                if ($apiProduct) {
+                    $products[] = $this->normalizeProduct($apiProduct, $catById);
+                }
+            }
+        }
+
+        return $products;
+    }
+
+    protected function fetchApiProductByIdentifier(string $identifier): ?array
+    {
+        if ($identifier === '') {
+            return null;
+        }
+
+        try {
+            $res = Http::get("{$this->baseUrl}/products/{$identifier}");
+            if (!$res->successful()) {
+                return null;
+            }
+
+            $json = $res->json();
+            $product = data_get($json, 'data.product') ?? data_get($json, 'data') ?? $json;
+
+            return is_array($product) ? $product : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
 
     protected function fetchCustomProducts(string $query = '', string $category = ''): array
     {
