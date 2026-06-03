@@ -135,9 +135,14 @@
                         </td>
                     </tr>
                     @php
-                        $pBase  = data_get($product, '__pricing.base', 0);
-                        $pFinal = data_get($product, '__pricing.final', $pBase);
-                        $pDisc  = data_get($product, '__pricing.discount', max(0, $pBase - $pFinal));
+                        $varieties = array_values((array) ($product['varieties'] ?? []));
+                        $singleVariety = count($varieties) === 1 ? $varieties[0] : null;
+                        $visibleVarieties = $singleVariety ? [] : $varieties;
+                        $rowSource = $singleVariety ?: $product;
+                        $pBase  = data_get($rowSource, '__pricing.base', 0);
+                        $pFinal = data_get($rowSource, '__pricing.final', $pBase);
+                        $pDisc  = data_get($rowSource, '__pricing.discount', max(0, $pBase - $pFinal));
+                        $rowQuantity = data_get($rowSource, 'quantity', data_get($product, 'quantity', 0));
                     @endphp
                     <tr>
                         <td>
@@ -148,14 +153,30 @@
                             @endif
                         </td>
                         <td>{{ $product['title'] ?? '—' }}</td>
-                        <td>—</td>
+                        <td>
+                            @if($singleVariety)
+                                @if(!empty($singleVariety['name']))
+                                    {{ $singleVariety['name'] }}
+                                @elseif(!empty($singleVariety['attributes']))
+                                    @foreach($singleVariety['attributes'] as $attribute)
+                                        {{ $attribute['label'] ?? $attribute['name'] ?? '—' }}:
+                                        {{ data_get($attribute, 'pivot.value') ?? ($attribute['value'] ?? '—') }}
+                                        @if(!$loop->last) | @endif
+                                    @endforeach
+                                @else
+                                    —
+                                @endif
+                            @else
+                                —
+                            @endif
+                        </td>
                         <td>{{ number_format($pBase) }} تومان</td>
                         <td>{{ $pDisc > 0 ? number_format($pDisc).' تومان' : '—' }}</td>
                         <td>{{ number_format($pFinal) }} تومان</td>
-                        <td>{{ $product['quantity'] ?? 0 }}</td>
+                        <td>{{ $rowQuantity }}</td>
                     </tr>
 
-                    @forelse($product['varieties'] ?? [] as $variety)
+                    @forelse($visibleVarieties as $variety)
                         @php
                             $vBase  = data_get($variety, '__pricing.base', 0);
                             $vFinal = data_get($variety, '__pricing.final', $vBase);

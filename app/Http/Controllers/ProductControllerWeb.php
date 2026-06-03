@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\CustomProduct;
-use App\Models\ProductPriceOverride;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -176,31 +177,29 @@ class ProductControllerWeb extends Controller
         $quantity = (int) ($validated['quantity'] ?? 0);
         $productKey = $validated['product_key'];
 
-        if (Str::startsWith($productKey, 'custom:')) {
-            $customProductId = (int) Str::after($productKey, 'custom:');
-            CustomProduct::whereKey($customProductId)->update([
-                'base_price' => $basePrice,
-                'discount' => $discount,
-                'final_price' => $finalPrice,
-                'quantity' => $quantity,
-            ]);
-        } else {
-            ProductPriceOverride::updateOrCreate(
-                ['product_key' => $productKey],
-                [
-                    'base_price' => $basePrice,
-                    'discount' => $discount,
-                    'final_price' => $finalPrice,
-                    'quantity' => $quantity,
-                ]
-            );
+        if (!Str::startsWith($productKey, 'custom:')) {
+            return redirect()->route('products.index', array_filter([
+                'q' => $validated['redirect_q'] ?? null,
+                'category' => $validated['redirect_category'] ?? null,
+                'page' => $validated['redirect_page'] ?? null,
+            ]))->with('error', 'قیمت و موجودی محصولات سایت فقط از سایت خوانده می‌شود و قابل ذخیره دستی نیست.');
         }
+
+        $customProductId = (int) Str::after($productKey, 'custom:');
+        CustomProduct::whereKey($customProductId)->update([
+            'base_price' => $basePrice,
+            'discount' => $discount,
+            'final_price' => $finalPrice,
+            'quantity' => $quantity,
+        ]);
+
+        $message = 'قیمت و موجودی محصول دستی ذخیره شد.';
 
         return redirect()->route('products.index', array_filter([
             'q' => $validated['redirect_q'] ?? null,
             'category' => $validated['redirect_category'] ?? null,
             'page' => $validated['redirect_page'] ?? null,
-        ]))->with('success', 'قیمت و موجودی محصول ذخیره شد.');
+        ]))->with('success', $message);
     }
 
     public function show(string $slug)
@@ -417,30 +416,104 @@ class ProductControllerWeb extends Controller
     }
 
 
-    protected function fetchSelectedProducts(array $selected, array $catById): array
+    protected function fetchSelectedProducts(array $selected, array $catById, array $pricingOverrides = []): array
     {
-        $products = [];
+        $orderedSelections = [];
+        $customProductIds = [];
+        $apiIdentifiers = [];
 
         foreach ($selected as $printKey) {
             if (Str::startsWith($printKey, 'custom:')) {
                 $customProductId = (int) Str::after($printKey, 'custom:');
-                $customProduct = CustomProduct::find($customProductId);
-                if ($customProduct) {
-                    $products[] = $this->customProductToArray($customProduct);
+                if ($customProductId > 0) {
+                    $orderedSelections[] = ['type' => 'custom', 'id' => $customProductId];
+                    $customProductIds[] = $customProductId;
                 }
                 continue;
             }
 
             if (Str::startsWith($printKey, 'api:')) {
                 $identifier = (string) Str::after($printKey, 'api:');
-                $apiProduct = $this->fetchApiProductByIdentifier($identifier);
-                if ($apiProduct) {
-                    $products[] = $this->normalizeProduct($apiProduct, $catById);
+                if ($identifier !== '') {
+                    $orderedSelections[] = ['type' => 'api', 'identifier' => $identifier];
+                    $apiIdentifiers[] = $identifier;
+                }
+            }
+        }
+
+        $customProducts = CustomProduct::whereIn('id', array_unique($customProductIds))
+            ->get()
+            ->keyBy('id');
+        $apiProducts = $this->fetchApiProductsByIdentifiers(array_unique($apiIdentifiers), $catById);
+
+        $products = [];
+        foreach ($orderedSelections as $selection) {
+            if ($selection['type'] === 'custom') {
+                $customProduct = $customProducts->get($selection['id']);
+                if ($customProduct) {
+                    $products[] = $this->customProductToArray($customProduct);
+                }
+                continue;
+            }
+
+            $apiProduct = $apiProducts[$selection['identifier']] ?? null;
+            if ($apiProduct) {
+                $products[] = $apiProduct;
+            }
+        }
+
+        return $products;
+    }
+
+    protected function fetchApiProductsByIdentifiers(array $identifiers, array $catById): array
+    {
+        $identifiers = array_values(array_unique(array_filter($identifiers, fn ($identifier) => $identifier !== '')));
+        $products = [];
+
+        foreach (array_chunk($identifiers, 50) as $chunk) {
+            try {
+                $responses = Http::pool(function (Pool $pool) use ($chunk) {
+                    $requests = [];
+                    foreach ($chunk as $identifier) {
+                        $requests[] = $pool->as($identifier)
+                            ->acceptJson()
+                            ->connectTimeout(4)
+                            ->timeout(12)
+                            ->get("{$this->baseUrl}/products/{$identifier}");
+                    }
+
+                    return $requests;
+                });
+
+                foreach ($responses as $identifier => $response) {
+                    $product = $this->extractProductFromApiResponse($response);
+                    if ($product) {
+                        $products[$identifier] = $this->normalizeProduct($product, $catById);
+                    }
+                }
+            } catch (\Throwable $e) {
+                foreach ($chunk as $identifier) {
+                    $apiProduct = $this->fetchApiProductByIdentifier($identifier);
+                    if ($apiProduct) {
+                        $products[$identifier] = $this->normalizeProduct($apiProduct, $catById);
+                    }
                 }
             }
         }
 
         return $products;
+    }
+
+    protected function extractProductFromApiResponse(mixed $response): ?array
+    {
+        if (!$response instanceof Response || !$response->successful()) {
+            return null;
+        }
+
+        $json = $response->json();
+        $product = data_get($json, 'data.product') ?? data_get($json, 'data') ?? $json;
+
+        return is_array($product) ? $product : null;
     }
 
     protected function fetchApiProductByIdentifier(string $identifier): ?array
@@ -450,15 +523,12 @@ class ProductControllerWeb extends Controller
         }
 
         try {
-            $res = Http::get("{$this->baseUrl}/products/{$identifier}");
-            if (!$res->successful()) {
-                return null;
-            }
+            $res = Http::acceptJson()
+                ->connectTimeout(4)
+                ->timeout(12)
+                ->get("{$this->baseUrl}/products/{$identifier}");
 
-            $json = $res->json();
-            $product = data_get($json, 'data.product') ?? data_get($json, 'data') ?? $json;
-
-            return is_array($product) ? $product : null;
+            return $this->extractProductFromApiResponse($res);
         } catch (\Throwable $e) {
             return null;
         }
@@ -532,34 +602,11 @@ class ProductControllerWeb extends Controller
         return $slug;
     }
 
-    protected function applyPriceOverride(array $product): array
+    /**
+     * نگه‌داری سازگاری با درخواست‌های قدیمی پرینت؛ قیمت و موجودی محصولات سایت دیگر override نمی‌شود.
+     */
+    protected function applyTemporaryPricingOverride(array $product, string $printKey, array $pricingOverrides = []): array
     {
-        $printKey = (string) ($product['__print_key'] ?? '');
-        if ($printKey === '' || Str::startsWith($printKey, 'custom:')) {
-            return $product;
-        }
-
-        $override = ProductPriceOverride::where('product_key', $printKey)->first();
-        if (!$override) {
-            return $product;
-        }
-
-        $product['__pricing'] = [
-            'base' => (int) $override->base_price,
-            'final' => (int) $override->final_price,
-            'discount' => (int) $override->discount,
-        ];
-        $product['quantity'] = (int) $override->quantity;
-        $product['__has_price_override'] = true;
-
-        $product['varieties'] = array_map(function ($variety) use ($product) {
-            $variety['__pricing'] = $product['__pricing'];
-            $variety['quantity'] = $product['quantity'];
-            $variety['__has_price_override'] = true;
-
-            return $variety;
-        }, (array) ($product['varieties'] ?? []));
-
         return $product;
     }
 
@@ -605,6 +652,6 @@ class ProductControllerWeb extends Controller
         $p['__pricing']       = ['base' => $base, 'final' => $final, 'discount' => $disc];
         $p['varieties']       = $varieties;
 
-        return $this->applyPriceOverride($p);
+        return $p;
     }
 }
