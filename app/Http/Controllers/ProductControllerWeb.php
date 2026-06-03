@@ -92,8 +92,9 @@ class ProductControllerWeb extends Controller
 
         $pagination = ['current_page' => $page, 'last_page' => $page];
         $selected = array_values(array_unique(array_filter(array_map('strval', (array) $request->get('selected', [])))));
+        $pricingOverrides = (array) $request->get('pricing_overrides', []);
         $products = !empty($selected)
-            ? $this->fetchSelectedProducts($selected, $catById)
+            ? $this->fetchSelectedProducts($selected, $catById, $pricingOverrides)
             : [];
 
         return view('productsWeb.pdf', [
