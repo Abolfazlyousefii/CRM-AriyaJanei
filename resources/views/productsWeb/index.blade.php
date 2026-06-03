@@ -74,7 +74,7 @@
                 <div class="card shadow-sm mb-3">
                     <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center gap-2 flex-wrap">
                         <span>افزودن محصول جدید به لیست فعلی</span>
-                        <small class="text-muted">اگر محصول در دیتای سایت نبود، همین‌جا اضافه کنید.</small>
+                        <small class="text-muted">محصولات سایت هر بار مستقیم خوانده می‌شوند؛ محصولات جدید را مثل قبل دستی اضافه کنید.</small>
                     </div>
                     <div class="card-body">
                         <form method="POST" action="{{ route('products.custom.store') }}" enctype="multipart/form-data" class="row g-3 align-items-end">
@@ -189,8 +189,8 @@
                                                 @if(!empty($product['__is_custom']))
                                                     <span class="badge bg-info text-dark ms-2">افزوده‌شده</span>
                                                 @endif
-                                                @if(!empty($product['__has_price_override']))
-                                                    <span class="badge bg-warning text-dark ms-2">قیمت/موجودی ویرایش‌شده</span>
+                                                @if(empty($product['__is_custom']))
+                                                    <span class="badge bg-success ms-2">قیمت و موجودی از سایت</span>
                                                 @endif
                                             </td>
                                         </tr>
@@ -200,9 +200,10 @@
                                             $pFinal = data_get($product, '__pricing.final', $pBase);
                                             $pDisc  = data_get($product, '__pricing.discount', max(0, $pBase - $pFinal));
                                             $printKey = $product['__print_key'] ?? ($product['slug'] ?? '');
+                                            $isCustom = !empty($product['__is_custom']);
                                             $editFormId = 'product-pricing-' . $loop->iteration;
                                         @endphp
-                                        <tr>
+                                        <tr data-print-key="{{ $printKey }}">
                                             <td>
                                                 <input class="form-check-input product-print-checkbox" type="checkbox" name="selected[]" value="{{ $printKey }}" form="productsPrintForm">
                                             </td>
@@ -216,26 +217,30 @@
                                             <td>{{ $product['title'] ?? '—' }}</td>
                                             <td>—</td>
                                             <td>
-                                                <input class="form-control form-control-sm text-center product-price-input" type="number" name="base_price" value="{{ $pBase }}" min="0" form="{{ $editFormId }}">
+                                                <input class="form-control form-control-sm text-center product-price-input js-product-base" type="number" name="base_price" value="{{ $pBase }}" min="0" @if($isCustom) form="{{ $editFormId }}" @endif>
                                             </td>
                                             <td>
-                                                <input class="form-control form-control-sm text-center product-price-input" type="number" name="discount" value="{{ $pDisc }}" min="0" form="{{ $editFormId }}">
+                                                <input class="form-control form-control-sm text-center product-price-input js-product-discount" type="number" name="discount" value="{{ $pDisc }}" min="0" @if($isCustom) form="{{ $editFormId }}" @endif>
                                             </td>
                                             <td>
-                                                <input class="form-control form-control-sm text-center product-price-input" type="number" name="final_price" value="{{ $pFinal }}" min="0" form="{{ $editFormId }}">
+                                                <input class="form-control form-control-sm text-center product-price-input js-product-final" type="number" name="final_price" value="{{ $pFinal }}" min="0" @if($isCustom) form="{{ $editFormId }}" @endif>
                                             </td>
                                             <td>
-                                                <input class="form-control form-control-sm text-center product-quantity-input" type="number" name="quantity" value="{{ $product['quantity'] ?? 0 }}" min="0" form="{{ $editFormId }}">
+                                                <input class="form-control form-control-sm text-center product-quantity-input js-product-quantity" type="number" name="quantity" value="{{ $product['quantity'] ?? 0 }}" min="0" @if($isCustom) form="{{ $editFormId }}" @endif>
                                             </td>
                                             <td>
-                                                <form id="{{ $editFormId }}" method="POST" action="{{ route('products.pricing.update') }}">
-                                                    @csrf
-                                                    <input type="hidden" name="product_key" value="{{ $printKey }}">
-                                                    <input type="hidden" name="redirect_q" value="{{ $query }}">
-                                                    <input type="hidden" name="redirect_category" value="{{ $category }}">
-                                                    <input type="hidden" name="redirect_page" value="{{ $pagination['current_page'] ?? 1 }}">
-                                                    <button class="btn btn-sm btn-success" type="submit">ذخیره</button>
-                                                </form>
+                                                @if($isCustom)
+                                                    <form id="{{ $editFormId }}" method="POST" action="{{ route('products.pricing.update') }}">
+                                                        @csrf
+                                                        <input type="hidden" name="product_key" value="{{ $printKey }}">
+                                                        <input type="hidden" name="redirect_q" value="{{ $query }}">
+                                                        <input type="hidden" name="redirect_category" value="{{ $category }}">
+                                                        <input type="hidden" name="redirect_page" value="{{ $pagination['current_page'] ?? 1 }}">
+                                                        <button class="btn btn-sm btn-success" type="submit">ذخیره</button>
+                                                    </form>
+                                                @else
+                                                    <small class="text-muted">برای چاپ قابل تغییر است</small>
+                                                @endif
                                             </td>
                                         </tr>
 
@@ -324,6 +329,34 @@
             };
 
             const toPersianNumber = (value) => String(value).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[digit]);
+
+            const clearPricingOverrideInputs = () => {
+                printForm?.querySelectorAll('input[data-pricing-override="1"]').forEach((input) => input.remove());
+            };
+
+            const appendPricingOverrideInput = (printKey, field, value) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = `pricing_overrides[${printKey}][${field}]`;
+                input.value = value || '0';
+                input.dataset.pricingOverride = '1';
+                printForm.appendChild(input);
+            };
+
+            printForm?.addEventListener('submit', () => {
+                clearPricingOverrideInputs();
+                checkboxes
+                    .filter((checkbox) => checkbox.checked)
+                    .forEach((checkbox) => {
+                        const row = checkbox.closest('tr[data-print-key]');
+                        if (!row) return;
+
+                        appendPricingOverrideInput(checkbox.value, 'base_price', row.querySelector('.js-product-base')?.value);
+                        appendPricingOverrideInput(checkbox.value, 'discount', row.querySelector('.js-product-discount')?.value);
+                        appendPricingOverrideInput(checkbox.value, 'final_price', row.querySelector('.js-product-final')?.value);
+                        appendPricingOverrideInput(checkbox.value, 'quantity', row.querySelector('.js-product-quantity')?.value);
+                    });
+            });
 
             const updateSelectionUi = () => {
                 const selected = loadSelected();
