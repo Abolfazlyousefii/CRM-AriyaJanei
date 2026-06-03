@@ -378,6 +378,34 @@
 
             const toPersianNumber = (value) => String(value).replace(/\d/g, (digit) => '۰۱۲۳۴۵۶۷۸۹'[digit]);
 
+            const clearPricingOverrideInputs = () => {
+                printForm?.querySelectorAll('input[data-pricing-override="1"]').forEach((input) => input.remove());
+            };
+
+            const appendPricingOverrideInput = (printKey, field, value) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = `pricing_overrides[${printKey}][${field}]`;
+                input.value = value || '0';
+                input.dataset.pricingOverride = '1';
+                printForm.appendChild(input);
+            };
+
+            printForm?.addEventListener('submit', () => {
+                clearPricingOverrideInputs();
+                checkboxes
+                    .filter((checkbox) => checkbox.checked)
+                    .forEach((checkbox) => {
+                        const row = checkbox.closest('tr[data-print-key]');
+                        if (!row) return;
+
+                        appendPricingOverrideInput(checkbox.value, 'base_price', row.querySelector('.js-product-base')?.value);
+                        appendPricingOverrideInput(checkbox.value, 'discount', row.querySelector('.js-product-discount')?.value);
+                        appendPricingOverrideInput(checkbox.value, 'final_price', row.querySelector('.js-product-final')?.value);
+                        appendPricingOverrideInput(checkbox.value, 'quantity', row.querySelector('.js-product-quantity')?.value);
+                    });
+            });
+
             const updateSelectionUi = () => {
                 const selected = loadSelected();
                 checkboxes.forEach((checkbox) => {

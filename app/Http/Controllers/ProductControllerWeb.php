@@ -90,8 +90,9 @@ class ProductControllerWeb extends Controller
 
         $pagination = ['current_page' => $page, 'last_page' => $page];
         $selected = array_values(array_unique(array_filter(array_map('strval', (array) $request->get('selected', [])))));
+        $pricingOverrides = (array) $request->get('pricing_overrides', []);
         $products = !empty($selected)
-            ? $this->fetchSelectedProducts($selected, $catById)
+            ? $this->fetchSelectedProducts($selected, $catById, $pricingOverrides)
             : [];
 
         return view('productsWeb.pdf', [
@@ -423,7 +424,11 @@ class ProductControllerWeb extends Controller
                 $customProductId = (int) Str::after($printKey, 'custom:');
                 $customProduct = CustomProduct::find($customProductId);
                 if ($customProduct) {
-                    $products[] = $this->customProductToArray($customProduct);
+                    $products[] = $this->applyTemporaryPricingOverride(
+                        $this->customProductToArray($customProduct),
+                        $printKey,
+                        $pricingOverrides
+                    );
                 }
                 continue;
             }
@@ -432,7 +437,11 @@ class ProductControllerWeb extends Controller
                 $identifier = (string) Str::after($printKey, 'api:');
                 $apiProduct = $this->fetchApiProductByIdentifier($identifier);
                 if ($apiProduct) {
-                    $products[] = $this->normalizeProduct($apiProduct, $catById);
+                    $products[] = $this->applyTemporaryPricingOverride(
+                        $this->normalizeProduct($apiProduct, $catById),
+                        $printKey,
+                        $pricingOverrides
+                    );
                 }
             }
         }
