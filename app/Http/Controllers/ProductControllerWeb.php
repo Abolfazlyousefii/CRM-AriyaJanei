@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\CustomProduct;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -417,36 +419,102 @@ class ProductControllerWeb extends Controller
 
     protected function fetchSelectedProducts(array $selected, array $catById, array $pricingOverrides = []): array
     {
-        $products = [];
+        $orderedSelections = [];
+        $customProductIds = [];
+        $apiIdentifiers = [];
 
         foreach ($selected as $printKey) {
             if (Str::startsWith($printKey, 'custom:')) {
                 $customProductId = (int) Str::after($printKey, 'custom:');
-                $customProduct = CustomProduct::find($customProductId);
-                if ($customProduct) {
-                    $products[] = $this->applyTemporaryPricingOverride(
-                        $this->customProductToArray($customProduct),
-                        $printKey,
-                        $pricingOverrides
-                    );
+                if ($customProductId > 0) {
+                    $orderedSelections[] = ['type' => 'custom', 'id' => $customProductId];
+                    $customProductIds[] = $customProductId;
                 }
                 continue;
             }
 
             if (Str::startsWith($printKey, 'api:')) {
                 $identifier = (string) Str::after($printKey, 'api:');
-                $apiProduct = $this->fetchApiProductByIdentifier($identifier);
-                if ($apiProduct) {
-                    $products[] = $this->applyTemporaryPricingOverride(
-                        $this->normalizeProduct($apiProduct, $catById),
-                        $printKey,
-                        $pricingOverrides
-                    );
+                if ($identifier !== '') {
+                    $orderedSelections[] = ['type' => 'api', 'identifier' => $identifier];
+                    $apiIdentifiers[] = $identifier;
+                }
+            }
+        }
+
+        $customProducts = CustomProduct::whereIn('id', array_unique($customProductIds))
+            ->get()
+            ->keyBy('id');
+        $apiProducts = $this->fetchApiProductsByIdentifiers(array_unique($apiIdentifiers), $catById);
+
+        $products = [];
+        foreach ($orderedSelections as $selection) {
+            if ($selection['type'] === 'custom') {
+                $customProduct = $customProducts->get($selection['id']);
+                if ($customProduct) {
+                    $products[] = $this->customProductToArray($customProduct);
+                }
+                continue;
+            }
+
+            $apiProduct = $apiProducts[$selection['identifier']] ?? null;
+            if ($apiProduct) {
+                $products[] = $apiProduct;
+            }
+        }
+
+        return $products;
+    }
+
+    protected function fetchApiProductsByIdentifiers(array $identifiers, array $catById): array
+    {
+        $identifiers = array_values(array_unique(array_filter($identifiers, fn ($identifier) => $identifier !== '')));
+        $products = [];
+
+        foreach (array_chunk($identifiers, 50) as $chunk) {
+            try {
+                $responses = Http::pool(function (Pool $pool) use ($chunk) {
+                    $requests = [];
+                    foreach ($chunk as $identifier) {
+                        $requests[] = $pool->as($identifier)
+                            ->acceptJson()
+                            ->connectTimeout(4)
+                            ->timeout(12)
+                            ->get("{$this->baseUrl}/products/{$identifier}");
+                    }
+
+                    return $requests;
+                });
+
+                foreach ($responses as $identifier => $response) {
+                    $product = $this->extractProductFromApiResponse($response);
+                    if ($product) {
+                        $products[$identifier] = $this->normalizeProduct($product, $catById);
+                    }
+                }
+            } catch (\Throwable $e) {
+                foreach ($chunk as $identifier) {
+                    $apiProduct = $this->fetchApiProductByIdentifier($identifier);
+                    if ($apiProduct) {
+                        $products[$identifier] = $this->normalizeProduct($apiProduct, $catById);
+                    }
                 }
             }
         }
 
         return $products;
+    }
+
+    protected function extractProductFromApiResponse(mixed $response): ?array
+    {
+        if (!$response instanceof Response || !$response->successful()) {
+            return null;
+        }
+
+        $json = $response->json();
+        $product = data_get($json, 'data.product') ?? data_get($json, 'data') ?? $json;
+
+        return is_array($product) ? $product : null;
     }
 
     protected function fetchApiProductByIdentifier(string $identifier): ?array
@@ -456,15 +524,12 @@ class ProductControllerWeb extends Controller
         }
 
         try {
-            $res = Http::get("{$this->baseUrl}/products/{$identifier}");
-            if (!$res->successful()) {
-                return null;
-            }
+            $res = Http::acceptJson()
+                ->connectTimeout(4)
+                ->timeout(12)
+                ->get("{$this->baseUrl}/products/{$identifier}");
 
-            $json = $res->json();
-            $product = data_get($json, 'data.product') ?? data_get($json, 'data') ?? $json;
-
-            return is_array($product) ? $product : null;
+            return $this->extractProductFromApiResponse($res);
         } catch (\Throwable $e) {
             return null;
         }
