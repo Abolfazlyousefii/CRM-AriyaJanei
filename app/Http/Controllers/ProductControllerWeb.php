@@ -187,7 +187,18 @@ class ProductControllerWeb extends Controller
 
             $message = 'قیمت و موجودی محصول دستی ذخیره شد.';
         } else {
-            $message = 'قیمت و موجودی محصولات سایت در هر بار باز شدن صفحه مستقیم از سایت خوانده می‌شود و ذخیره دستی نمی‌شود.';
+            ProductPriceOverride::updateOrCreate(
+                ['product_key' => $productKey],
+                [
+                    // قیمت محصولات سایت همچنان هر بار از سایت خوانده می‌شود؛ فقط موجودی دستی ذخیره می‌ماند.
+                    'base_price' => $basePrice,
+                    'discount' => $discount,
+                    'final_price' => $finalPrice,
+                    'quantity' => $quantity,
+                ]
+            );
+
+            $message = 'موجودی دستی محصول سایت ذخیره شد و از این به بعد موجودی سایت برای این محصول نادیده گرفته می‌شود.';
         }
 
         return redirect()->route('products.index', array_filter([
@@ -534,6 +545,34 @@ class ProductControllerWeb extends Controller
         return $slug;
     }
 
+    protected function applySavedStockOverride(array $product): array
+    {
+        $override = $pricingOverrides[$printKey] ?? null;
+        if (!is_array($override)) {
+            return $product;
+        }
+
+        $basePrice = max(0, (int) ($override['base_price'] ?? data_get($product, '__pricing.base', 0)));
+        $discount = max(0, (int) ($override['discount'] ?? data_get($product, '__pricing.discount', 0)));
+        $finalPrice = max(0, (int) ($override['final_price'] ?? data_get($product, '__pricing.final', $basePrice)));
+        if ($finalPrice === 0 && $basePrice > 0) {
+            $finalPrice = max(0, $basePrice - $discount);
+        }
+        $quantity = max(0, (int) ($override['quantity'] ?? ($product['quantity'] ?? 0)));
+
+        $product['quantity'] = (int) $override->quantity;
+        $product['__has_stock_override'] = true;
+
+        $product['varieties'] = array_map(function ($variety) use ($product) {
+            $variety['quantity'] = $product['quantity'];
+            $variety['__has_stock_override'] = true;
+
+            return $variety;
+        }, (array) ($product['varieties'] ?? []));
+
+        return $product;
+    }
+
 
     protected function applyTemporaryPricingOverride(array $product, string $printKey, array $pricingOverrides): array
     {
@@ -611,6 +650,6 @@ class ProductControllerWeb extends Controller
         $p['__pricing']       = ['base' => $base, 'final' => $final, 'discount' => $disc];
         $p['varieties']       = $varieties;
 
-        return $p;
+        return $this->applySavedStockOverride($p);
     }
 }

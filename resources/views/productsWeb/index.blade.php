@@ -74,7 +74,7 @@
                 <div class="card shadow-sm mb-3">
                     <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center gap-2 flex-wrap">
                         <span>افزودن محصول جدید به لیست فعلی</span>
-                        <small class="text-muted">محصولات سایت هر بار مستقیم خوانده می‌شوند؛ محصولات جدید را مثل قبل دستی اضافه کنید.</small>
+                        <small class="text-muted">قیمت محصولات سایت هر بار مستقیم خوانده می‌شود؛ موجودی را در صورت نیاز می‌توانید دستی ذخیره کنید.</small>
                     </div>
                     <div class="card-body">
                         <form method="POST" action="{{ route('products.custom.store') }}" enctype="multipart/form-data" class="row g-3 align-items-end">
@@ -190,7 +190,12 @@
                                                     <span class="badge bg-info text-dark ms-2">افزوده‌شده</span>
                                                 @endif
                                                 @if(empty($product['__is_custom']))
-                                                    <span class="badge bg-success ms-2">قیمت و موجودی از سایت</span>
+                                                    <span class="badge bg-success ms-2">قیمت از سایت</span>
+                                                    @if(!empty($product['__has_stock_override']))
+                                                        <span class="badge bg-warning text-dark ms-2">موجودی دستی</span>
+                                                    @else
+                                                        <span class="badge bg-secondary ms-2">موجودی از سایت</span>
+                                                    @endif
                                                 @endif
                                             </td>
                                         </tr>
@@ -226,21 +231,22 @@
                                                 <input class="form-control form-control-sm text-center product-price-input js-product-final" type="number" name="final_price" value="{{ $pFinal }}" min="0" @if($isCustom) form="{{ $editFormId }}" @endif>
                                             </td>
                                             <td>
-                                                <input class="form-control form-control-sm text-center product-quantity-input js-product-quantity" type="number" name="quantity" value="{{ $product['quantity'] ?? 0 }}" min="0" @if($isCustom) form="{{ $editFormId }}" @endif>
+                                                <input class="form-control form-control-sm text-center product-quantity-input js-product-quantity" type="number" name="quantity" value="{{ $product['quantity'] ?? 0 }}" min="0" form="{{ $editFormId }}">
                                             </td>
                                             <td>
-                                                @if($isCustom)
-                                                    <form id="{{ $editFormId }}" method="POST" action="{{ route('products.pricing.update') }}">
-                                                        @csrf
-                                                        <input type="hidden" name="product_key" value="{{ $printKey }}">
-                                                        <input type="hidden" name="redirect_q" value="{{ $query }}">
-                                                        <input type="hidden" name="redirect_category" value="{{ $category }}">
-                                                        <input type="hidden" name="redirect_page" value="{{ $pagination['current_page'] ?? 1 }}">
-                                                        <button class="btn btn-sm btn-success" type="submit">ذخیره</button>
-                                                    </form>
-                                                @else
-                                                    <small class="text-muted">برای چاپ قابل تغییر است</small>
-                                                @endif
+                                                <form id="{{ $editFormId }}" method="POST" action="{{ route('products.pricing.update') }}">
+                                                    @csrf
+                                                    <input type="hidden" name="product_key" value="{{ $printKey }}">
+                                                    <input type="hidden" name="redirect_q" value="{{ $query }}">
+                                                    <input type="hidden" name="redirect_category" value="{{ $category }}">
+                                                    <input type="hidden" name="redirect_page" value="{{ $pagination['current_page'] ?? 1 }}">
+                                                    <button class="btn btn-sm btn-success" type="submit">
+                                                        {{ $isCustom ? 'ذخیره' : 'ذخیره موجودی' }}
+                                                    </button>
+                                                </form>
+                                                @unless($isCustom)
+                                                    <small class="text-muted d-block mt-1">قیمت فقط برای چاپ قابل تغییر است</small>
+                                                @endunless
                                             </td>
                                         </tr>
 
