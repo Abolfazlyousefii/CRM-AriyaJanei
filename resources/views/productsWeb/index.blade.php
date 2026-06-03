@@ -40,6 +40,18 @@
                 padding: .25rem .65rem;
                 font-size: .8rem;
             }
+            .product-print-checkbox,
+            #selectAllProducts {
+                -webkit-appearance: checkbox !important;
+                appearance: auto !important;
+                accent-color: #0d6efd;
+                cursor: pointer;
+                height: 1.15rem;
+                width: 1.15rem;
+            }
+            @media print {
+                .no-print { display: none !important; }
+            }
         </style>
 
         <div class="row">
@@ -190,7 +202,7 @@
                                                     <span class="badge bg-info text-dark ms-2">افزوده‌شده</span>
                                                 @endif
                                                 @if(empty($product['__is_custom']))
-                                                    <span class="badge bg-success ms-2">قیمت و موجودی از سایت</span>
+                                                    <span class="badge bg-success ms-2 no-print">قیمت و موجودی از سایت</span>
                                                 @endif
                                             </td>
                                         </tr>
@@ -255,7 +267,7 @@
                                                         <button class="btn btn-sm btn-success" type="submit">ذخیره</button>
                                                     </form>
                                                 @else
-                                                    <span class="text-muted">از سایت</span>
+                                                    <span class="text-muted">—</span>
                                                 @endif
                                             </td>
                                         </tr>

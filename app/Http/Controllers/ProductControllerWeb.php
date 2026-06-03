@@ -538,6 +538,14 @@ class ProductControllerWeb extends Controller
         return $slug;
     }
 
+    /**
+     * نگه‌داری سازگاری با درخواست‌های قدیمی پرینت؛ قیمت و موجودی محصولات سایت دیگر override نمی‌شود.
+     */
+    protected function applyTemporaryPricingOverride(array $product, string $printKey, array $pricingOverrides = []): array
+    {
+        return $product;
+    }
+
     /** نرمال‌سازی نام دسته و قیمت‌های محصول و تنوع‌ها */
     protected function normalizeProduct(array $p, array $catById): array
     {
