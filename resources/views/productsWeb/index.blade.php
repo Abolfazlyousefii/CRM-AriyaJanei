@@ -74,7 +74,7 @@
                 <div class="card shadow-sm mb-3">
                     <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center gap-2 flex-wrap">
                         <span>افزودن محصول جدید به لیست فعلی</span>
-                        <small class="text-muted">قیمت محصولات سایت هر بار مستقیم خوانده می‌شود؛ موجودی را در صورت نیاز می‌توانید دستی ذخیره کنید.</small>
+                        <small class="text-muted">قیمت و موجودی محصولات سایت هر بار مستقیم خوانده می‌شود؛ محصولات جدید را با قیمت نهایی و موجودی دستی اضافه کنید.</small>
                     </div>
                     <div class="card-body">
                         <form method="POST" action="{{ route('products.custom.store') }}" enctype="multipart/form-data" class="row g-3 align-items-end">
@@ -190,12 +190,7 @@
                                                     <span class="badge bg-info text-dark ms-2">افزوده‌شده</span>
                                                 @endif
                                                 @if(empty($product['__is_custom']))
-                                                    <span class="badge bg-success ms-2">قیمت از سایت</span>
-                                                    @if(!empty($product['__has_stock_override']))
-                                                        <span class="badge bg-warning text-dark ms-2">موجودی دستی</span>
-                                                    @else
-                                                        <span class="badge bg-secondary ms-2">موجودی از سایت</span>
-                                                    @endif
+                                                    <span class="badge bg-success ms-2">قیمت و موجودی از سایت</span>
                                                 @endif
                                             </td>
                                         </tr>
@@ -222,31 +217,46 @@
                                             <td>{{ $product['title'] ?? '—' }}</td>
                                             <td>—</td>
                                             <td>
-                                                <input class="form-control form-control-sm text-center product-price-input js-product-base" type="number" name="base_price" value="{{ $pBase }}" min="0" @if($isCustom) form="{{ $editFormId }}" @endif>
+                                                @if($isCustom)
+                                                    <input class="form-control form-control-sm text-center product-price-input" type="number" name="base_price" value="{{ $pBase }}" min="0" form="{{ $editFormId }}">
+                                                @else
+                                                    {{ number_format($pBase) }} تومان
+                                                @endif
                                             </td>
                                             <td>
-                                                <input class="form-control form-control-sm text-center product-price-input js-product-discount" type="number" name="discount" value="{{ $pDisc }}" min="0" @if($isCustom) form="{{ $editFormId }}" @endif>
+                                                @if($isCustom)
+                                                    <input class="form-control form-control-sm text-center product-price-input" type="number" name="discount" value="{{ $pDisc }}" min="0" form="{{ $editFormId }}">
+                                                @else
+                                                    {{ $pDisc > 0 ? number_format($pDisc).' تومان' : '—' }}
+                                                @endif
                                             </td>
                                             <td>
-                                                <input class="form-control form-control-sm text-center product-price-input js-product-final" type="number" name="final_price" value="{{ $pFinal }}" min="0" @if($isCustom) form="{{ $editFormId }}" @endif>
+                                                @if($isCustom)
+                                                    <input class="form-control form-control-sm text-center product-price-input" type="number" name="final_price" value="{{ $pFinal }}" min="0" form="{{ $editFormId }}">
+                                                @else
+                                                    {{ number_format($pFinal) }} تومان
+                                                @endif
                                             </td>
                                             <td>
-                                                <input class="form-control form-control-sm text-center product-quantity-input js-product-quantity" type="number" name="quantity" value="{{ $product['quantity'] ?? 0 }}" min="0" form="{{ $editFormId }}">
+                                                @if($isCustom)
+                                                    <input class="form-control form-control-sm text-center product-quantity-input" type="number" name="quantity" value="{{ $product['quantity'] ?? 0 }}" min="0" form="{{ $editFormId }}">
+                                                @else
+                                                    {{ $product['quantity'] ?? 0 }}
+                                                @endif
                                             </td>
                                             <td>
-                                                <form id="{{ $editFormId }}" method="POST" action="{{ route('products.pricing.update') }}">
-                                                    @csrf
-                                                    <input type="hidden" name="product_key" value="{{ $printKey }}">
-                                                    <input type="hidden" name="redirect_q" value="{{ $query }}">
-                                                    <input type="hidden" name="redirect_category" value="{{ $category }}">
-                                                    <input type="hidden" name="redirect_page" value="{{ $pagination['current_page'] ?? 1 }}">
-                                                    <button class="btn btn-sm btn-success" type="submit">
-                                                        {{ $isCustom ? 'ذخیره' : 'ذخیره موجودی' }}
-                                                    </button>
-                                                </form>
-                                                @unless($isCustom)
-                                                    <small class="text-muted d-block mt-1">قیمت فقط برای چاپ قابل تغییر است</small>
-                                                @endunless
+                                                @if($isCustom)
+                                                    <form id="{{ $editFormId }}" method="POST" action="{{ route('products.pricing.update') }}">
+                                                        @csrf
+                                                        <input type="hidden" name="product_key" value="{{ $printKey }}">
+                                                        <input type="hidden" name="redirect_q" value="{{ $query }}">
+                                                        <input type="hidden" name="redirect_category" value="{{ $category }}">
+                                                        <input type="hidden" name="redirect_page" value="{{ $pagination['current_page'] ?? 1 }}">
+                                                        <button class="btn btn-sm btn-success" type="submit">ذخیره</button>
+                                                    </form>
+                                                @else
+                                                    <span class="text-muted">از سایت</span>
+                                                @endif
                                             </td>
                                         </tr>
 
@@ -289,7 +299,6 @@
                             </table>
                         </div>
                     </div>
-                </form>
 
                 {{-- صفحه‌بندی --}}
                 <div class="mt-3 d-flex justify-content-center">
