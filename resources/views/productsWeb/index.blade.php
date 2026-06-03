@@ -208,12 +208,17 @@
                                         </tr>
 
                                         @php
-                                            $pBase  = data_get($product, '__pricing.base', 0);
-                                            $pFinal = data_get($product, '__pricing.final', $pBase);
-                                            $pDisc  = data_get($product, '__pricing.discount', max(0, $pBase - $pFinal));
                                             $printKey = $product['__print_key'] ?? ($product['slug'] ?? '');
                                             $isCustom = !empty($product['__is_custom']);
                                             $editFormId = 'product-pricing-' . $loop->iteration;
+                                            $varieties = array_values((array) ($product['varieties'] ?? []));
+                                            $singleVariety = count($varieties) === 1 ? $varieties[0] : null;
+                                            $visibleVarieties = $singleVariety ? [] : $varieties;
+                                            $rowSource = $singleVariety ?: $product;
+                                            $pBase  = data_get($rowSource, '__pricing.base', 0);
+                                            $pFinal = data_get($rowSource, '__pricing.final', $pBase);
+                                            $pDisc  = data_get($rowSource, '__pricing.discount', max(0, $pBase - $pFinal));
+                                            $rowQuantity = data_get($rowSource, 'quantity', data_get($product, 'quantity', 0));
                                         @endphp
                                         <tr data-print-key="{{ $printKey }}">
                                             <td>
@@ -227,7 +232,23 @@
                                                 @endif
                                             </td>
                                             <td>{{ $product['title'] ?? '—' }}</td>
-                                            <td>—</td>
+                                            <td>
+                                                @if($singleVariety)
+                                                    @if(!empty($singleVariety['name']))
+                                                        {{ $singleVariety['name'] }}
+                                                    @elseif(!empty($singleVariety['attributes']))
+                                                        @foreach($singleVariety['attributes'] as $attribute)
+                                                            {{ $attribute['label'] ?? $attribute['name'] ?? '—' }}:
+                                                            {{ data_get($attribute, 'pivot.value') ?? ($attribute['value'] ?? '—') }}
+                                                            @if(!$loop->last) | @endif
+                                                        @endforeach
+                                                    @else
+                                                        —
+                                                    @endif
+                                                @else
+                                                    —
+                                                @endif
+                                            </td>
                                             <td>
                                                 @if($isCustom)
                                                     <input class="form-control form-control-sm text-center product-price-input" type="number" name="base_price" value="{{ $pBase }}" min="0" form="{{ $editFormId }}">
@@ -251,9 +272,9 @@
                                             </td>
                                             <td>
                                                 @if($isCustom)
-                                                    <input class="form-control form-control-sm text-center product-quantity-input" type="number" name="quantity" value="{{ $product['quantity'] ?? 0 }}" min="0" form="{{ $editFormId }}">
+                                                    <input class="form-control form-control-sm text-center product-quantity-input" type="number" name="quantity" value="{{ $rowQuantity }}" min="0" form="{{ $editFormId }}">
                                                 @else
-                                                    {{ $product['quantity'] ?? 0 }}
+                                                    {{ $rowQuantity }}
                                                 @endif
                                             </td>
                                             <td>
@@ -272,7 +293,7 @@
                                             </td>
                                         </tr>
 
-                                        @forelse($product['varieties'] ?? [] as $variety)
+                                        @forelse($visibleVarieties as $variety)
                                             @php
                                                 $vBase  = data_get($variety, '__pricing.base', 0);
                                                 $vFinal = data_get($variety, '__pricing.final', $vBase);
