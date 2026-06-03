@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\CustomProduct;
-use App\Models\ProductPriceOverride;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -548,15 +547,18 @@ class ProductControllerWeb extends Controller
 
     protected function applySavedStockOverride(array $product): array
     {
-        $printKey = (string) ($product['__print_key'] ?? '');
-        if ($printKey === '' || Str::startsWith($printKey, 'custom:')) {
+        $override = $pricingOverrides[$printKey] ?? null;
+        if (!is_array($override)) {
             return $product;
         }
 
-        $override = ProductPriceOverride::where('product_key', $printKey)->first();
-        if (!$override) {
-            return $product;
+        $basePrice = max(0, (int) ($override['base_price'] ?? data_get($product, '__pricing.base', 0)));
+        $discount = max(0, (int) ($override['discount'] ?? data_get($product, '__pricing.discount', 0)));
+        $finalPrice = max(0, (int) ($override['final_price'] ?? data_get($product, '__pricing.final', $basePrice)));
+        if ($finalPrice === 0 && $basePrice > 0) {
+            $finalPrice = max(0, $basePrice - $discount);
         }
+        $quantity = max(0, (int) ($override['quantity'] ?? ($product['quantity'] ?? 0)));
 
         $product['quantity'] = (int) $override->quantity;
         $product['__has_stock_override'] = true;
