@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\CustomProduct;
-use App\Models\ProductPriceOverride;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -176,31 +175,29 @@ class ProductControllerWeb extends Controller
         $quantity = (int) ($validated['quantity'] ?? 0);
         $productKey = $validated['product_key'];
 
-        if (Str::startsWith($productKey, 'custom:')) {
-            $customProductId = (int) Str::after($productKey, 'custom:');
-            CustomProduct::whereKey($customProductId)->update([
-                'base_price' => $basePrice,
-                'discount' => $discount,
-                'final_price' => $finalPrice,
-                'quantity' => $quantity,
-            ]);
-        } else {
-            ProductPriceOverride::updateOrCreate(
-                ['product_key' => $productKey],
-                [
-                    'base_price' => $basePrice,
-                    'discount' => $discount,
-                    'final_price' => $finalPrice,
-                    'quantity' => $quantity,
-                ]
-            );
+        if (!Str::startsWith($productKey, 'custom:')) {
+            return redirect()->route('products.index', array_filter([
+                'q' => $validated['redirect_q'] ?? null,
+                'category' => $validated['redirect_category'] ?? null,
+                'page' => $validated['redirect_page'] ?? null,
+            ]))->with('error', 'قیمت و موجودی محصولات سایت فقط از سایت خوانده می‌شود و قابل ذخیره دستی نیست.');
         }
+
+        $customProductId = (int) Str::after($productKey, 'custom:');
+        CustomProduct::whereKey($customProductId)->update([
+            'base_price' => $basePrice,
+            'discount' => $discount,
+            'final_price' => $finalPrice,
+            'quantity' => $quantity,
+        ]);
+
+        $message = 'قیمت و موجودی محصول دستی ذخیره شد.';
 
         return redirect()->route('products.index', array_filter([
             'q' => $validated['redirect_q'] ?? null,
             'category' => $validated['redirect_category'] ?? null,
             'page' => $validated['redirect_page'] ?? null,
-        ]))->with('success', 'قیمت و موجودی محصول ذخیره شد.');
+        ]))->with('success', $message);
     }
 
     public function show(string $slug)
@@ -417,7 +414,7 @@ class ProductControllerWeb extends Controller
     }
 
 
-    protected function fetchSelectedProducts(array $selected, array $catById): array
+    protected function fetchSelectedProducts(array $selected, array $catById, array $pricingOverrides = []): array
     {
         $products = [];
 
@@ -532,34 +529,11 @@ class ProductControllerWeb extends Controller
         return $slug;
     }
 
-    protected function applyPriceOverride(array $product): array
+    /**
+     * نگه‌داری سازگاری با درخواست‌های قدیمی پرینت؛ قیمت و موجودی محصولات سایت دیگر override نمی‌شود.
+     */
+    protected function applyTemporaryPricingOverride(array $product, string $printKey, array $pricingOverrides = []): array
     {
-        $printKey = (string) ($product['__print_key'] ?? '');
-        if ($printKey === '' || Str::startsWith($printKey, 'custom:')) {
-            return $product;
-        }
-
-        $override = ProductPriceOverride::where('product_key', $printKey)->first();
-        if (!$override) {
-            return $product;
-        }
-
-        $product['__pricing'] = [
-            'base' => (int) $override->base_price,
-            'final' => (int) $override->final_price,
-            'discount' => (int) $override->discount,
-        ];
-        $product['quantity'] = (int) $override->quantity;
-        $product['__has_price_override'] = true;
-
-        $product['varieties'] = array_map(function ($variety) use ($product) {
-            $variety['__pricing'] = $product['__pricing'];
-            $variety['quantity'] = $product['quantity'];
-            $variety['__has_price_override'] = true;
-
-            return $variety;
-        }, (array) ($product['varieties'] ?? []));
-
         return $product;
     }
 
@@ -605,6 +579,6 @@ class ProductControllerWeb extends Controller
         $p['__pricing']       = ['base' => $base, 'final' => $final, 'discount' => $disc];
         $p['varieties']       = $varieties;
 
-        return $this->applyPriceOverride($p);
+        return $p;
     }
 }
