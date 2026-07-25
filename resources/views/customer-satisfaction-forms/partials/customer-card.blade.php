@@ -1,6 +1,13 @@
-@php($prefix = "customers[$index]")
+@php
+    $prefix = "customers[{$index}]";
+
+    $displayIndex = $displayIndex
+        ?? (is_numeric($index)
+            ? ((int) $index + 1)
+            : '__INDEX_DISPLAY__');
+@endphp
 <section class="cs-card customer-card" data-index="{{ $index }}">
- <header class="d-flex justify-content-between align-items-center mb-4"><div><small>مشتری شماره <span class="customer-number">{{ $index + 1 }}</span></small><h3 class="h5 mb-0 customer-title">اطلاعات مشتری</h3></div><button type="button" class="btn btn-sm btn-outline-danger remove-customer {{ $index ? '' : 'd-none' }}">حذف</button></header>
+ <header class="d-flex justify-content-between align-items-center mb-4"><div><small>مشتری شماره <span class="customer-number">{{ $displayIndex }}</span></small><h3 class="h5 mb-0 customer-title">اطلاعات مشتری</h3></div><button type="button" class="btn btn-sm btn-outline-danger remove-customer {{ $index ? '' : 'd-none' }}">حذف</button></header>
  <div class="row g-3">
   <div class="col-md-6"><label class="form-label">نام و نام خانوادگی <b>*</b></label><input class="form-control" name="{{ $prefix }}[customer_full_name]" value="{{ $customer['customer_full_name'] ?? '' }}" required></div>
   <div class="col-md-6"><label class="form-label">شماره تماس</label><input class="form-control" dir="ltr" name="{{ $prefix }}[customer_phone]" maxlength="20" value="{{ $customer['customer_phone'] ?? '' }}"></div>
