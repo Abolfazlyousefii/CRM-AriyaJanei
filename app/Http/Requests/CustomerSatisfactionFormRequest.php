@@ -4,13 +4,39 @@ namespace App\Http\Requests;
 
 use App\Models\CustomerSatisfactionForm;
 use App\Models\User;
-use Hekmatinasser\Verta\Verta;
+use App\Support\JalaliDate;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 abstract class CustomerSatisfactionFormRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $customers = $this->input('customers');
+
+        if (! is_array($customers)) {
+            return;
+        }
+
+        foreach ($customers as &$customer) {
+            if (! is_array($customer)) {
+                continue;
+            }
+
+            foreach (['submitted_at_fa', 'shipment_sent_at_fa'] as $field) {
+                if (! array_key_exists($field, $customer) || (! is_string($customer[$field]) && $customer[$field] !== null)) {
+                    continue;
+                }
+
+                $customer[$field] = JalaliDate::normalize($customer[$field]);
+            }
+        }
+        unset($customer);
+
+        $this->merge(['customers' => $customers]);
+    }
+
     public function rules(): array
     {
         return [
@@ -48,8 +74,8 @@ abstract class CustomerSatisfactionFormRequest extends FormRequest
                     if (blank($customer[$field] ?? null)) $validator->errors()->add("customers.$index.$field", 'پاسخ این سؤال الزامی است.');
                 }
                 foreach (['submitted_at_fa', 'shipment_sent_at_fa'] as $field) {
-                    if (! blank($customer[$field] ?? null)) {
-                        try { Verta::parse($customer[$field])->datetime(); } catch (\Throwable) { $validator->errors()->add("customers.$index.$field", 'تاریخ شمسی واردشده معتبر نیست.'); }
+                    if (! JalaliDate::isValid($customer[$field] ?? null)) {
+                        $validator->errors()->add("customers.$index.$field", 'تاریخ شمسی انتخاب‌شده معتبر نیست.');
                     }
                 }
                 $assigned = $customer['assigned_to_user_id'] ?? null;
