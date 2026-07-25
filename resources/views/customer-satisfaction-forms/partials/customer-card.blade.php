@@ -1,15 +1,22 @@
-@php($prefix = "customers[$index]")
+@php
+    $prefix = "customers[{$index}]";
+
+    $displayIndex = $displayIndex
+        ?? (is_numeric($index)
+            ? ((int) $index + 1)
+            : '__INDEX_DISPLAY__');
+@endphp
 <section class="cs-card customer-card" data-index="{{ $index }}">
- <header class="d-flex justify-content-between align-items-center mb-4"><div><small>مشتری شماره <span class="customer-number">{{ $index + 1 }}</span></small><h3 class="h5 mb-0 customer-title">اطلاعات مشتری</h3></div><button type="button" class="btn btn-sm btn-outline-danger remove-customer {{ $index ? '' : 'd-none' }}">حذف</button></header>
+ <header class="d-flex justify-content-between align-items-center mb-4"><div><small>مشتری شماره <span class="customer-number">{{ $displayIndex }}</span></small><h3 class="h5 mb-0 customer-title">اطلاعات مشتری</h3></div><button type="button" class="btn btn-sm btn-outline-danger remove-customer {{ $index ? '' : 'd-none' }}">حذف</button></header>
  <div class="row g-3">
   <div class="col-md-6"><label class="form-label">نام و نام خانوادگی <b>*</b></label><input class="form-control" name="{{ $prefix }}[customer_full_name]" value="{{ $customer['customer_full_name'] ?? '' }}" required></div>
   <div class="col-md-6"><label class="form-label">شماره تماس</label><input class="form-control" dir="ltr" name="{{ $prefix }}[customer_phone]" maxlength="20" value="{{ $customer['customer_phone'] ?? '' }}"></div>
-  <div class="col-md-6"><label class="form-label">تاریخ تماس / پیگیری (شمسی)</label><input class="form-control" data-jdp name="{{ $prefix }}[submitted_at_fa]" value="{{ $customer['submitted_at_fa'] ?? '' }}" autocomplete="off"></div>
+  <div class="col-md-6"><label class="form-label">تاریخ تماس / پیگیری (شمسی)</label><div class="cs-date-field"><input type="text" class="form-control cs-jalali-date" data-jdp name="{{ $prefix }}[submitted_at_fa]" value="{{ $customer['submitted_at_fa'] ?? '' }}" readonly inputmode="none" autocomplete="off" placeholder="انتخاب تاریخ شمسی"><button type="button" class="cs-date-trigger" aria-label="انتخاب تاریخ"><i class="bi bi-calendar3" aria-hidden="true"></i></button></div>@error("customers.$index.submitted_at_fa")<div class="invalid-feedback d-block">{{ $message }}</div>@enderror</div>
   <div class="col-md-6"><label class="form-label">ارجاع به</label><select class="form-select" name="{{ $prefix }}[assigned_to_user_id]"><option value="">بدون ارجاع</option>@foreach($reviewUsers as $u)<option value="{{ $u->id }}" @selected((string)($customer['assigned_to_user_id'] ?? '') === (string)$u->id)>{{ $u->name }}</option>@endforeach</select></div>
  </div>
  <div class="question-block mt-4"><label class="form-label fw-bold">آیا این مشتری خرید کرده است؟ *</label><div class="choice-grid status-choices">@foreach(\App\Models\CustomerSatisfactionForm::PURCHASE_STATUSES as $value=>$label)<label class="choice"><input type="radio" name="{{ $prefix }}[purchase_status]" value="{{ $value }}" @checked(($customer['purchase_status'] ?? '') === $value) required><span>{{ $label }}</span></label>@endforeach</div></div>
  <div class="buyer-section mt-4">
-  <div class="row g-3"><div class="col-12"><label class="form-label">تاریخ ارسال بار (اختیاری)</label><input class="form-control" data-jdp name="{{ $prefix }}[shipment_sent_at_fa]" value="{{ $customer['shipment_sent_at_fa'] ?? '' }}" autocomplete="off"></div>
+  <div class="row g-3"><div class="col-12"><label class="form-label">تاریخ ارسال بار (اختیاری)</label><div class="cs-date-field"><input type="text" class="form-control cs-jalali-date" data-jdp name="{{ $prefix }}[shipment_sent_at_fa]" value="{{ $customer['shipment_sent_at_fa'] ?? '' }}" readonly inputmode="none" autocomplete="off" placeholder="انتخاب تاریخ شمسی"><button type="button" class="cs-date-trigger" aria-label="انتخاب تاریخ"><i class="bi bi-calendar3" aria-hidden="true"></i></button></div>@error("customers.$index.shipment_sent_at_fa")<div class="invalid-feedback d-block">{{ $message }}</div>@enderror</div>
   @foreach(['sales_response_score'=>'از لحظه ارتباط با کارشناس فروش و ثبت پیش‌فاکتور، به کیفیت پاسخ‌گویی و ارتباط با شما چه امتیازی می‌دهید؟','shipping_time_score'=>'به زمان ارسال کالا چه امتیازی می‌دهید؟','packaging_quality_score'=>'به کیفیت بسته‌بندی محصول چه امتیازی می‌دهید؟'] as $field=>$question)
    <div class="col-12 question-block"><label class="form-label">{{ $question }}</label><div class="score-row">@for($score=1;$score<=5;$score++)<label><input type="radio" name="{{ $prefix }}[{{ $field }}]" value="{{ $score }}" @checked((string)($customer[$field] ?? '') === (string)$score)><span>{{ $score }}</span></label>@endfor</div></div>
   @endforeach

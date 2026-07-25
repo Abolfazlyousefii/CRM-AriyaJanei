@@ -6,6 +6,7 @@ use App\Http\Requests\StoreCustomerSatisfactionFormRequest;
 use App\Http\Requests\UpdateCustomerSatisfactionFormRequest;
 use App\Models\CustomerSatisfactionForm;
 use App\Models\User;
+use App\Support\JalaliDate;
 use Hekmatinasser\Verta\Verta;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -97,8 +98,8 @@ class CustomerSatisfactionFormController extends Controller
             'customer_phone' => blank($data['customer_phone'] ?? null) ? null : strtr(trim($data['customer_phone']), $digits),
             'purchase_status' => $data['purchase_status'], 'description' => $data['description'] ?? null,
             'assigned_to_user_id' => $data['assigned_to_user_id'] ?? null,
-            'submitted_at' => blank($data['submitted_at_fa'] ?? null) ? ($creating ? now()->toDateString() : null) : Verta::parse($data['submitted_at_fa'])->datetime()->format('Y-m-d'),
-            'shipment_sent_at' => blank($data['shipment_sent_at_fa'] ?? null) ? null : Verta::parse($data['shipment_sent_at_fa'])->datetime()->format('Y-m-d'),
+            'submitted_at' => blank($data['submitted_at_fa'] ?? null) ? ($creating ? now()->toDateString() : null) : JalaliDate::toGregorian($data['submitted_at_fa']),
+            'shipment_sent_at' => JalaliDate::toGregorian($data['shipment_sent_at_fa'] ?? null),
         ];
         $buyerFields = ['sales_response_score', 'support_positive_features', 'warranty_explained', 'warranty_meets_needs', 'shipping_time_score', 'packaging_quality_score', 'product_value_satisfied', 'would_recommend', 'would_choose_again'];
         $result['no_purchase_reason'] = $data['purchase_status'] === 'not_purchased' ? ($data['no_purchase_reason'] ?? null) : null;
