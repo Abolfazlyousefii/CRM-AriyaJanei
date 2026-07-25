@@ -562,14 +562,18 @@ Route::middleware(['auth', 'role:customer_review|Admin|internalManager|InternalM
         ->name('customer-satisfaction-forms.create');
     Route::post('customer-satisfaction-forms', [CustomerSatisfactionFormController::class, 'store'])
         ->name('customer-satisfaction-forms.store');
+    Route::post('customer-satisfaction-forms/mark-assigned-seen', [CustomerSatisfactionFormController::class, 'markAssignedReferralsSeen'])
+        ->name('customer-satisfaction-forms.mark-assigned-seen');
+    Route::get('customer-satisfaction-forms/{customerSatisfactionForm}/edit', [CustomerSatisfactionFormController::class, 'edit'])
+        ->name('customer-satisfaction-forms.edit');
+    Route::match(['put', 'patch'], 'customer-satisfaction-forms/{customerSatisfactionForm}', [CustomerSatisfactionFormController::class, 'update'])
+        ->name('customer-satisfaction-forms.update');
     Route::get('customer-satisfaction-forms/{customerSatisfactionForm}', [CustomerSatisfactionFormController::class, 'show'])
         ->name('customer-satisfaction-forms.show');
     Route::delete('customer-satisfaction-forms/{customerSatisfactionForm}', [CustomerSatisfactionFormController::class, 'destroy'])
         ->name('customer-satisfaction-forms.destroy');
     Route::patch('customer-satisfaction-forms/{customerSatisfactionForm}/submit-result', [CustomerSatisfactionFormController::class, 'submitResult'])
         ->name('customer-satisfaction-forms.submit-result');
-    Route::post('customer-satisfaction-forms/mark-assigned-seen', [CustomerSatisfactionFormController::class, 'markAssignedReferralsSeen'])
-        ->name('customer-satisfaction-forms.mark-assigned-seen');
 });
 
 Route::post('/embed/order-store', [MarketerOrderController::class, 'embedStore'])
@@ -687,5 +691,4 @@ use App\Http\Controllers\PublicProductsController;
 
 Route::get('/public/products', [PublicProductsController::class, 'index']);
 Route::get('/public/products/{ariya_id}', [PublicProductsController::class, 'show']);
-
 
