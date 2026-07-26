@@ -41,6 +41,7 @@ abstract class CustomerSatisfactionFormRequest extends FormRequest
     {
         return [
             'customers' => ['required', 'array', 'min:1'],
+            'customers.*.customer_id' => ['required', 'integer', 'exists:customers,id'],
             'customers.*.customer_full_name' => ['required', 'string', 'max:255'],
             'customers.*.customer_phone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9۰-۹٠-٩+\s-]+$/u'],
             'customers.*.purchase_status' => ['required', Rule::in(array_keys(CustomerSatisfactionForm::PURCHASE_STATUSES))],
@@ -86,6 +87,6 @@ abstract class CustomerSatisfactionFormRequest extends FormRequest
 
     public function messages(): array
     {
-        return ['customers.required' => 'حداقل یک مشتری وارد کنید.', 'customers.*.customer_full_name.required' => 'نام و نام خانوادگی مشتری الزامی است.', 'customers.*.customer_phone.regex' => 'شماره تماس فقط می‌تواند شامل عدد، +، فاصله و خط تیره باشد.', 'customers.*.purchase_status.required' => 'وضعیت خرید مشتری را انتخاب کنید.', 'customers.*.between' => 'امتیاز باید بین ۱ تا ۵ باشد.', 'customers.*.integer' => 'امتیاز باید عدد صحیح باشد.'];
+        return ['customers.required' => 'حداقل یک مشتری وارد کنید.', 'customers.*.customer_id.required' => 'انتخاب مشتری الزامی است.', 'customers.*.customer_id.exists' => 'مشتری انتخاب‌شده دیگر در سامانه موجود نیست.', 'customers.*.customer_full_name.required' => 'نام و نام خانوادگی مشتری الزامی است.', 'customers.*.customer_phone.regex' => 'شماره تماس فقط می‌تواند شامل عدد، +، فاصله و خط تیره باشد.', 'customers.*.purchase_status.required' => 'وضعیت خرید مشتری را انتخاب کنید.', 'customers.*.between' => 'امتیاز باید بین ۱ تا ۵ باشد.', 'customers.*.integer' => 'امتیاز باید عدد صحیح باشد.'];
     }
 }
