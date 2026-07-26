@@ -564,6 +564,8 @@ Route::middleware(['auth', 'role:customer_review|Admin|internalManager|InternalM
         ->name('customer-satisfaction-forms.store');
     Route::post('customer-satisfaction-forms/mark-assigned-seen', [CustomerSatisfactionFormController::class, 'markAssignedReferralsSeen'])
         ->name('customer-satisfaction-forms.mark-assigned-seen');
+    Route::get('customer-satisfaction-forms/customer-search', [CustomerSatisfactionFormController::class, 'searchCustomers'])
+        ->name('customer-satisfaction-forms.customer-search');
     Route::get('customer-satisfaction-forms/{customerSatisfactionForm}/edit', [CustomerSatisfactionFormController::class, 'edit'])
         ->name('customer-satisfaction-forms.edit');
     Route::match(['put', 'patch'], 'customer-satisfaction-forms/{customerSatisfactionForm}', [CustomerSatisfactionFormController::class, 'update'])

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCustomerSatisfactionFormRequest;
 use App\Http\Requests\UpdateCustomerSatisfactionFormRequest;
 use App\Models\CustomerSatisfactionForm;
+use App\Models\Customer;
 use App\Models\User;
 use App\Support\JalaliDate;
 use Hekmatinasser\Verta\Verta;
@@ -19,7 +20,7 @@ class CustomerSatisfactionFormController extends Controller
     {
         $this->authorize('viewAny', CustomerSatisfactionForm::class);
         $user = $request->user();
-        $query = CustomerSatisfactionForm::with(['assignedToUser:id,name', 'createdByUser:id,name'])->latest();
+        $query = CustomerSatisfactionForm::with(['assignedToUser:id,name', 'createdByUser:id,name', 'customer.marketer:id,name', 'customerSeller:id,name'])->latest();
         if (! $user->hasAnyRole(['Admin', 'internalManager', 'InternalManager'])) {
             $query->where(fn ($q) => $q->where('created_by_user_id', $user->id)->orWhere('assigned_to_user_id', $user->id));
         }
@@ -36,13 +37,33 @@ class CustomerSatisfactionFormController extends Controller
     public function create()
     {
         $this->authorize('create', CustomerSatisfactionForm::class);
-        return view('customer-satisfaction-forms.create', ['reviewUsers' => $this->reviewUsers()]);
+        return view('customer-satisfaction-forms.create', ['reviewUsers' => $this->reviewUsers(), 'selectedCustomers' => $this->selectedCustomers(old('customers', []))]);
+    }
+
+    public function searchCustomers(Request $request): JsonResponse
+    {
+        $q = trim(strtr((string) $request->query('q', ''), $this->digitMap()));
+        if (mb_strlen($q) < 2) return response()->json([]);
+        $like = '%'.addcslashes($q, '%_\\').'%';
+        $prefix = addcslashes($q, '%_\\').'%';
+        $customers = Customer::query()->with('marketer:id,name')
+            ->select(['id', 'customer_number', 'name', 'phone', 'city', 'user_id'])
+            ->where(fn ($query) => $query->where('phone', 'like', $like)->orWhere('name', 'like', $like)->orWhere('customer_number', 'like', $like))
+            ->orderByRaw('CASE WHEN phone = ? OR name = ? OR customer_number = ? THEN 0 WHEN phone LIKE ? THEN 1 ELSE 2 END', [$q, $q, $q, $prefix])
+            ->limit(10)->get();
+        return response()->json($customers->map(fn (Customer $customer) => [
+            'id' => $customer->id, 'customer_number' => $customer->customer_number, 'name' => $customer->name,
+            'phone' => $customer->phone, 'city' => $customer->city, 'seller_id' => $customer->marketer?->id,
+            'seller_name' => $customer->marketer?->name ?? 'تعیین نشده',
+        ])->values());
     }
 
     public function store(StoreCustomerSatisfactionFormRequest $request)
     {
-        DB::transaction(function () use ($request) {
-            foreach ($request->validated('customers') as $customer) CustomerSatisfactionForm::create($this->normalize($customer, true));
+        $rows = $request->validated('customers');
+        $customers = Customer::with('marketer:id,name')->whereKey(collect($rows)->pluck('customer_id'))->get()->keyBy('id');
+        DB::transaction(function () use ($rows, $customers) {
+            foreach ($rows as $row) CustomerSatisfactionForm::create($this->normalize($row, true, $customers->get($row['customer_id'])));
         });
         return redirect()->route('customer-satisfaction-forms.index')->with('success', 'فرم‌های رضایت مشتری با موفقیت ثبت شدند.');
     }
@@ -50,18 +71,21 @@ class CustomerSatisfactionFormController extends Controller
     public function show(CustomerSatisfactionForm $customerSatisfactionForm)
     {
         $this->authorize('view', $customerSatisfactionForm);
-        return view('customer-satisfaction-forms.show', ['form' => $customerSatisfactionForm->load(['assignedToUser', 'createdByUser'])]);
+        return view('customer-satisfaction-forms.show', ['form' => $customerSatisfactionForm->load(['assignedToUser', 'createdByUser', 'customer.marketer', 'customerSeller'])]);
     }
 
     public function edit(CustomerSatisfactionForm $customerSatisfactionForm)
     {
         $this->authorize('update', $customerSatisfactionForm);
-        return view('customer-satisfaction-forms.edit', ['form' => $customerSatisfactionForm, 'reviewUsers' => $this->reviewUsers()]);
+        $customerSatisfactionForm->load(['customer.marketer', 'customerSeller']);
+        return view('customer-satisfaction-forms.edit', ['form' => $customerSatisfactionForm, 'reviewUsers' => $this->reviewUsers(), 'selectedCustomers' => $this->selectedCustomers(old('customers', [['customer_id' => $customerSatisfactionForm->customer_id]]))]);
     }
 
     public function update(UpdateCustomerSatisfactionFormRequest $request, CustomerSatisfactionForm $customerSatisfactionForm)
     {
-        $customerSatisfactionForm->update($this->normalize($request->validated('customers')[0], false));
+        $row = $request->validated('customers')[0];
+        $customer = Customer::with('marketer:id,name')->findOrFail($row['customer_id']);
+        DB::transaction(fn () => $customerSatisfactionForm->update($this->normalize($row, false, $customer)));
         return redirect()->route('customer-satisfaction-forms.show', $customerSatisfactionForm)->with('success', 'فرم با موفقیت ویرایش شد.');
     }
 
@@ -88,14 +112,15 @@ class CustomerSatisfactionFormController extends Controller
 
     private function reviewUsers() { return User::role('customer_review')->orderBy('name')->get(['id', 'name']); }
 
-    private function normalize(array $data, bool $creating): array
+    private function normalize(array $data, bool $creating, Customer $customer): array
     {
         $digits = ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9'];
-        $fullName = preg_replace('/\s+/u', ' ', trim($data['customer_full_name'] ?? ''));
+        $fullName = preg_replace('/\s+/u', ' ', trim($customer->name));
         $parts = explode(' ', $fullName, 2);
         $result = [
+            'customer_id' => $customer->id, 'customer_seller_user_id' => $customer->user_id,
             'customer_name' => $parts[0], 'customer_family' => $parts[1] ?? null,
-            'customer_phone' => blank($data['customer_phone'] ?? null) ? null : strtr(trim($data['customer_phone']), $digits),
+            'customer_phone' => blank($customer->phone) ? null : strtr(trim($customer->phone), $digits),
             'purchase_status' => $data['purchase_status'], 'description' => $data['description'] ?? null,
             'assigned_to_user_id' => $data['assigned_to_user_id'] ?? null,
             'submitted_at' => blank($data['submitted_at_fa'] ?? null) ? ($creating ? now()->toDateString() : null) : JalaliDate::toGregorian($data['submitted_at_fa']),
@@ -108,5 +133,11 @@ class CustomerSatisfactionFormController extends Controller
         if ($creating) $result['created_by_user_id'] = Auth::id();
         elseif ($result['submitted_at'] === null) unset($result['submitted_at']);
         return $result;
+    }
+
+    private function digitMap(): array { return ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']; }
+    private function selectedCustomers(array $rows)
+    {
+        return Customer::with('marketer:id,name')->whereKey(collect($rows)->pluck('customer_id')->filter())->get()->keyBy('id');
     }
 }
