@@ -36,6 +36,8 @@ Route::post('/token-for-client', function (Request $request) {
 
     return response()->json(['token' => $token]);
 });
-Route::get('/external/users', [ExternalUserSyncController::class, 'index']);
+Route::middleware('external.sync')->group(function () {
+    Route::get('/external/users', [ExternalUserSyncController::class, 'index']);
+});
 Route::get('/external/customers', [ExternalCustomerSyncController::class, 'index']);
 Route::post('/external/customers', [ExternalCustomerSyncController::class, 'store']);

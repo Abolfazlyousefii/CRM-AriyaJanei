@@ -32,7 +32,6 @@ class ExternalUserSyncController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'phone' => $user->phone,
-                    'password_hash' => $user->password,
                     'manager_id' => $user->manager_id,
                     'roles' => $user->roles->pluck('name')->values(),
                     'created_at' => $user->created_at,
@@ -42,7 +41,6 @@ class ExternalUserSyncController extends Controller
 
         return response()->json([
             'message' => 'Users synced successfully.',
-            'password_note' => 'password_hash is a Laravel-compatible hash and can be reused in another Laravel project.',
             'users' => $users,
         ]);
     }
