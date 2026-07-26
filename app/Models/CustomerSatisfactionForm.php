@@ -18,6 +18,8 @@ class CustomerSatisfactionForm extends Model
     public const YES_NO = ['yes' => 'بله', 'no' => 'خیر'];
 
     protected $fillable = [
+        'customer_id',
+        'customer_seller_user_id',
         'submitted_at',
         'customer_name',
         'customer_family',
@@ -60,6 +62,13 @@ class CustomerSatisfactionForm extends Model
     public function createdByUser()
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    public function customer() { return $this->belongsTo(Customer::class); }
+    public function customerSeller() { return $this->belongsTo(User::class, 'customer_seller_user_id'); }
+    public function getSellerNameAttribute(): string
+    {
+        return $this->customerSeller?->name ?? $this->customer?->marketer?->name ?? 'تعیین نشده';
     }
 
     public function getCustomerFullNameAttribute(): string
