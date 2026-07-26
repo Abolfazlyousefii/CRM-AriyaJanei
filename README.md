@@ -109,7 +109,7 @@ php artisan migrate --seed
 
 ## 🔄 API همگام‌سازی کاربران برای پروژه دوم
 
-برای دریافت کاربران همراه با نقش‌ها و **hash پسورد** (قابل استفاده در یک پروژه Laravel دیگر)، این endpoint اضافه شده است:
+برای دریافت امن کاربران همراه با نقش‌ها، این endpoint اضافه شده است:
 
 - `GET /api/external/users`
 - Header: `Authorization: Bearer {EXTERNAL_SYNC_TOKEN}`
@@ -118,6 +118,6 @@ php artisan migrate --seed
 - `updated_since` (فرمت تاریخ)
 - `per_page` (بین 1 تا 500)
 
-نمونه پاسخ شامل `name`، `phone`، `password_hash`، `roles` و زمان‌های ایجاد/ویرایش کاربر است.
+نمونه پاسخ شامل `id`، `name`، `phone`، `manager_id`، `roles` و زمان‌های ایجاد/ویرایش کاربر است. رمز عبور، hash رمز و سایر اطلاعات حساس در پاسخ قرار نمی‌گیرند.
 
 > مقدار `EXTERNAL_SYNC_TOKEN` را در فایل `.env` تنظیم کنید.
