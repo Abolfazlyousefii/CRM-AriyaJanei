@@ -10,13 +10,13 @@
         $todayReminders = collect($todayReminders ?? []);
         $groupedNotifications = collect($groupedNotifications ?? []);
 
-        $inventoryBaseUrl = 'http://192.168.1.30:8080';
+        $inventoryBaseUrl = 'http://192.168.1.207:8080';
         $inventoryPhone = preg_replace('/\s+/', '', (string) ($user->phone ?? ''));
 
         if (!function_exists('inventory_url')) {
             function inventory_url($path = '/')
             {
-                $baseUrl = rtrim('http://192.168.1.30:8080', '/');
+                $baseUrl = rtrim('http://192.168.1.207:8080', '/');
                 $path = '/' . ltrim((string) $path, '/');
 
                 return $baseUrl . $path;
@@ -26,7 +26,7 @@
         if (!function_exists('inventory_auto_login_only_url')) {
             function inventory_auto_login_only_url($phone = null)
             {
-                $baseUrl = rtrim('http://192.168.1.30:8080', '/');
+                $baseUrl = rtrim('http://192.168.1.207:8080', '/');
                 $phone = preg_replace('/\s+/', '', (string) $phone);
 
                 return $baseUrl . '/auto-login?' . http_build_query([
