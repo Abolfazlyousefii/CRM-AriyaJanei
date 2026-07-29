@@ -10,39 +10,9 @@
         $todayReminders = collect($todayReminders ?? []);
         $groupedNotifications = collect($groupedNotifications ?? []);
 
-        $inventoryBaseUrl = 'http://192.168.1.207:8080';
-        $inventoryPhone = preg_replace('/\s+/', '', (string) ($user->phone ?? ''));
+        $inventoryBaseUrl = rtrim((string) config('services.erp.url'), '/');
 
-        if (!function_exists('inventory_url')) {
-            function inventory_url($path = '/')
-            {
-                $baseUrl = rtrim('http://192.168.1.207:8080', '/');
-                $path = '/' . ltrim((string) $path, '/');
-
-                return $baseUrl . $path;
-            }
-        }
-
-        if (!function_exists('inventory_auto_login_only_url')) {
-            function inventory_auto_login_only_url($phone = null)
-            {
-                $baseUrl = rtrim('http://192.168.1.207:8080', '/');
-                $phone = preg_replace('/\s+/', '', (string) $phone);
-
-                return $baseUrl . '/auto-login?' . http_build_query([
-                    'phone' => $phone,
-                ]);
-            }
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | لینک‌های عمومی سیستم انبار
-        |--------------------------------------------------------------------------
-        | این لینک‌ها برای همه کاربران نمایش داده می‌شوند.
-        | هنگام کلیک، اول auto-login انجام می‌شود،
-        | سپس همان تب به مسیر target منتقل می‌شود.
-        */
+        /* ERP operational links are restricted to known paths and use the configured base URL. */
         $linksForAllUsers = [
             [
                 'title' => 'ثبت پیش فاکتور',
@@ -366,13 +336,12 @@
                     </div>
                 </div>
 
-                <a href="{{ inventory_auto_login_only_url($inventoryPhone) }}"
-                   class="btn btn-primary align-items-center gap-2"
-                   target="_blank"
-                   rel="noopener noreferrer">
-                    <i class="bi bi-speedometer2"></i>
-                    <span>ورود به سیستم انبار</span>
-                </a>
+                @if($user->canAccessErp())
+                    <a href="{{ route('erp.launch') }}" class="btn btn-primary align-items-center gap-2">
+                        <i class="bi bi-speedometer2"></i>
+                        <span>ورود به سیستم انبار</span>
+                    </a>
+                @endif
 
                 <div class="sd-muted small text-end">
                     {{ \Hekmatinasser\Verta\Verta::now()->format('l، j F Y') }}
@@ -1086,24 +1055,20 @@
                                             $isInventoryLink = isset($item['inventory_path']);
 
                                             if ($isInventoryLink) {
-                                                $href = inventory_url($item['inventory_path']);
-                                                $autoLoginUrl = inventory_auto_login_only_url($inventoryPhone);
-                                                $targetUrl = inventory_url($item['inventory_path']);
+                                                $allowedInventoryPaths = ['/preinvoice/create', '/products'];
+                                                $inventoryPath = in_array($item['inventory_path'], $allowedInventoryPaths, true)
+                                                    ? $item['inventory_path']
+                                                    : '/';
+                                                $href = $inventoryBaseUrl . $inventoryPath;
                                                 $isExternalUrl = true;
                                             } elseif (isset($item['url'])) {
                                                 $href = $item['url'];
-                                                $autoLoginUrl = null;
-                                                $targetUrl = null;
                                                 $isExternalUrl = true;
                                             } elseif (isset($item['route'])) {
                                                 $href = route($item['route']);
-                                                $autoLoginUrl = null;
-                                                $targetUrl = null;
                                                 $isExternalUrl = false;
                                             } else {
                                                 $href = '#';
-                                                $autoLoginUrl = null;
-                                                $targetUrl = null;
                                                 $isExternalUrl = false;
                                             }
                                         @endphp
@@ -1129,13 +1094,8 @@
                                                 </form>
                                             @else
                                                 <a href="{{ $href }}"
-                                                   class="sd-link-item {{ $isInventoryLink ? 'js-inventory-auto-login' : '' }}"
-                                                   @if($isExternalUrl) target="_blank" rel="noopener noreferrer" @endif
-                                                   @if($isInventoryLink)
-                                                       data-auto-login-url="{{ $autoLoginUrl }}"
-                                                       data-target-url="{{ $targetUrl }}"
-                                                       data-phone="{{ $inventoryPhone }}"
-                                                   @endif>
+                                                   class="sd-link-item"
+                                                   @if($isExternalUrl) target="_blank" rel="noopener noreferrer" @endif>
                                                     <span class="sd-muted">‹</span>
 
                                                     <div class="sd-row-reverse gap-3">
@@ -1353,50 +1313,6 @@
                     keyboard: false
                 }).show();
             @endif
-
-            /*
-            |--------------------------------------------------------------------------
-            | ورود خودکار به سیستم انبار و انتقال به صفحه درست
-            |--------------------------------------------------------------------------
-            | چون auto-login بعد از لاگین خودش به dashboard می‌رود،
-            | اینجا اول auto-login در تب جدید باز می‌شود،
-            | سپس همان تب بعد از کمی مکث به صفحه دکمه منتقل می‌شود.
-            */
-            document.querySelectorAll('.js-inventory-auto-login').forEach(link => {
-                link.addEventListener('click', function (event) {
-                    event.preventDefault();
-
-                    const autoLoginUrl = this.dataset.autoLoginUrl;
-                    const targetUrl = this.dataset.targetUrl;
-                    const phone = this.dataset.phone;
-
-                    if (!phone) {
-                        Swal.fire({
-                            title: 'شماره تماس ثبت نشده',
-                            text: 'برای ورود خودکار به سیستم انبار، شماره تماس کاربر باید در پروفایل ثبت شده باشد.',
-                            icon: 'warning',
-                            confirmButtonText: 'باشه'
-                        });
-                        return;
-                    }
-
-                    const inventoryTab = window.open(autoLoginUrl, '_blank');
-
-                    if (!inventoryTab) {
-                        Swal.fire({
-                            title: 'باز شدن تب مسدود شد',
-                            text: 'لطفاً اجازه باز شدن Pop-up را برای این سایت فعال کنید.',
-                            icon: 'warning',
-                            confirmButtonText: 'باشه'
-                        });
-                        return;
-                    }
-
-                    setTimeout(function () {
-                        inventoryTab.location.href = targetUrl;
-                    }, 1800);
-                });
-            });
 
             async function toggleTask(checkbox) {
                 const taskId = checkbox.dataset.id;
