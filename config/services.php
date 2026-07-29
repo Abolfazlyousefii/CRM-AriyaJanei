@@ -43,4 +43,22 @@ return [
     'token' => env('EXTERNAL_SYNC_TOKEN'),
 ],
 
+'erp' => [
+    'enabled' => env('ERP_ENABLED', false),
+    'url' => rtrim((string) env('ERP_URL', 'https://inv.ariyajanebi.ir'), '/'),
+    'launch_url' => rtrim((string) env('ERP_LAUNCH_URL', 'https://inv.ariyajanebi.ir'), '/'),
+    'access_roles' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('ERP_ACCESS_ROLES', ''))
+    ))),
+    'seller_roles' => ['Marketer'],
+    'sync_rate_limit' => (int) env('ERP_SYNC_RATE_LIMIT', 60),
+    'sync_audit_enabled' => env('ERP_SYNC_AUDIT_ENABLED', false),
+],
+
+'legacy_client_token' => [
+    'enabled' => env('LEGACY_CLIENT_TOKEN_ENABLED', false),
+    'secret' => env('CLIENT_SECRET'),
+],
+
 ];

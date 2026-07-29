@@ -21,6 +21,9 @@ use App\Http\Controllers\RemindersController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\CustomerSatisfactionFormController;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\ErpLaunchController;
+
+Route::get('/launch/erp', ErpLaunchController::class)->middleware('auth')->name('erp.launch');
 
 
 Route::middleware(['auth'])->group(function () {
@@ -693,4 +696,3 @@ use App\Http\Controllers\PublicProductsController;
 
 Route::get('/public/products', [PublicProductsController::class, 'index']);
 Route::get('/public/products/{ariya_id}', [PublicProductsController::class, 'show']);
-
