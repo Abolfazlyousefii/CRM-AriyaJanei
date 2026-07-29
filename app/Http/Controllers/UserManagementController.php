@@ -25,6 +25,7 @@ class UserManagementController extends Controller
     {
         $roles = $request->input('roles', []); // آرایه نقش‌های انتخاب شده
         $user->syncRoles($roles); // جایگزینی نقش‌ها
+        $user->touch();
         return back()->with('success', 'نقش‌های کاربر به‌روزرسانی شد.');
     }
 
@@ -51,6 +52,7 @@ class UserManagementController extends Controller
         ]);
 
         $user->assignRole('Manager');
+        $user->touch();
 
         return redirect()->route('admin.users.index')->with('success', 'مدیر با موفقیت ایجاد شد.');
     }
@@ -125,6 +127,7 @@ $user->save();
         ]);
 
         $user->assignRole('User');
+        $user->touch();
 
         return redirect()->route('admin.users.index')->with('success', 'کارمند با موفقیت ایجاد شد.');
     }

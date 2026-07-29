@@ -45,6 +45,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'blocked_until' => 'datetime',
         ];
     }
 
@@ -67,14 +68,32 @@ public function userProducts()
 {
     return $this->hasMany(\App\Models\UserProduct::class);
 }
-protected $casts = [
-    'email_verified_at' => 'datetime',
-    'blocked_until' => 'datetime',
-];
-
 public function isBlocked(): bool
 {
     return $this->blocked_until && $this->blocked_until->isFuture();
+}
+
+public function isActiveForErp(): bool
+{
+    return ! $this->isBlocked();
+}
+
+public function canAccessErp(): bool
+{
+    $roles = config('services.erp.access_roles', []);
+
+    return (bool) config('services.erp.enabled', false)
+        && $this->exists
+        && $this->isActiveForErp()
+        && $roles !== []
+        && $this->hasAnyRole($roles);
+}
+
+public function isSellerForErp(): bool
+{
+    $roles = config('services.erp.seller_roles', []);
+
+    return $roles !== [] && $this->hasAnyRole($roles);
 }
 
 public function blockRemaining(): ?string

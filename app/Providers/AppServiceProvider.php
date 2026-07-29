@@ -8,6 +8,9 @@ use App\Models\Notification;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use App\Services\TaskOverdueNotificationService;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +27,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('erp.sync', function (Request $request) {
+            $token = (string) $request->bearerToken();
+            $key = $token === '' ? 'missing' : hash('sha256', $token);
+
+            return Limit::perMinute(max(1, (int) config('services.erp.sync_rate_limit', 60)))
+                ->by('erp-sync:'.$key);
+        });
+
         View::composer('layouts.navigation', function ($view) {
             $user = auth()->user();
 
