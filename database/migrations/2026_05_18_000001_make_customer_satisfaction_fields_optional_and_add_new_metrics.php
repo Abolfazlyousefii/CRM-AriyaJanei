@@ -12,7 +12,6 @@ return new class extends Migration
             $table->date('submitted_at')->nullable()->change();
             $table->string('customer_name')->nullable()->change();
             $table->string('customer_family')->nullable()->change();
-            $table->enum('shipping_method', ['barbari', 'tipax', 'rahmati', 'ghafari', 'nadi', 'hozori'])->nullable()->change();
             $table->enum('satisfaction_status', ['satisfied', 'unsatisfied'])->nullable()->change();
             $table->foreignId('assigned_to_user_id')->nullable()->change();
 
@@ -20,7 +19,7 @@ return new class extends Migration
             $table->unsignedTinyInteger('shipment_score')->nullable()->after('operator_communication_score');
             $table->unsignedTinyInteger('product_quality_score')->nullable()->after('shipment_score');
             $table->enum('needs_consultation', ['yes', 'no'])->nullable()->after('product_quality_score');
-            $table->enum('wants_in_person_purchase', ['yes', 'no'])->nullable()->after('needs_consultation');
+            $table->enum('wants_in_person_purchase', ['in_person', 'website', 'phone'])->nullable()->after('needs_consultation');
         });
     }
 
@@ -38,7 +37,6 @@ return new class extends Migration
             $table->date('submitted_at')->nullable(false)->change();
             $table->string('customer_name')->nullable(false)->change();
             $table->string('customer_family')->nullable(false)->change();
-            $table->enum('shipping_method', ['barbari', 'tipax', 'rahmati', 'ghafari', 'nadi', 'hozori'])->nullable(false)->change();
             $table->enum('satisfaction_status', ['satisfied', 'unsatisfied'])->nullable(false)->change();
             $table->foreignId('assigned_to_user_id')->nullable(false)->change();
         });

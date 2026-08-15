@@ -61,14 +61,10 @@ return [
     'secret' => env('CLIENT_SECRET'),
 ],
 
+
+
 'inventory' => [
     'url' => env('INVENTORY_URL'),
 ]
-
-
-
-
-
-
 
 ];

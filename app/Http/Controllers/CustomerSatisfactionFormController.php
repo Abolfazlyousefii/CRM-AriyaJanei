@@ -2,191 +2,142 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCustomerSatisfactionFormRequest;
+use App\Http\Requests\UpdateCustomerSatisfactionFormRequest;
 use App\Models\CustomerSatisfactionForm;
+use App\Models\Customer;
 use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use App\Support\JalaliDate;
 use Hekmatinasser\Verta\Verta;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CustomerSatisfactionFormController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $user = Auth::user();
-
-        if ($user->hasAnyRole(['Admin', 'internalManager', 'InternalManager'])) {
-            $forms = CustomerSatisfactionForm::with(['assignedToUser', 'createdByUser'])
-                ->latest()
-                ->paginate(20);
-                $groupedForms = $forms->getCollection()->groupBy(function ($form) {
-    return \Hekmatinasser\Verta\Verta::instance($form->submitted_at)->format('Y/m/d');
-});
-        } elseif ($user->hasRole('customer_review')) {
-            $forms = CustomerSatisfactionForm::with(['assignedToUser', 'createdByUser'])
-                ->where(function ($q) use ($user) {
-                    $q->where('created_by_user_id', $user->id)
-                        ->orWhere('assigned_to_user_id', $user->id);
-                })
-                ->latest()
-                ->paginate(20);
-                $groupedForms = $forms->getCollection()->groupBy(function ($form) {
-    return \Hekmatinasser\Verta\Verta::instance($form->submitted_at)->format('Y/m/d');
-});
-        } else {
-            abort(403);
+        $this->authorize('viewAny', CustomerSatisfactionForm::class);
+        $user = $request->user();
+        $query = CustomerSatisfactionForm::with(['assignedToUser:id,name', 'createdByUser:id,name', 'customer.marketer:id,name', 'customerSeller:id,name'])->latest();
+        if (! $user->hasAnyRole(['Admin', 'internalManager', 'InternalManager'])) {
+            $query->where(fn ($q) => $q->where('created_by_user_id', $user->id)->orWhere('assigned_to_user_id', $user->id));
         }
-
-
-return view('customer-satisfaction-forms.index', compact('forms', 'groupedForms'));    }
+        $query->when($request->filled('search'), fn ($q) => $q->where(fn ($q) => $q->whereRaw("TRIM(CONCAT(COALESCE(customer_name,''), ' ', COALESCE(customer_family,''))) LIKE ?", ['%'.$request->search.'%'])->orWhere('customer_phone', 'like', '%'.$request->search.'%')))
+            ->when($request->filled('purchase_status'), fn ($q) => $request->purchase_status === 'legacy' ? $q->whereNull('purchase_status') : $q->where('purchase_status', $request->purchase_status))
+            ->when($request->filled('no_purchase_reason'), fn ($q) => $q->where('no_purchase_reason', $request->no_purchase_reason))
+            ->when($request->filled('assigned_to_user_id'), fn ($q) => $q->where('assigned_to_user_id', $request->assigned_to_user_id));
+        foreach (['date_from' => '>=', 'date_to' => '<='] as $field => $operator) {
+            if ($request->filled($field)) try { $query->whereDate('submitted_at', $operator, Verta::parse($request->$field)->datetime()); } catch (\Throwable) { return back()->withErrors([$field => 'تاریخ فیلتر معتبر نیست.'])->withInput(); }
+        }
+        return view('customer-satisfaction-forms.index', ['forms' => $query->paginate(20)->withQueryString(), 'reviewUsers' => User::role('customer_review')->orderBy('name')->get(['id', 'name'])]);
+    }
 
     public function create()
     {
-        $user = Auth::user();
-
-        if (! $user->hasRole('customer_review')) {
-            abort(403);
-        }
-
-        $reviewUsers = User::role('customer_review')->orderBy('name')->get();
-
-        return view('customer-satisfaction-forms.create', compact('reviewUsers'));
+        $this->authorize('create', CustomerSatisfactionForm::class);
+        return view('customer-satisfaction-forms.create', ['reviewUsers' => $this->reviewUsers(), 'selectedCustomers' => $this->selectedCustomers(old('customers', []))]);
     }
 
-   public function store(Request $request)
-{
-    $user = Auth::user();
-
-    if (! $user->hasRole('customer_review')) {
-        abort(403);
+    public function searchCustomers(Request $request): JsonResponse
+    {
+        $q = trim(strtr((string) $request->query('q', ''), $this->digitMap()));
+        if (mb_strlen($q) < 2) return response()->json([]);
+        $like = '%'.addcslashes($q, '%_\\').'%';
+        $prefix = addcslashes($q, '%_\\').'%';
+        $customers = Customer::query()->with('marketer:id,name')
+            ->select(['id', 'customer_number', 'name', 'phone', 'city', 'user_id'])
+            ->where(fn ($query) => $query->where('phone', 'like', $like)->orWhere('name', 'like', $like)->orWhere('customer_number', 'like', $like))
+            ->orderByRaw('CASE WHEN phone = ? OR name = ? OR customer_number = ? THEN 0 WHEN phone LIKE ? THEN 1 ELSE 2 END', [$q, $q, $q, $prefix])
+            ->limit(10)->get();
+        return response()->json($customers->map(fn (Customer $customer) => [
+            'id' => $customer->id, 'customer_number' => $customer->customer_number, 'name' => $customer->name,
+            'phone' => $customer->phone, 'city' => $customer->city, 'seller_id' => $customer->marketer?->id,
+            'seller_name' => $customer->marketer?->name ?? 'تعیین نشده',
+        ])->values());
     }
 
-    $validated = $request->validate([
-        'customers' => ['required', 'array', 'min:1'],
-        'customers.*.submitted_at' => ['nullable', 'date'],
-        'customers.*.shipment_sent_at_fa' => ['nullable', 'string'],
-        'customers.*.customer_full_name' => ['nullable', 'string', 'max:255'],
-        'customers.*.shipping_method' => ['nullable', 'in:barbari,tipax,rahmati,ghafari,nadi,hozori'],
-        'customers.*.satisfaction_status' => ['nullable', 'in:satisfied,unsatisfied,a,'],
-        'customers.*.assigned_to_user_id' => ['nullable', 'integer'],
-        'customers.*.referral_note' => ['nullable', 'string'],
-        'customers.*.description' => ['nullable', 'string'],
-        'customers.*.operator_communication_score' => ['nullable', 'integer', 'between:1,5'],
-        'customers.*.shipment_score' => ['nullable', 'integer', 'between:1,5'],
-        'customers.*.product_quality_score' => ['nullable', 'integer', 'between:1,5'],
-        'customers.*.needs_consultation' => ['nullable', 'in:yes,no'],
-        'customers.*.wants_in_person_purchase' => ['nullable', 'in:yes,no'],
-    ]);
-
-    foreach ($validated['customers'] as $formData) {
-        $assignedUser = null;
-        if ($formData['assigned_to_user_id']) {
-            $assignedUser = User::role('customer_review')->findOrFail($formData['assigned_to_user_id']);
-        }
-
-        $fullName = preg_replace('/\s+/', ' ', trim($formData['customer_full_name'] ?? ''));
-        $nameParts = $fullName !== '' ? explode(' ', $fullName, 2) : ['', ''];
-
-        // اگر satisfaction_status خالی باشد، مقدار آن را به null تنظیم کنید
-        $satisfactionStatus = $formData['satisfaction_status'] ?? null;
-
-        CustomerSatisfactionForm::create([
-            'submitted_at' => $formData['submitted_at'] ?? null,
-            'shipment_sent_at' => ! empty($formData['shipment_sent_at_fa']) ? Verta::parse($formData['shipment_sent_at_fa'])->datetime()->format('Y-m-d') : null,
-            'customer_name' => $nameParts[0] !== '' ? $nameParts[0] : null,
-            'customer_family' => ($nameParts[1] ?? '') !== '' ? ($nameParts[1] ?? '') : null,
-            'shipping_method' => $formData['shipping_method'] ?? null,
-            'satisfaction_status' => $satisfactionStatus,
-            'assigned_to_user_id' => $assignedUser ? $assignedUser->id : null,
-            'created_by_user_id' => $user->id,
-            'referral_note' => $formData['referral_note'] ?? null,
-            'description' => $formData['description'] ?? null,
-            'operator_communication_score' => $formData['operator_communication_score'] ?? null,
-            'shipment_score' => $formData['shipment_score'] ?? null,
-            'product_quality_score' => $formData['product_quality_score'] ?? null,
-            'needs_consultation' => $formData['needs_consultation'] ?? null,
-            'wants_in_person_purchase' => $formData['wants_in_person_purchase'] ?? null,
-        ]);
+    public function store(StoreCustomerSatisfactionFormRequest $request)
+    {
+        $rows = $request->validated('customers');
+        $customers = Customer::with('marketer:id,name')->whereKey(collect($rows)->pluck('customer_id'))->get()->keyBy('id');
+        DB::transaction(function () use ($rows, $customers) {
+            foreach ($rows as $row) CustomerSatisfactionForm::create($this->normalize($row, true, $customers->get($row['customer_id'])));
+        });
+        return redirect()->route('customer-satisfaction-forms.index')->with('success', 'فرم‌های رضایت مشتری با موفقیت ثبت شدند.');
     }
-
-    return redirect()->route('customer-satisfaction-forms.index')->with('success', 'فرم‌های رضایت مشتری با موفقیت ثبت شدند.');
-}
 
     public function show(CustomerSatisfactionForm $customerSatisfactionForm)
     {
-        $user = Auth::user();
-
-        $canView =
-            $user->hasAnyRole(['Admin', 'internalManager', 'InternalManager']) ||
-            $customerSatisfactionForm->created_by_user_id === $user->id ||
-            $customerSatisfactionForm->assigned_to_user_id === $user->id;
-
-        if (! $canView) {
-            abort(403);
-        }
-
-        $customerSatisfactionForm->load(['assignedToUser', 'createdByUser']);
-
-        return view('customer-satisfaction-forms.show', [
-            'form' => $customerSatisfactionForm,
-        ]);
+        $this->authorize('view', $customerSatisfactionForm);
+        return view('customer-satisfaction-forms.show', ['form' => $customerSatisfactionForm->load(['assignedToUser', 'createdByUser', 'customer.marketer', 'customerSeller'])]);
     }
 
+    public function edit(CustomerSatisfactionForm $customerSatisfactionForm)
+    {
+        $this->authorize('update', $customerSatisfactionForm);
+        $customerSatisfactionForm->load(['customer.marketer', 'customerSeller']);
+        return view('customer-satisfaction-forms.edit', ['form' => $customerSatisfactionForm, 'reviewUsers' => $this->reviewUsers(), 'selectedCustomers' => $this->selectedCustomers(old('customers', [['customer_id' => $customerSatisfactionForm->customer_id]]))]);
+    }
+
+    public function update(UpdateCustomerSatisfactionFormRequest $request, CustomerSatisfactionForm $customerSatisfactionForm)
+    {
+        $row = $request->validated('customers')[0];
+        $customer = Customer::with('marketer:id,name')->findOrFail($row['customer_id']);
+        DB::transaction(fn () => $customerSatisfactionForm->update($this->normalize($row, false, $customer)));
+        return redirect()->route('customer-satisfaction-forms.show', $customerSatisfactionForm)->with('success', 'فرم با موفقیت ویرایش شد.');
+    }
 
     public function destroy(CustomerSatisfactionForm $customerSatisfactionForm)
     {
-        $user = Auth::user();
-
-        if ($customerSatisfactionForm->created_by_user_id !== $user->id) {
-            abort(403, 'فقط ثبت‌کننده می‌تواند فرم را حذف کند.');
-        }
-
-        if (! empty($customerSatisfactionForm->result)) {
-            return redirect()->route('customer-satisfaction-forms.index')
-                ->with('error', 'فرمی که نتیجه برای آن ثبت شده قابل حذف نیست.');
-        }
-
+        $this->authorize('delete', $customerSatisfactionForm);
         $customerSatisfactionForm->delete();
-
-        return redirect()->route('customer-satisfaction-forms.index')
-            ->with('success', 'فرم رضایت مشتری با موفقیت حذف شد.');
+        return redirect()->route('customer-satisfaction-forms.index')->with('success', 'فرم رضایت مشتری با موفقیت حذف شد.');
     }
-
-
 
     public function markAssignedReferralsSeen(): JsonResponse
     {
-        $user = Auth::user();
-
-        $updated = CustomerSatisfactionForm::query()
-            ->where('assigned_to_user_id', $user->id)
-            ->whereNull('referral_seen_at')
-            ->update(['referral_seen_at' => now()]);
-
-        return response()->json([
-            'success' => true,
-            'updated' => $updated,
-        ]);
+        $updated = CustomerSatisfactionForm::where('assigned_to_user_id', Auth::id())->whereNull('referral_seen_at')->update(['referral_seen_at' => now()]);
+        return response()->json(['success' => true, 'updated' => $updated]);
     }
 
     public function submitResult(Request $request, CustomerSatisfactionForm $customerSatisfactionForm)
     {
-        $user = Auth::user();
+        $this->authorize('submitResult', $customerSatisfactionForm);
+        $validated = $request->validate(['result' => ['required', 'string']]);
+        $customerSatisfactionForm->update(['result' => $validated['result'], 'result_filled_at' => now()]);
+        return redirect()->route('customer-satisfaction-forms.show', $customerSatisfactionForm)->with('success', 'نتیجه بررسی ثبت شد.');
+    }
 
-        if ($customerSatisfactionForm->assigned_to_user_id !== $user->id) {
-            abort(403);
-        }
+    private function reviewUsers() { return User::role('customer_review')->orderBy('name')->get(['id', 'name']); }
 
-        $validated = $request->validate([
-            'result' => ['required', 'string'],
-        ]);
+    private function normalize(array $data, bool $creating, Customer $customer): array
+    {
+        $digits = ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9'];
+        $fullName = preg_replace('/\s+/u', ' ', trim($customer->name));
+        $parts = explode(' ', $fullName, 2);
+        $result = [
+            'customer_id' => $customer->id, 'customer_seller_user_id' => $customer->user_id,
+            'customer_name' => $parts[0], 'customer_family' => $parts[1] ?? null,
+            'customer_phone' => blank($customer->phone) ? null : strtr(trim($customer->phone), $digits),
+            'purchase_status' => $data['purchase_status'], 'description' => $data['description'] ?? null,
+            'assigned_to_user_id' => $data['assigned_to_user_id'] ?? null,
+            'submitted_at' => blank($data['submitted_at_fa'] ?? null) ? ($creating ? now()->toDateString() : null) : JalaliDate::toGregorian($data['submitted_at_fa']),
+            'shipment_sent_at' => JalaliDate::toGregorian($data['shipment_sent_at_fa'] ?? null),
+        ];
+        $buyerFields = ['sales_response_score', 'support_positive_features', 'warranty_explained', 'warranty_meets_needs', 'shipping_time_score', 'packaging_quality_score', 'product_value_satisfied', 'would_recommend', 'would_choose_again'];
+        $result['no_purchase_reason'] = $data['purchase_status'] === 'not_purchased' ? ($data['no_purchase_reason'] ?? null) : null;
+        foreach ($buyerFields as $field) $result[$field] = $data['purchase_status'] === 'purchased' ? ($data[$field] ?? null) : null;
+        if ($data['purchase_status'] !== 'purchased') $result['shipment_sent_at'] = null;
+        if ($creating) $result['created_by_user_id'] = Auth::id();
+        elseif ($result['submitted_at'] === null) unset($result['submitted_at']);
+        return $result;
+    }
 
-        $customerSatisfactionForm->update([
-            'result' => $validated['result'],
-            'result_filled_at' => now(),
-        ]);
-
-        return redirect()->route('customer-satisfaction-forms.show', $customerSatisfactionForm)
-            ->with('success', 'نتیجه بررسی ثبت شد.');
+    private function digitMap(): array { return ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']; }
+    private function selectedCustomers(array $rows)
+    {
+        return Customer::with('marketer:id,name')->whereKey(collect($rows)->pluck('customer_id')->filter())->get()->keyBy('id');
     }
 }
