@@ -11,7 +11,7 @@
             <h2 class="fw-semibold fs-4 mb-0">مدیریت بازاریاب‌ها</h2>
             <span class="text-muted">|</span>
             <h3 class="fs-6 mb-0">
-                <a href="{{ route('admin.marketers.create') }}" class="text-decoration-none">ایجاد کاربر بازاریاب</a>
+                <a href="{{ route('admin.users.create', ['role' => 'Marketer']) }}" class="text-decoration-none">ایجاد کاربر بازاریاب</a>
             </h3>
         </div>
     </x-slot>
@@ -77,7 +77,7 @@
                                             </a>
                                         </td>
                                         <td class="d-flex flex-wrap gap-1">
-                                            <a href="{{ route('admin.marketers.edit', $item->id) }}" class="btn btn-sm btn-primary">ویرایش</a>
+                                            <a href="{{ route('admin.users.editEmployee', $item->id) }}" class="btn btn-sm btn-primary">ویرایش</a>
 
                                             @include('admin.users.partials.active-toggle', ['user' => $item])
 

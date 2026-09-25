@@ -27,6 +27,13 @@ class UserLifecycleAndHierarchyTest extends TestCase
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
+    protected function tearDown(): void
+    {
+        // this test rebuilds a private schema, so later RefreshDatabase tests must re-run migrations
+        \Illuminate\Foundation\Testing\RefreshDatabaseState::$migrated = false;
+        parent::tearDown();
+    }
+
     public function test_archiving_user_preserves_customers_and_historical_marketer(): void
     {
         $user = User::factory()->create();

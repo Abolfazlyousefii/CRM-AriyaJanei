@@ -81,6 +81,10 @@ use App\Http\Controllers\UserManagementController;
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->group(function () {
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
 
+    // نقطه واحد افزودن کاربر (نقش‌ها و مدیر مستقیم اختیاری)
+    Route::get('/users/create', [UserManagementController::class, 'create'])->name('users.create');
+    Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
+
     // مدیر
     Route::get('/users/create-manager', [UserManagementController::class, 'createManager'])->name('users.createManager');
     Route::post('/users/store-manager', [UserManagementController::class, 'storeManager'])->name('users.storeManager');

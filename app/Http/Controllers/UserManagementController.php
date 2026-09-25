@@ -21,7 +21,35 @@ class UserManagementController extends Controller
             ->with(['roles', 'employees.roles', 'employees.manager'])
             ->orderBy('name')->get();
 
-        return view('admin.users.index', compact('managers', 'roles'));
+        $unassignedUsers = User::query()
+            ->whereNull('manager_id')
+            ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'Manager'))
+            ->with('roles')
+            ->orderBy('name')->get();
+
+        return view('admin.users.index', compact('managers', 'roles', 'unassignedUsers'));
+    }
+
+    public function create(Request $request)
+    {
+        $preselected = Role::query()->where('guard_name', 'web')
+            ->whereIn('name', (array) $request->query('role', []))->pluck('name')->all();
+
+        return view('admin.users.create', array_merge($this->accessOptions(), ['selectedRoles' => $preselected]));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate(array_merge($this->identityRules(), $this->roleRules(), [
+            'manager_id' => ['nullable', 'integer', new EligibleManager],
+        ]));
+
+        $this->accounts->create([
+            'name' => $validated['name'], 'phone' => $validated['phone'],
+            'password' => $validated['password'], 'manager_id' => $validated['manager_id'] ?? null,
+        ], $validated['roles']);
+
+        return redirect()->route('admin.users.index')->with('success', 'کاربر با موفقیت ایجاد شد.');
     }
 
     public function updateRoles(Request $request, User $user)

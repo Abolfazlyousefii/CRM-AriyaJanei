@@ -24,6 +24,13 @@ class ErpIntegrationTest extends TestCase
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
+    protected function tearDown(): void
+    {
+        // this test rebuilds a private schema, so later RefreshDatabase tests must re-run migrations
+        \Illuminate\Foundation\Testing\RefreshDatabaseState::$migrated = false;
+        parent::tearDown();
+    }
+
     public function test_authentication_error_contracts(): void
     {
         $this->getJson('/api/integrations/erp/users')->assertStatus(401)->assertExactJson([

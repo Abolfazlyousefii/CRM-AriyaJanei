@@ -24,9 +24,7 @@ class MarketerController extends Controller
 
     public function create()
     {
-        $managers = User::query()->eligibleManagers()->orderBy('name')->get();
-
-        return view('admin.marketers.create', compact('managers'));
+        return redirect()->route('admin.users.create', ['role' => 'Marketer']);
     }
 
     public function store(Request $request)
@@ -62,15 +60,7 @@ class MarketerController extends Controller
 
     public function edit(string $id)
     {
-        $marketer = User::findOrFail($id);
-
-        $managers = User::query()
-            ->eligibleManagers()
-            ->whereKeyNot($marketer->id)
-            ->orderBy('name')
-            ->get();
-
-        return view('admin.marketers.edit', compact('marketer', 'managers'));
+        return redirect()->route('admin.users.editEmployee', User::findOrFail($id));
     }
 
     public function update(Request $request, string $id)
