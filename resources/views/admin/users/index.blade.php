@@ -646,6 +646,7 @@
                                 </div>
 
                                 <div class="modal-footer">
+                                    @include('admin.users.partials.active-toggle', ['user' => $manager])
                                     <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">
                                         بستن
                                     </button>
@@ -775,6 +776,7 @@
                                 </div>
 
                                 <div class="modal-footer">
+                                    @include('admin.users.partials.active-toggle', ['user' => $employee])
                                     <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">
                                         انصراف
                                     </button>

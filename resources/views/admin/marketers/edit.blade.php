@@ -35,6 +35,10 @@
                         @error('phone')<p class="text-red-500 text-xs mt-1 text-right">{{ $message }}</p>@enderror
                     </div>
 
+                    @include('admin.users.partials.manager-select', [
+                        'selectedManagerId' => old('manager_id', $marketer->manager_id),
+                    ])
+
                     <div class="flex items-center gap-4 justify-end">
                         <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                                 type="submit">

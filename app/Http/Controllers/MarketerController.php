@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\User;
+use App\Rules\EligibleManager;
+use App\Services\UserAccountService;
+use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Spatie\Activitylog\Models\Activity;
 
 class MarketerController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly UserAccountService $accounts)
     {
         $this->middleware('role:Admin|Marketer');
     }
@@ -17,12 +18,15 @@ class MarketerController extends Controller
     public function index()
     {
         $marketers = User::role('Marketer')->paginate(20);
+
         return view('admin.marketers.index', compact('marketers'));
     }
 
     public function create()
     {
-        return view('admin.marketers.create');
+        $managers = User::query()->eligibleManagers()->orderBy('name')->get();
+
+        return view('admin.marketers.create', compact('managers'));
     }
 
     public function store(Request $request)
@@ -31,19 +35,19 @@ class MarketerController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'regex:/^09\d{9}$/', 'unique:users,phone'],
             'password' => ['required', 'min:8', 'confirmed'],
+            'manager_id' => ['nullable', 'integer', new EligibleManager],
         ], [
             'phone.regex' => 'فرمت شماره موبایل معتبر نیست. باید با 09 شروع شود و 11 رقم باشد.',
             'phone.unique' => 'این شماره موبایل قبلاً ثبت شده است.',
             'password.confirmed' => 'رمز عبور و تکرار آن یکسان نیستند.',
         ]);
 
-        $user = User::create([
+        $user = $this->accounts->create([
             'name' => $request->name,
             'phone' => $request->phone,
-            'password' => bcrypt($request->password),
-        ]);
-
-        $user->assignRole('Marketer');
+            'password' => $request->password,
+            'manager_id' => $request->integer('manager_id') ?: null,
+        ], ['Marketer']);
 
         // لاگ ایجاد کاربر
         activity()
@@ -59,7 +63,14 @@ class MarketerController extends Controller
     public function edit(string $id)
     {
         $marketer = User::findOrFail($id);
-        return view('admin.marketers.edit', compact('marketer'));
+
+        $managers = User::query()
+            ->eligibleManagers()
+            ->whereKeyNot($marketer->id)
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.marketers.edit', compact('marketer', 'managers'));
     }
 
     public function update(Request $request, string $id)
@@ -74,14 +85,16 @@ class MarketerController extends Controller
                 'regex:/^09\d{9}$/',
                 Rule::unique('users', 'phone')->ignore($marketer->id),
             ],
+            'manager_id' => ['nullable', 'integer', new EligibleManager($marketer)],
         ]);
 
         $oldData = $marketer->getOriginal();
 
-        $marketer->update([
+        $this->accounts->update($marketer, [
             'name' => $request->name,
             'phone' => $request->phone,
-        ]);
+            'manager_id' => $request->integer('manager_id') ?: null,
+        ], $marketer->getRoleNames()->all());
 
         // لاگ ویرایش کاربر
         activity()
@@ -98,16 +111,18 @@ class MarketerController extends Controller
     {
         $marketer = User::findOrFail($id);
 
+        abort_if($marketer->is(auth()->user()), 422, 'امکان آرشیوکردن حساب خودتان وجود ندارد.');
+
         // لاگ حذف کاربر
         activity()
             ->causedBy(auth()->user())
             ->performedOn($marketer)
             ->withProperties(['action' => 'delete'])
-            ->log('حذف مارکتر');
+            ->log('آرشیو مارکتر');
 
         $marketer->delete();
 
         return redirect()->route('admin.marketers.index')
-            ->with('success', 'مارکتر با موفقیت حذف شد');
+            ->with('success', 'بازاریاب آرشیو شد و مشتریان و سوابق او محفوظ ماندند.');
     }
 }

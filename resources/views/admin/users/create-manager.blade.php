@@ -19,6 +19,8 @@
                 <label>تکرار رمز عبور:</label>
                 <input type="password" name="password_confirmation" class="border p-2 w-full">
             </div>
+            @include('admin.users.partials.manager-select', ['selectedManagerId' => old('manager_id')])
+            @include('admin.users.partials.role-selector', ['selectedRoles' => ['Manager']])
             <button type="submit" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded">ذخیره</button>
         </form>
     </div>

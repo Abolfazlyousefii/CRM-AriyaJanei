@@ -29,6 +29,12 @@
                 <input type="password" name="password_confirmation" class="border p-2 w-full" required>
             </div>
 
+            @include('admin.users.partials.manager-select', [
+                'selectedManagerId' => old('manager_id', $manager->id),
+                'required' => true,
+            ])
+            @include('admin.users.partials.role-selector', ['selectedRoles' => ['User']])
+
             <button type="submit" class="mt-4 bg-green-600 text-white px-4 py-2 rounded">
                 ذخیره کارمند
             </button>

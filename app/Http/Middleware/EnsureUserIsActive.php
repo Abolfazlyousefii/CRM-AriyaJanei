@@ -5,20 +5,22 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\Response;
 
-class CheckIfBlocked
+class EnsureUserIsActive
 {
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next): Response
     {
         $user = Auth::user();
-        if ($user && $user->isBlocked()) {
+
+        if ($user && ! $user->isActive()) {
             Auth::logout();
 
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
             return redirect()->route('login')
-                ->withErrors(['phone' => "حساب شما تا {$user->blocked_until->format('Y-m-d H:i')} مسدود است."]);
+                ->withErrors(['phone' => 'حساب کاربری شما غیرفعال شده است. با مدیر سیستم تماس بگیرید.']);
         }
 
         return $next($request);

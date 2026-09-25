@@ -49,6 +49,27 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        $user = Auth::user();
+
+        if (! $user->isActive()) {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'phone' => 'حساب کاربری شما غیرفعال شده است. با مدیر سیستم تماس بگیرید.',
+            ]);
+        }
+
+        if ($user->isBlocked()) {
+            $blockedUntil = $user->blocked_until->format('Y-m-d H:i');
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'phone' => "حساب شما تا {$blockedUntil} مسدود است.",
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

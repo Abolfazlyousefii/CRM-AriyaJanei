@@ -1,9 +1,9 @@
 <?php
 
+use App\Http\Middleware\CheckVisitorAccess;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\CheckVisitorAccess;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,6 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->web(append: [
+            \App\Http\Middleware\EnsureUserIsActive::class,
+            \App\Http\Middleware\CheckIfBlocked::class,
+        ]);
+
         $middleware->alias([
             // Spatie
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
@@ -22,6 +27,8 @@ return Application::configure(basePath: dirname(__DIR__))
             // ✅ Middleware خودت
             'visitor.access' => CheckVisitorAccess::class,
             'external.sync' => \App\Http\Middleware\EnsureExternalSyncToken::class,
+            'active' => \App\Http\Middleware\EnsureUserIsActive::class,
+            'blocked' => \App\Http\Middleware\CheckIfBlocked::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

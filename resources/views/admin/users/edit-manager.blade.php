@@ -15,6 +15,9 @@
                 <input type="text" name="phone" value="{{ $manager->phone }}" class="border p-2 w-full">
             </div>
 
+            @include('admin.users.partials.manager-select', ['selectedManagerId' => old('manager_id', $manager->manager_id)])
+            @include('admin.users.partials.role-selector', ['selectedRoles' => $manager->getRoleNames()])
+
             <button type="submit" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded">بروزرسانی</button>
         </form>
     </div>

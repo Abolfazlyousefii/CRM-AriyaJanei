@@ -52,7 +52,9 @@
                                             @endforeach
                                         </td>
                                         <td>
-                                            @if($item->isBlocked())
+                                            @if(! $item->is_active)
+                                                <span class="badge bg-secondary">غیرفعال</span>
+                                            @elseif($item->isBlocked())
                                                 @php
                                                     $blockedUntil = new \Hekmatinasser\Verta\Verta($item->blocked_until);
                                                 @endphp
@@ -77,10 +79,12 @@
                                         <td class="d-flex flex-wrap gap-1">
                                             <a href="{{ route('admin.marketers.edit', $item->id) }}" class="btn btn-sm btn-primary">ویرایش</a>
 
+                                            @include('admin.users.partials.active-toggle', ['user' => $item])
+
                                             <form action="{{ route('admin.marketers.destroy', $item->id) }}" method="POST" onsubmit="return confirm('آیا مطمئن هستید؟')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-danger">حذف</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">آرشیو</button>
                                             </form>
 
                                             <!-- دکمه مسدودسازی -->

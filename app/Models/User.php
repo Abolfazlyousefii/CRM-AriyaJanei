@@ -3,7 +3,9 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -11,7 +13,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, hasRoles;
+    use HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -23,6 +25,10 @@ class User extends Authenticatable
         'phone',
         'password',
         'manager_id', // 👈 این خیلی مهمه
+        'is_active',
+        'deactivated_at',
+        'deactivation_reason',
+        'deactivated_by',
     ];
 
     /**
@@ -57,50 +63,83 @@ class User extends Authenticatable
     {
         return $this->hasMany(Invoice::class);
     }
+
     public function reports()
     {
         return $this->hasMany(Report::class);
     }
 
+    public function userProducts()
+    {
+        return $this->hasMany(\App\Models\UserProduct::class);
+    }
 
-public function userProducts()
-{
-    return $this->hasMany(\App\Models\UserProduct::class);
-}
-protected $casts = [
-    'email_verified_at' => 'datetime',
-    'blocked_until' => 'datetime',
-];
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'blocked_until' => 'datetime',
+        'is_active' => 'boolean',
+        'deactivated_at' => 'datetime',
+    ];
 
-public function isBlocked(): bool
-{
-    return $this->blocked_until && $this->blocked_until->isFuture();
-}
+    public function isBlocked(): bool
+    {
+        return $this->blocked_until && $this->blocked_until->isFuture();
+    }
 
-public function blockRemaining(): ?string
-{
-    return $this->isBlocked() ? $this->blocked_until->diffForHumans(null, true) : null;
-}
+    public function isActive(): bool
+    {
+        return (bool) $this->is_active && ! $this->trashed();
+    }
 
-public function manager()
-{
-    return $this->belongsTo(User::class, 'manager_id');
-}
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('is_active', true);
+    }
 
-public function employees()
-{
-    return $this->hasMany(User::class, 'manager_id');
-}
-public function isRole($role)
-{
-    return $this->role === $role;
-}
+    public function scopeEligibleManagers(Builder $query): Builder
+    {
+        return $query->active()->whereHas('roles', function (Builder $roles): void {
+            $roles->where('name', 'Owner')->orWhere('name', 'like', '%Manager');
+        });
+    }
 
-public function notes() { return $this->hasMany(CustomerNote::class, 'user_id'); }
+    public static function isManagerialRole(string $role): bool
+    {
+        return $role === 'Owner' || str_ends_with($role, 'Manager');
+    }
 
-public function messageGroups()
-{
-    return $this->belongsToMany(MessageGroup::class, 'message_group_user')->withTimestamps();
-}
+    public function blockRemaining(): ?string
+    {
+        return $this->isBlocked() ? $this->blocked_until->diffForHumans(null, true) : null;
+    }
 
+    public function manager()
+    {
+        return $this->belongsTo(User::class, 'manager_id')->withTrashed();
+    }
+
+    public function employees()
+    {
+        return $this->hasMany(User::class, 'manager_id');
+    }
+
+    public function deactivatedBy()
+    {
+        return $this->belongsTo(User::class, 'deactivated_by')->withTrashed();
+    }
+
+    public function isRole($role)
+    {
+        return $this->role === $role;
+    }
+
+    public function notes()
+    {
+        return $this->hasMany(CustomerNote::class, 'user_id');
+    }
+
+    public function messageGroups()
+    {
+        return $this->belongsToMany(MessageGroup::class, 'message_group_user')->withTimestamps();
+    }
 }
