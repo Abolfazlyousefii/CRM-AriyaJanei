@@ -38,11 +38,15 @@ class ErpUserSyncService
 
     private function query(array $filters): Builder
     {
+        $includeInactive = ($filters['include_inactive'] ?? true) !== false;
+
         return User::query()
+            // Archived users are still sent (as is_active=false) so the ERP can disable them.
+            ->when($includeInactive, fn (Builder $query) => $query->withTrashed())
             ->with('roles:id,name')
             ->when(! empty($filters['updated_since']), fn (Builder $query) => $query->where('updated_at', '>=', $filters['updated_since']))
-            ->when(($filters['include_inactive'] ?? true) === false, function (Builder $query): void {
-                $query->where(fn (Builder $active) => $active
+            ->when(! $includeInactive, function (Builder $query): void {
+                $query->where('is_active', true)->where(fn (Builder $active) => $active
                     ->whereNull('blocked_until')
                     ->orWhere('blocked_until', '<=', now()));
             });

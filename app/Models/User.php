@@ -31,6 +31,10 @@ class User extends Authenticatable
         'deactivated_by',
     ];
 
+    protected $attributes = [
+        'is_active' => true,
+    ];
+
     /**
      * The attributes that should be hidden for serialization.
      *

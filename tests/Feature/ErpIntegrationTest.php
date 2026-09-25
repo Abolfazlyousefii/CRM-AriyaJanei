@@ -138,7 +138,10 @@ class ErpIntegrationTest extends TestCase
         Schema::create('users', function (Blueprint $table): void {
             $table->id(); $table->string('name'); $table->string('phone')->unique(); $table->string('email')->nullable();
             $table->string('password'); $table->rememberToken(); $table->foreignId('manager_id')->nullable();
-            $table->timestamp('blocked_until')->nullable(); $table->timestamps();
+            $table->timestamp('blocked_until')->nullable();
+            $table->boolean('is_active')->default(true); $table->timestamp('deactivated_at')->nullable();
+            $table->text('deactivation_reason')->nullable(); $table->foreignId('deactivated_by')->nullable();
+            $table->timestamps(); $table->softDeletes();
         });
         Schema::create('roles', function (Blueprint $table): void {
             $table->id(); $table->string('name'); $table->string('guard_name'); $table->timestamps();
