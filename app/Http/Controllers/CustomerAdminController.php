@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
@@ -14,7 +14,6 @@ class CustomerAdminController extends Controller
 {
     $search = $request->get('search');
     $sort   = $request->get('sort'); // sort: last_note OR null
-dd($sort);
 
     $customers = Customer::with([
         'marketer',

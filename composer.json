@@ -18,6 +18,7 @@
         "maatwebsite/excel": "^3.1",
         "morilog/jalali": "^3.4",
         "spatie/laravel-activitylog": "^4.10",
+        "spatie/laravel-ignition": "^2.9",
         "spatie/laravel-permission": "^6.21"
     },
     "require-dev": {

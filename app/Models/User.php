@@ -51,6 +51,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'blocked_until' => 'datetime',
         ];
     }
 
@@ -74,6 +75,7 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\UserProduct::class);
     }
 
+<<<<<<< HEAD
     protected $casts = [
         'email_verified_at' => 'datetime',
         'blocked_until' => 'datetime',
@@ -90,6 +92,44 @@ class User extends Authenticatable
     {
         return (bool) $this->is_active && ! $this->trashed();
     }
+=======
+public function userProducts()
+{
+    return $this->hasMany(\App\Models\UserProduct::class);
+}
+public function isBlocked(): bool
+{
+    return $this->blocked_until && $this->blocked_until->isFuture();
+}
+
+public function isActiveForErp(): bool
+{
+    return ! $this->isBlocked();
+}
+
+public function canAccessErp(): bool
+{
+    $roles = config('services.erp.access_roles', []);
+
+    return (bool) config('services.erp.enabled', false)
+        && $this->exists
+        && $this->isActiveForErp()
+        && $roles !== []
+        && $this->hasAnyRole($roles);
+}
+
+public function isSellerForErp(): bool
+{
+    $roles = config('services.erp.seller_roles', []);
+
+    return $roles !== [] && $this->hasAnyRole($roles);
+}
+
+public function blockRemaining(): ?string
+{
+    return $this->isBlocked() ? $this->blocked_until->diffForHumans(null, true) : null;
+}
+>>>>>>> 287e98f1c1bf2c7cff83897a8f36aba2699fc3a4
 
     public function scopeActive(Builder $query): Builder
     {

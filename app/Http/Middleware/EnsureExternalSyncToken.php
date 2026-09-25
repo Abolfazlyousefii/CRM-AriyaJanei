@@ -13,19 +13,53 @@ class EnsureExternalSyncToken
         $expectedToken = config('services.external_sync.token');
 
         if (blank($expectedToken)) {
-            return response()->json([
-                'message' => 'External sync token is not configured.',
+            $response = response()->json([
+                'error' => [
+                    'code' => 'sync_token_not_configured',
+                    'message' => 'ERP synchronization is not configured.',
+                ],
             ], 500);
+
+            $this->audit($request, $response, 0);
+
+            return $response;
         }
 
         $providedToken = $request->bearerToken();
 
         if (! hash_equals($expectedToken, (string) $providedToken)) {
-            return response()->json([
-                'message' => 'Unauthorized.',
+            $response = response()->json([
+                'error' => [
+                    'code' => 'unauthenticated',
+                    'message' => 'Authentication is required.',
+                ],
             ], 401);
+
+            $this->audit($request, $response, 0);
+
+            return $response;
         }
 
-        return $next($request);
+        $response = $next($request);
+        $data = method_exists($response, 'getData') ? $response->getData(true) : [];
+        $count = count($data['data'] ?? $data['users']['data'] ?? []);
+        $this->audit($request, $response, $count);
+
+        return $response;
+    }
+
+    private function audit(Request $request, Response $response, int $count): void
+    {
+        if (! config('services.erp.sync_audit_enabled')) {
+            return;
+        }
+
+        activity('erp-sync')->withProperties([
+            'endpoint' => $request->path(),
+            'result' => $response->isSuccessful() ? 'success' : 'failure',
+            'returned_users' => $count,
+            'cursor' => max(0, $request->integer('cursor')),
+            'http_status' => $response->getStatusCode(),
+        ])->log('ERP user synchronization');
     }
 }
