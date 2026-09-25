@@ -1,54 +1,29 @@
 <?php
-<<<<<<< HEAD
-=======
+
 use App\Http\Controllers\Admin\CustomerAdminController;
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\GuestController;
-use App\Http\Controllers\MarketerController;
-use App\Http\Controllers\ReferenceTypeController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\CustomerNotesController;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\UserPanelController;
-use App\Models\UserProduct;
-use App\Http\Controllers\TaskController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\LeaveController;
-use App\Http\Controllers\RemindersController;
-use App\Http\Controllers\MessageController;
-use App\Http\Controllers\CustomerSatisfactionFormController;
 use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerNotesController;
+use App\Http\Controllers\CustomerSatisfactionFormController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ErpLaunchController;
+use App\Http\Controllers\GuestController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\LeaveController;
+use App\Http\Controllers\MarketerController;
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReferenceTypeController;
+use App\Http\Controllers\RemindersController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\TaskController;
+use App\Http\Controllers\UserPanelController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/launch/erp', ErpLaunchController::class)->middleware('auth')->name('erp.launch');
->>>>>>> 287e98f1c1bf2c7cff83897a8f36aba2699fc3a4
-
-use App\Http\Controllers\Admin\CustomerAdminController;
-use App\Http\Controllers\AdminController;
-use App\Http\Controllers\AnnouncementController;
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\CustomerNotesController;
-use App\Http\Controllers\CustomerSatisfactionFormController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\GuestController;
-use App\Http\Controllers\InvoiceController;
-use App\Http\Controllers\LeaveController;
-use App\Http\Controllers\MarketerController;
-use App\Http\Controllers\MessageController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ReferenceTypeController;
-use App\Http\Controllers\RemindersController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\TaskController;
-use App\Http\Controllers\UserPanelController;
-use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
 

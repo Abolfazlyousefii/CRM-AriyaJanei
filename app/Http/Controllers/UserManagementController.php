@@ -26,18 +26,11 @@ class UserManagementController extends Controller
 
     public function updateRoles(Request $request, User $user)
     {
-<<<<<<< HEAD
         $roles = $request->validate($this->roleRules())['roles'];
         $this->ensureManagerKeepsManagerialRole($user, $roles);
         $this->accounts->syncRoles($user, $roles);
 
         return back()->with('success', 'نقش‌های کاربر با موفقیت به‌روزرسانی شد.');
-=======
-        $roles = $request->input('roles', []); // آرایه نقش‌های انتخاب شده
-        $user->syncRoles($roles); // جایگزینی نقش‌ها
-        $user->touch();
-        return back()->with('success', 'نقش‌های کاربر به‌روزرسانی شد.');
->>>>>>> 287e98f1c1bf2c7cff83897a8f36aba2699fc3a4
     }
 
     public function createManager()
@@ -52,22 +45,10 @@ class UserManagementController extends Controller
         ]));
         $this->ensureAtLeastOneManagerialRole($validated['roles']);
 
-<<<<<<< HEAD
         $this->accounts->create([
             'name' => $validated['name'], 'phone' => $validated['phone'],
             'password' => $validated['password'], 'manager_id' => $validated['manager_id'] ?? null,
         ], $validated['roles']);
-=======
-        $user = User::create([
-            'name' => $request->name,
-            'phone' => $request->phone,
-            'password' => bcrypt($request->password),
-            'manager_id' => "1", // اینجا درست مقداردهی میشه
-        ]);
-
-        $user->assignRole('Manager');
-        $user->touch();
->>>>>>> 287e98f1c1bf2c7cff83897a8f36aba2699fc3a4
 
         return redirect()->route('admin.users.index')->with('success', 'مدیر با موفقیت ایجاد شد.');
     }
@@ -116,14 +97,7 @@ class UserManagementController extends Controller
             'password' => $validated['password'], 'manager_id' => $validated['manager_id'],
         ], $validated['roles']);
 
-<<<<<<< HEAD
         return redirect()->route('admin.users.index')->with('success', 'کاربر با نقش‌ها و مدیر انتخاب‌شده ایجاد شد.');
-=======
-        $user->assignRole('User');
-        $user->touch();
-
-        return redirect()->route('admin.users.index')->with('success', 'کارمند با موفقیت ایجاد شد.');
->>>>>>> 287e98f1c1bf2c7cff83897a8f36aba2699fc3a4
     }
 
     public function editEmployee(User $employee)
