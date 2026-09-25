@@ -15,7 +15,7 @@ class ErpUserSyncController extends Controller
             'cursor' => ['nullable', 'integer', 'min:0'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:500'],
             'updated_since' => ['nullable', 'date'],
-            'include_inactive' => ['nullable', 'boolean'],
+            'include_inactive' => ['nullable', 'in:true,false,1,0'], // query strings send "false" as text
         ]);
         $validated['include_inactive'] = $request->has('include_inactive')
             ? $request->boolean('include_inactive')
