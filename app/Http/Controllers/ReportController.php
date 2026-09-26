@@ -139,6 +139,7 @@ class ReportController extends Controller
 
         if ($auth->hasRole('Admin')) {
             $availableUsers = User::query()
+                ->where('is_active', true)
                 ->whereNotIn('id', $excludedUserIds)
                 ->whereHas('roles', function ($q) {
                     $q->whereIn('name', ['User', 'Marketer', 'Manager']);
@@ -147,6 +148,7 @@ class ReportController extends Controller
                 ->get(['id', 'name']);
 
             $usersWithoutYesterdayReport = User::query()
+                ->where('is_active', true)
                 ->whereNotIn('id', $excludedUserIds)
                 ->whereHas('roles', function ($q) {
                     $q->whereIn('name', ['User', 'Marketer', 'Manager']);
@@ -164,16 +166,18 @@ class ReportController extends Controller
                     $q->whereNotIn('id', $excludedUserIds);
                 });
         } else {
-            $manager = $auth;
+            $subordinateIds = $auth->allSubordinateIds();
 
             $availableUsers = User::query()
-                ->where('manager_id', $manager->id)
+                ->whereIn('id', $subordinateIds)
+                ->where('is_active', true)
                 ->whereNotIn('id', $excludedUserIds)
                 ->orderBy('name')
                 ->get(['id', 'name']);
 
             $usersWithoutYesterdayReport = User::query()
-                ->where('manager_id', $manager->id)
+                ->whereIn('id', $subordinateIds)
+                ->where('is_active', true)
                 ->whereNotIn('id', $excludedUserIds)
                 ->whereDoesntHave('reports', function ($q) use ($yesterday) {
                     $q->whereDate('submitted_at', $yesterday->toDateString())
@@ -184,8 +188,8 @@ class ReportController extends Controller
 
             $reportsQuery = Report::query()
                 ->whereIn('status', [Report::STATUS_SUBMITTED, Report::STATUS_READ])
-                ->whereHas('user', function ($q) use ($manager, $excludedUserIds) {
-                    $q->where('manager_id', $manager->id)
+                ->whereHas('user', function ($q) use ($subordinateIds, $excludedUserIds) {
+                    $q->whereIn('id', $subordinateIds)
                         ->whereNotIn('id', $excludedUserIds);
                 });
         }

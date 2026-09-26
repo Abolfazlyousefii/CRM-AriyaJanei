@@ -146,6 +146,37 @@ class User extends Authenticatable
         return $this->hasMany(User::class, 'manager_id');
     }
 
+    /**
+     * IDs of every user below this one in the management chain, at any depth.
+     *
+     * @return list<int>
+     */
+    public function allSubordinateIds(): array
+    {
+        $ids = [];
+        $frontier = [$this->id];
+        $visited = [$this->id => true];
+
+        while (! empty($frontier)) {
+            $children = static::query()
+                ->whereIn('manager_id', $frontier)
+                ->pluck('id')
+                ->all();
+
+            $frontier = [];
+            foreach ($children as $childId) {
+                if (isset($visited[$childId])) {
+                    continue; // guards against cycles in corrupted data
+                }
+                $visited[$childId] = true;
+                $ids[] = $childId;
+                $frontier[] = $childId;
+            }
+        }
+
+        return $ids;
+    }
+
     public function deactivatedBy()
     {
         return $this->belongsTo(User::class, 'deactivated_by')->withTrashed();
