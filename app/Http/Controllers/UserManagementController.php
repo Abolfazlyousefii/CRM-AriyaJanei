@@ -33,7 +33,7 @@ class UserManagementController extends Controller
 
     public function personnel(Request $request)
     {
-        $query = User::query()->where('is_active', true)->with(['roles', 'department', 'manager']);
+        $query = User::query()->with(['roles', 'department', 'manager']);
 
         if ($request->filled('role')) {
             $query->whereHas('roles', fn ($q) => $q->where('name', $request->string('role')));

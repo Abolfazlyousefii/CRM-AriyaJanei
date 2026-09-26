@@ -48,6 +48,7 @@
                                     <th scope="col">نقش‌ها</th>
                                     <th scope="col">دپارتمان</th>
                                     <th scope="col">مدیر مستقیم</th>
+                                    <th scope="col">وضعیت</th>
                                     <th scope="col">عملیات</th>
                                 </tr>
                             </thead>
@@ -69,13 +70,51 @@
                                         <td>{{ $person->department?->name ?? '—' }}</td>
                                         <td>{{ $person->manager?->name ?? '—' }}</td>
                                         <td>
+                                            @if(! $person->is_active)
+                                                <span class="badge bg-secondary">غیرفعال</span>
+                                            @elseif($person->isBlocked())
+                                                @php
+                                                    $blockedUntil = new \Hekmatinasser\Verta\Verta($person->blocked_until);
+                                                @endphp
+                                                <span class="badge bg-danger">
+                                                    مسدود تا {{ $blockedUntil->format('j F Y H:i') }}
+                                                </span>
+                                            @else
+                                                <span class="badge bg-success">فعال</span>
+                                            @endif
+                                        </td>
+                                        <td class="d-flex flex-wrap gap-1">
                                             <a href="{{ $isManagerial ? route('admin.users.editManager', $person) : route('admin.users.editEmployee', $person) }}"
                                                class="btn btn-outline-primary btn-sm">ویرایش</a>
+
+                                            @include('admin.users.partials.active-toggle', ['user' => $person])
+
+                                            <button type="button" class="btn btn-sm btn-warning"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#blockUserModal{{ $person->id }}">
+                                                مسدود کن
+                                            </button>
+
+                                            @if($person->isBlocked())
+                                                <form action="{{ route('admin.users.unblock', $person) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-success">
+                                                        آزادسازی
+                                                    </button>
+                                                </form>
+                                            @endif
+
+                                            <form action="{{ $isManagerial ? route('admin.users.destroyManager', $person) : route('admin.users.destroyEmployee', $person) }}"
+                                                  method="POST" class="d-inline" onsubmit="return confirm('آیا مطمئن هستید؟')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">آرشیو</button>
+                                            </form>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted">کاربری یافت نشد.</td>
+                                        <td colspan="7" class="text-center text-muted">کاربری یافت نشد.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -89,4 +128,48 @@
             </div>
         </div>
     </div>
+
+    <!-- همه Modal ها بعد از جدول -->
+    @foreach($personnel as $person)
+        <div class="modal fade" id="blockUserModal{{ $person->id }}" tabindex="-1" aria-labelledby="blockUserLabel{{ $person->id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <form action="{{ route('admin.users.block', $person) }}" method="POST" class="modal-content">
+                    @csrf
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="blockUserLabel{{ $person->id }}">
+                            مسدودسازی کاربر: {{ $person->name }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">مدت مسدودسازی (ساعت)</label>
+                            <input type="number" name="hours" class="form-control" min="1" max="8760" placeholder="مثلاً 24" required>
+                        </div>
+                        <div class="d-flex gap-2 mb-3">
+                            <button type="button" class="btn btn-outline-primary"
+                                    onclick="this.closest('form').querySelector('[name=hours]').value=24">
+                                24 ساعت
+                            </button>
+                            <button type="button" class="btn btn-outline-primary"
+                                    onclick="this.closest('form').querySelector('[name=hours]').value=72">
+                                72 ساعت
+                            </button>
+                            <button type="button" class="btn btn-outline-primary"
+                                    onclick="this.closest('form').querySelector('[name=hours]').value=168">
+                                7 روز
+                            </button>
+                        </div>
+                        <div class="alert alert-info">
+                            کاربر در مدت مسدودسازی امکان ورود یا دسترسی به پنل را نخواهد داشت.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                        <button type="submit" class="btn btn-danger">مسدود کن</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endforeach
 </x-layouts.app>

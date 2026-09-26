@@ -42,7 +42,7 @@ class PersonnelSectionTest extends TestCase
         return $user;
     }
 
-    public function test_personnel_page_lists_every_active_user_across_managers(): void
+    public function test_personnel_page_lists_every_user_including_inactive(): void
     {
         $sales = Department::create(['name' => 'Test Sales']);
         $it = Department::create(['name' => 'Test IT']);
@@ -59,13 +59,58 @@ class PersonnelSectionTest extends TestCase
         $response->assertOk()
             ->assertSee('Employee Under Alpha')
             ->assertSee('Employee Under Beta')
-            ->assertSee('Test Sales');
+            ->assertSee('Test Sales')
+            ->assertSee('<span class="badge bg-secondary">غیرفعال</span>', false)
+            ->assertSee(route('admin.users.activate', $inactive), false);
 
         $ids = $response->viewData('personnel')->pluck('id');
-        foreach ([$managerA, $managerB, $underA, $underB, $orphan] as $user) {
+        foreach ([$managerA, $managerB, $underA, $underB, $orphan, $inactive] as $user) {
             $this->assertTrue($ids->contains($user->id), "{$user->name} should be listed");
         }
-        $this->assertFalse($ids->contains($inactive->id));
+    }
+
+    public function test_blocked_user_shows_blocked_badge_and_unblock_button(): void
+    {
+        $blocked = $this->userWith('Blocked Person', 'User', null, ['blocked_until' => now()->addDay()]);
+        $free = $this->userWith('Free Person', 'User');
+
+        $response = $this->actingAs($this->admin())->get(route('admin.personnel.index'));
+
+        $response->assertOk()
+            ->assertSee('مسدود تا')
+            ->assertSee('آزادسازی')
+            ->assertSee(route('admin.users.unblock', $blocked), false)
+            ->assertDontSee(route('admin.users.unblock', $free), false);
+    }
+
+    public function test_block_modal_posts_to_the_block_route_and_blocks_the_user(): void
+    {
+        $admin = $this->admin();
+        $person = $this->userWith('Blockable Person', 'User');
+
+        $this->actingAs($admin)->get(route('admin.personnel.index'))
+            ->assertOk()
+            ->assertSee('data-bs-target="#blockUserModal'.$person->id.'"', false)
+            ->assertSee('id="blockUserModal'.$person->id.'"', false)
+            ->assertSee('action="'.route('admin.users.block', $person).'"', false);
+
+        $this->actingAs($admin)->post(route('admin.users.block', $person), ['hours' => 24])
+            ->assertSessionHasNoErrors();
+
+        $this->assertTrue($person->fresh()->isBlocked());
+    }
+
+    public function test_archive_button_targets_destroy_route_matching_the_role(): void
+    {
+        $manager = $this->userWith('Archivable Manager', 'Manager');
+        $employee = $this->userWith('Archivable Employee', 'User', null, ['manager_id' => $manager->id]);
+
+        $this->actingAs($this->admin())->get(route('admin.personnel.index'))
+            ->assertOk()
+            ->assertSee('action="'.route('admin.users.destroyManager', $manager).'"', false)
+            ->assertDontSee(route('admin.users.destroyEmployee', $manager), false)
+            ->assertSee('action="'.route('admin.users.destroyEmployee', $employee).'"', false)
+            ->assertDontSee(route('admin.users.destroyManager', $employee), false);
     }
 
     public function test_personnel_page_links_to_the_edit_form_matching_the_role(): void
