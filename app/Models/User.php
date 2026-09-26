@@ -25,6 +25,7 @@ class User extends Authenticatable
         'phone',
         'password',
         'manager_id', // 👈 این خیلی مهمه
+        'department_id',
         'is_active',
         'deactivated_at',
         'deactivation_reason',
@@ -139,6 +140,11 @@ class User extends Authenticatable
     public function manager()
     {
         return $this->belongsTo(User::class, 'manager_id')->withTrashed();
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
     }
 
     public function employees()

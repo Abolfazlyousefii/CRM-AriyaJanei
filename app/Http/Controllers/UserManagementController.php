@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Department;
 use App\Models\User;
 use App\Rules\EligibleManager;
 use App\Services\UserAccountService;
@@ -30,6 +31,29 @@ class UserManagementController extends Controller
         return view('admin.users.index', compact('managers', 'roles', 'unassignedUsers'));
     }
 
+    public function personnel(Request $request)
+    {
+        $query = User::query()->where('is_active', true)->with(['roles', 'department', 'manager']);
+
+        if ($request->filled('role')) {
+            $query->whereHas('roles', fn ($q) => $q->where('name', $request->string('role')));
+        }
+
+        if ($request->filled('department_id')) {
+            $query->where('department_id', $request->integer('department_id'));
+        }
+
+        $personnel = $query->orderBy('name')->paginate(30)->withQueryString();
+
+        return view('admin.personnel.index', [
+            'personnel' => $personnel,
+            'roles' => Role::query()->orderBy('name')->get(),
+            'departments' => Department::query()->orderBy('name')->get(),
+            'selectedRole' => $request->string('role')->toString() ?: null,
+            'selectedDepartmentId' => $request->integer('department_id') ?: null,
+        ]);
+    }
+
     public function create(Request $request)
     {
         $preselected = Role::query()->where('guard_name', 'web')
@@ -42,11 +66,13 @@ class UserManagementController extends Controller
     {
         $validated = $request->validate(array_merge($this->identityRules(), $this->roleRules(), [
             'manager_id' => ['nullable', 'integer', new EligibleManager],
+            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
         ]));
 
         $this->accounts->create([
             'name' => $validated['name'], 'phone' => $validated['phone'],
             'password' => $validated['password'], 'manager_id' => $validated['manager_id'] ?? null,
+            'department_id' => $validated['department_id'] ?? null,
         ], $validated['roles']);
 
         return redirect()->route('admin.users.index')->with('success', 'کاربر با موفقیت ایجاد شد.');
@@ -70,12 +96,14 @@ class UserManagementController extends Controller
     {
         $validated = $request->validate(array_merge($this->identityRules(), $this->roleRules(), [
             'manager_id' => ['nullable', 'integer', new EligibleManager],
+            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
         ]));
         $this->ensureAtLeastOneManagerialRole($validated['roles']);
 
         $this->accounts->create([
             'name' => $validated['name'], 'phone' => $validated['phone'],
             'password' => $validated['password'], 'manager_id' => $validated['manager_id'] ?? null,
+            'department_id' => $validated['department_id'] ?? null,
         ], $validated['roles']);
 
         return redirect()->route('admin.users.index')->with('success', 'مدیر با موفقیت ایجاد شد.');
@@ -90,12 +118,14 @@ class UserManagementController extends Controller
     {
         $validated = $request->validate(array_merge($this->identityRules($manager), $this->roleRules(), [
             'manager_id' => ['nullable', 'integer', new EligibleManager($manager)],
+            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
         ]));
         $this->ensureAtLeastOneManagerialRole($validated['roles']);
 
         $this->accounts->update($manager, [
             'name' => $validated['name'], 'phone' => $validated['phone'],
             'manager_id' => $validated['manager_id'] ?? null,
+            'department_id' => $validated['department_id'] ?? null,
         ], $validated['roles']);
 
         return redirect()->route('admin.users.index')->with('success', 'اطلاعات و دسترسی‌های مدیر به‌روزرسانی شد.');
@@ -118,11 +148,13 @@ class UserManagementController extends Controller
     {
         $validated = $request->validate(array_merge($this->identityRules(), $this->roleRules(), [
             'manager_id' => ['required', 'integer', new EligibleManager],
+            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
         ]));
 
         $this->accounts->create([
             'name' => $validated['name'], 'phone' => $validated['phone'],
             'password' => $validated['password'], 'manager_id' => $validated['manager_id'],
+            'department_id' => $validated['department_id'] ?? null,
         ], $validated['roles']);
 
         return redirect()->route('admin.users.index')->with('success', 'کاربر با نقش‌ها و مدیر انتخاب‌شده ایجاد شد.');
@@ -137,12 +169,14 @@ class UserManagementController extends Controller
     {
         $validated = $request->validate(array_merge($this->identityRules($employee), $this->roleRules(), [
             'manager_id' => ['nullable', 'integer', new EligibleManager($employee)],
+            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
         ]));
         $this->ensureManagerKeepsManagerialRole($employee, $validated['roles']);
 
         $this->accounts->update($employee, [
             'name' => $validated['name'], 'phone' => $validated['phone'],
             'manager_id' => $validated['manager_id'] ?? null,
+            'department_id' => $validated['department_id'] ?? null,
         ], $validated['roles']);
 
         return redirect()->route('admin.users.index')->with('success', 'اطلاعات، نقش‌ها و مدیر مستقیم کاربر به‌روزرسانی شد.');
@@ -184,6 +218,7 @@ class UserManagementController extends Controller
             'managers' => User::query()->eligibleManagers()
                 ->when($subject, fn ($query) => $query->whereKeyNot($subject->id))
                 ->orderBy('name')->get(),
+            'departments' => Department::query()->orderBy('name')->get(),
         ];
     }
 

@@ -1,5 +1,6 @@
 <x-layouts.app>
     <x-slot name="header">
+        @include('admin.users.partials.section-tabs')
         <!-- Loader -->
         <div id="loader" class="d-flex justify-content-center align-items-center position-fixed top-0 start-0 w-100 h-100 bg-white" style="z-index: 1050;">
             <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">

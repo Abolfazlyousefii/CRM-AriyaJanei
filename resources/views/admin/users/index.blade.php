@@ -59,9 +59,10 @@
     @endphp
 
     <x-slot name="header">
+        @include('admin.users.partials.section-tabs')
         <div class="users-header">
             <div>
-                <h2 class="users-title mb-0">مدیریت کاربران</h2>
+                <h2 class="users-title mb-0">مدیریت پرسنل</h2>
                 <div class="users-subtitle">نمایش ساختار سازمانی به‌صورت درخت افقی</div>
             </div>
 

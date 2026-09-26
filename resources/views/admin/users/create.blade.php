@@ -30,6 +30,7 @@
             </div>
 
             @include('admin.users.partials.manager-select', ['selectedManagerId' => old('manager_id')])
+            @include('admin.users.partials.department-select', ['selectedDepartmentId' => old('department_id')])
             @include('admin.users.partials.role-selector', ['selectedRoles' => $selectedRoles])
 
             <button type="submit" class="mt-4 bg-green-600 text-white px-4 py-2 rounded">
