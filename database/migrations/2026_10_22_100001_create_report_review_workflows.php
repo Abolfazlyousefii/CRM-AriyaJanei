@@ -26,6 +26,7 @@ return new class extends Migration
             $table->string('reviewer_name', 255); // snapshot in case of user rename
             $table->string('decision', 24)->default('waiting');
             $table->text('comment')->nullable();
+            $table->string('returned_description_hash', 64)->nullable();
             $table->timestamp('decided_at')->nullable();
             $table->foreignId('decided_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
