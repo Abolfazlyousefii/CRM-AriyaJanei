@@ -25,6 +25,8 @@ class ReportReviewWorkflowPhaseThreeTest extends TestCase
         }
         config()->set('report_review.enabled', true);
         config()->set('report_review.max_steps', 3);
+        // Explicitly simulate completed pilot authorization in positive tests.
+        config()->set('report_review.all_users', true);
     }
 
     private function person(string $position = 'staff', ?User $manager = null, ?Department $department = null): User
@@ -56,6 +58,21 @@ class ReportReviewWorkflowPhaseThreeTest extends TestCase
         $this->assertNull(app(ReportReviewWorkflowService::class)->start($report));
         $this->assertDatabaseCount('report_review_workflows', 0);
         $this->assertSame(Report::STATUS_SUBMITTED, $report->fresh()->status);
+    }
+
+    public function test_enabled_without_an_explicit_pilot_list_stays_on_legacy_flow(): void
+    {
+        config()->set('report_review.enabled', true);
+        config()->set('report_review.all_users', false);
+        config()->set('report_review.pilot_user_ids', []);
+
+        $manager = $this->person('supervisor');
+        $author = $this->person('staff', $manager);
+        $this->assertNull(app(ReportReviewWorkflowService::class)->start($this->report($author)));
+        $this->assertDatabaseCount('report_review_workflows', 0);
+
+        config()->set('report_review.pilot_user_ids', [$author->id]);
+        $this->assertNotNull(app(ReportReviewWorkflowService::class)->start($this->report($author)));
     }
 
     public function test_snapshots_warehouse_supervisor_manager_and_internal_manager(): void
