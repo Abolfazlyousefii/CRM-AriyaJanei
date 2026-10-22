@@ -137,7 +137,12 @@
 @endphp
 
     <tr>
-        <td class="whitespace-nowrap">{{ $leave->user?->name ?? '-' }}</td>
+        <td class="whitespace-nowrap">
+            {{ $leave->user?->name ?? '-' }}
+            @if($leave->approval_route === 'organization')
+                <small class="d-block text-muted">مسئول بررسی: {{ $leave->assignedApprover?->name ?? 'نیازمند تعیین مسئول' }}</small>
+            @endif
+        </td>
         <td class="whitespace-nowrap">{{ $leave->substituteUser?->name ?? '-' }}</td>
         <td class="whitespace-nowrap">{{ $leave->leave_type }}</td>
         <td class="whitespace-nowrap">{{ $leave->leave_unit }}</td>
@@ -205,6 +210,26 @@
                     <button class="btn btn-danger btn-sm">رد</button>
                 </form>
             @endcan
+            @if(auth()->user()->hasRole('Admin') && $leave->approval_route === 'organization' && in_array($leave->status, \App\Services\LeaveApprovalService::PENDING_STATUSES, true))
+                <details class="mt-2" style="min-width:160px;max-width:260px;white-space:normal">
+                    <summary>تغییر مسئول بررسی</summary>
+                    <form class="mt-2" method="POST" action="{{ route('admin.leaves.reassign', $leave) }}">
+                        @csrf @method('PATCH')
+                        <label class="small" for="leave-assignee-{{ $leave->id }}">مسئول جدید</label>
+                        <select name="assignee_id" id="leave-assignee-{{ $leave->id }}" class="form-select form-select-sm mb-2" required>
+                            <option value="">انتخاب مسئول</option>
+                            @foreach($leaveAssignees as $person)
+                                @if((int) $person->id !== (int) $leave->user_id)
+                                    <option value="{{ $person->id }}">{{ $person->name }}</option>
+                                @endif
+                            @endforeach
+                        </select>
+                        <label class="small" for="leave-reason-{{ $leave->id }}">دلیل تغییر</label>
+                        <textarea name="reason" id="leave-reason-{{ $leave->id }}" class="form-control form-control-sm mb-2" rows="2" required minlength="3" maxlength="1000"></textarea>
+                        <button class="btn btn-outline-primary btn-sm" type="submit">ثبت ارجاع</button>
+                    </form>
+                </details>
+            @endif
         </td>
     </tr>
 @empty

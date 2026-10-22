@@ -108,6 +108,16 @@
             $addLink($item);
         }
 
+        if ($user && app(\App\Services\ReportAccessService::class)->canUsePersonalReports($user)) {
+            $addLink(['title' => 'گزارش‌های من', 'route' => 'user.reports.index', 'icon' => 'doc', 'group' => 'reports']);
+        }
+        if ($user && ($user->hasRole('Admin') || app(\App\Services\ReportAccessService::class)->canManageTeam($user))) {
+            $addLink(['title' => 'گزارش‌های تیم', 'route' => 'user.reports.reportsManagment', 'icon' => 'chart', 'group' => 'reports']);
+        }
+        if ($user && config('report_review.enabled', false)) {
+            $addLink(['title' => 'کارتابل بررسی گزارش‌کار', 'route' => 'report-review.inbox', 'icon' => 'doc', 'group' => 'reports']);
+        }
+
         if ($user) {
             $addLink([
                 'title' => 'خروج از حساب کاربری',

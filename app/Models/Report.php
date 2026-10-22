@@ -21,6 +21,7 @@ class Report extends Model
         'submitted_at',
         'feedback',
         'rating',
+        'voice_path',
         'successful_calls',
     'unsuccessful_calls',
     ];
@@ -33,7 +34,7 @@ class Report extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withTrashed();
     }
 
     public function scopeDraft($query)

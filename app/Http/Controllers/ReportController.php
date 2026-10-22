@@ -15,20 +15,12 @@ class ReportController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('role:Admin|Marketer|User|Manager');
+        $this->middleware(['auth', 'blocked']);
     }
 
     private function allowedReportUserIds(): array
     {
-        $authId = Auth::id();
-
-        $ids = [$authId];
-
-        if ($authId == 35) {
-            $ids[] = 31;
-        }
-
-        return array_values(array_unique($ids));
+        return [Auth::id()];
     }
 
     private function normalizeDigits(?string $value): ?string
@@ -88,11 +80,13 @@ class ReportController extends Controller
     public function index(User $user)
     {
         $authUser = Auth::user();
+        abort_unless(app(\App\Services\ReportAccessService::class)->canUsePersonalReports($authUser), 403);
         $view = 'user.reports.index';
 
-        $allowedIds = $this->allowedReportUserIds();
+        $allowedIds = Auth::user()->hasRole('Admin') && $user->exists ? [$user->id] : $this->allowedReportUserIds();
 
         $reports = Report::whereIn('user_id', $allowedIds)
+            ->with(['user', 'attachments', 'reviewWorkflow.currentReviewer'])
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
@@ -106,129 +100,49 @@ class ReportController extends Controller
 
     public function reportsManagment(Request $request)
     {
-        $auth = Auth::user();
-        $yesterday = Carbon::yesterday();
-
-        $excludedUserIds = [17, 43, 42, 32, 1, 30, 36, 26,47,39,20,27,28];
-
+        $auth = $request->user();
         $validated = $request->validate([
-            'user_id'   => 'nullable|integer|exists:users,id',
-            'date_from' => 'nullable|string',
-            'date_to'   => 'nullable|string',
+            'user_id' => 'nullable|integer|exists:users,id',
+            'date_from' => 'nullable|string', 'date_to' => 'nullable|string',
         ]);
-
         $selectedUserId = isset($validated['user_id']) ? (int) $validated['user_id'] : null;
-
         $dateFromInput = $validated['date_from'] ?? null;
         $dateToInput = $validated['date_to'] ?? null;
-
         $dateFrom = $this->jalaliToGregorian($dateFromInput);
         $dateTo = $this->jalaliToGregorian($dateToInput);
-
-        if ($dateFromInput && !$dateFrom) {
-            return back()->withInput()->with('error', 'فرمت تاریخ شروع صحیح نیست.');
+        if (($dateFromInput && ! $dateFrom) || ($dateToInput && ! $dateTo)) {
+            return back()->withInput()->with('error', 'فرمت تاریخ صحیح نیست.');
         }
-
-        if ($dateToInput && !$dateTo) {
-            return back()->withInput()->with('error', 'فرمت تاریخ پایان صحیح نیست.');
-        }
-
         if ($dateFrom && $dateTo && $dateFrom > $dateTo) {
-            return back()->withInput()->with('error', 'تاریخ "از" نمی‌تواند بزرگ‌تر از تاریخ "تا" باشد.');
+            return back()->withInput()->with('error', 'تاریخ شروع نباید بعد از تاریخ پایان باشد.');
         }
-
-        if ($auth->hasRole('Admin')) {
-            $availableUsers = User::query()
-                ->where('is_active', true)
-                ->whereNotIn('id', $excludedUserIds)
-                ->whereHas('roles', function ($q) {
-                    $q->whereIn('name', ['User', 'Marketer', 'Manager']);
-                })
-                ->orderBy('name')
-                ->get(['id', 'name']);
-
-            $usersWithoutYesterdayReport = User::query()
-                ->where('is_active', true)
-                ->whereNotIn('id', $excludedUserIds)
-                ->whereHas('roles', function ($q) {
-                    $q->whereIn('name', ['User', 'Marketer', 'Manager']);
-                })
-                ->whereDoesntHave('reports', function ($q) use ($yesterday) {
-                    $q->whereDate('submitted_at', $yesterday->toDateString())
-                        ->whereIn('status', [Report::STATUS_SUBMITTED, Report::STATUS_READ]);
-                })
-                ->orderBy('name')
-                ->get();
-
-            $reportsQuery = Report::query()
-                ->whereIn('status', [Report::STATUS_SUBMITTED, Report::STATUS_READ])
-                ->whereHas('user', function ($q) use ($excludedUserIds) {
-                    $q->whereNotIn('id', $excludedUserIds);
-                });
-        } else {
-            $subordinateIds = $auth->allSubordinateIds();
-
-            $availableUsers = User::query()
-                ->whereIn('id', $subordinateIds)
-                ->where('is_active', true)
-                ->whereNotIn('id', $excludedUserIds)
-                ->orderBy('name')
-                ->get(['id', 'name']);
-
-            $usersWithoutYesterdayReport = User::query()
-                ->whereIn('id', $subordinateIds)
-                ->where('is_active', true)
-                ->whereNotIn('id', $excludedUserIds)
-                ->whereDoesntHave('reports', function ($q) use ($yesterday) {
-                    $q->whereDate('submitted_at', $yesterday->toDateString())
-                        ->whereIn('status', [Report::STATUS_SUBMITTED, Report::STATUS_READ]);
-                })
-                ->orderBy('name')
-                ->get();
-
-            $reportsQuery = Report::query()
-                ->whereIn('status', [Report::STATUS_SUBMITTED, Report::STATUS_READ])
-                ->whereHas('user', function ($q) use ($subordinateIds, $excludedUserIds) {
-                    $q->whereIn('id', $subordinateIds)
-                        ->whereNotIn('id', $excludedUserIds);
-                });
+        $scope = app(\App\Services\ReportAccessService::class)->visibleTeamIds($auth);
+        $people = User::query()->where('is_active', true);
+        $reportsQuery = Report::query()->whereIn('status', [Report::STATUS_SUBMITTED, Report::STATUS_READ]);
+        if ($scope !== null) {
+            $people->whereIn('id', $scope);
+            $reportsQuery->whereIn('user_id', $scope);
         }
-
-        if ($selectedUserId) {
-            $reportsQuery->where('user_id', $selectedUserId);
-        }
-
-        if ($dateFrom) {
-            $reportsQuery->whereDate('created_at', '>=', $dateFrom);
-        }
-
-        if ($dateTo) {
-            $reportsQuery->whereDate('created_at', '<=', $dateTo);
-        }
-
-        $reports = $reportsQuery
-            ->with(['user', 'attachments'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(15)
-            ->withQueryString();
-
-        $dateFromJalali = $dateFromInput ?: ($dateFrom ? $this->gregorianToJalali($dateFrom) : null);
-        $dateToJalali = $dateToInput ?: ($dateTo ? $this->gregorianToJalali($dateTo) : null);
-
+        $availableUsers = (clone $people)->orderBy('name')->get(['id', 'name']);
+        $usersWithoutYesterdayReport = (clone $people)->whereDoesntHave('reports', function ($query) {
+            $query->whereDate('submitted_at', Carbon::yesterday()->toDateString())
+                ->whereIn('status', [Report::STATUS_SUBMITTED, Report::STATUS_READ]);
+        })->orderBy('name')->get();
+        if ($selectedUserId) $reportsQuery->where('user_id', $selectedUserId);
+        if ($dateFrom) $reportsQuery->whereDate('created_at', '>=', $dateFrom);
+        if ($dateTo) $reportsQuery->whereDate('created_at', '<=', $dateTo);
+        $reports = $reportsQuery->with(['user', 'attachments', 'reviewWorkflow.currentReviewer'])->latest()->paginate(15)->withQueryString();
+        $dateFromJalali = $dateFromInput;
+        $dateToJalali = $dateToInput;
         return view('user.reports.reportsManagment', compact(
-            'reports',
-            'usersWithoutYesterdayReport',
-            'availableUsers',
-            'selectedUserId',
-            'dateFrom',
-            'dateTo',
-            'dateFromJalali',
-            'dateToJalali'
+            'reports', 'usersWithoutYesterdayReport', 'availableUsers', 'selectedUserId',
+            'dateFrom', 'dateTo', 'dateFromJalali', 'dateToJalali'
         ));
     }
 
     public function feedback(Request $request, Report $report)
     {
+        $this->authorize('feedback', $report);
         if (!in_array($report->status, [Report::STATUS_SUBMITTED, Report::STATUS_READ])) {
             abort(404);
         }
@@ -265,6 +179,8 @@ class ReportController extends Controller
             $data['voice_path'] = $request->file('voice_file')->store('voices', 'public');
         }
 
+        // Persist and audit only scalar metadata, never UploadedFile resources or audio bodies.
+        unset($data['voice'], $data['voice_file']);
         $oldData = $report->getOriginal();
         $report->update($data);
 
@@ -294,6 +210,7 @@ class ReportController extends Controller
     public function create(User $user)
     {
         $authUser = Auth::user();
+        abort_unless(app(\App\Services\ReportAccessService::class)->canUsePersonalReports($authUser), 403);
 
         $view = 'user.reports.create';
 
@@ -308,10 +225,9 @@ class ReportController extends Controller
     public function store(Request $request, User $user)
     {
         $authUser = Auth::user();
+        abort_unless(app(\App\Services\ReportAccessService::class)->canUsePersonalReports($authUser), 403);
 
-        $unlimitedPhone = '099999';
-
-        if ($authUser->phone != $unlimitedPhone) {
+        if (! $authUser->getAllPermissions()->contains('name', 'reports.submit-multiple')) {
             $reportCount = Report::where('user_id', $authUser->id)
                 ->whereDate('submitted_at', now()->toDateString())
                 ->count();
@@ -428,188 +344,62 @@ class ReportController extends Controller
 
     public function submit(Report $report)
     {
-        $authUser = Auth::user();
-
-        if ($authUser->id !== $report->user_id) {
-            abort(403);
+        $this->authorize('submit', $report);
+        $report->markAsSubmitted();
+        $workflow = app(\App\Services\ReportReviewWorkflowService::class)->start($report);
+        if ($workflow?->current_reviewer_id) {
+            Notification::create([
+                'user_id' => $workflow->current_reviewer_id, 'title' => 'گزارش کار در انتظار بررسی',
+                'message' => 'گزارش جدیدی برای بررسی به شما ارجاع شده است.', 'seen' => false,
+            ]);
         }
-
-        if ($report->status === Report::STATUS_SUBMITTED) {
-            return redirect()->back()->with('error', 'این گزارش قبلا ارسال شده است.');
-        }
-
-        $oldData = $report->getOriginal();
-        $report->status = Report::STATUS_SUBMITTED;
-        $report->submitted_at = now();
-        $report->save();
-
-        activity()
-            ->causedBy($authUser)
-            ->performedOn($report)
-            ->withProperties(['old' => $oldData, 'new' => $report->toArray()])
-            ->log('ارسال گزارش');
-
-        return redirect()->route('user.reports.index', $report)
-            ->with('success', 'گزارش ارسال شد.');
+        activity()->causedBy(Auth::user())->performedOn($report)->log('ارسال گزارش');
+        return redirect()->route('user.reports.index')->with('success', 'گزارش ارسال شد.');
     }
 
     public function show(Report $report, User $user = null)
     {
-        $authUser = Auth::user();
-
-        if ($authUser->hasRole('Admin') || $authUser->hasRole('Manager')) {
-            if (!in_array($report->status, [Report::STATUS_SUBMITTED, Report::STATUS_READ])) {
-                abort(404);
-            }
-
-            if ($report->status === Report::STATUS_SUBMITTED) {
-                $report->markAsRead();
-            }
-
-            activity()
-                ->causedBy($authUser)
-                ->performedOn($report)
-                ->withProperties(['action' => 'view'])
-                ->log('مشاهده گزارش توسط ادمین/مدیر');
-
-            return view('reports.show', compact('report', 'user'));
-        }
-
-        $allowedIds = $this->allowedReportUserIds();
-
-        if (!in_array($report->user_id, $allowedIds)) {
-            abort(403);
-        }
-
-        if ($authUser->id == 35 && $report->user_id == 31) {
-            if ($report->status === Report::STATUS_SUBMITTED) {
-                $report->markAsRead();
-            }
-        }
-
-        activity()
-            ->causedBy($authUser)
-            ->performedOn($report)
-            ->withProperties(['action' => 'view'])
-            ->log('مشاهده گزارش');
-
-        return view('user.reports.show', compact('report'));
+        $this->authorize('view', $report);
+        $owner = (int) Auth::id() === (int) $report->user_id;
+        if (! $owner && $report->status === Report::STATUS_SUBMITTED) $report->markAsRead();
+        activity()->causedBy(Auth::user())->performedOn($report)->log('مشاهده گزارش');
+        return view($owner ? 'user.reports.show' : 'reports.show', compact('report', 'user'));
     }
 
     public function edit(Report $report, User $user = null)
     {
-        $authUser = Auth::user();
-
-        if ($authUser->hasRole('Admin')) {
-            $report = Report::where('id', $report->id)->firstOrFail();
-        } elseif ($authUser->hasRole('Manager')) {
-            $report = Report::where('id', $report->id)->firstOrFail();
-        } else {
-            $report = Report::where('user_id', $authUser->id)->where('id', $report->id)->firstOrFail();
-        }
-
-        $this->ensureReviewReportEditable($report);
-
-        $view = 'user.reports.edit';
-
-        activity()
-            ->causedBy($authUser)
-            ->performedOn($report)
-            ->withProperties(['action' => 'view_edit_form'])
-            ->log('مشاهده فرم ویرایش گزارش');
-
-        return view($view, $authUser->hasRole('Admin') ? compact('report', 'user') : compact('report'));
+        $this->authorize('update', $report);
+        activity()->causedBy(Auth::user())->performedOn($report)->log('مشاهده فرم ویرایش گزارش');
+        return view('user.reports.edit', compact('report', 'user'));
     }
 
     public function update(Request $request, Report $report, User $user = null)
     {
+        $this->authorize('update', $report);
         $data = $request->validate([
-            'title' => 'nullable|string|max:255',
-            'description' => 'required|string',
-            'successful_calls' => 'nullable|integer|min:0',
-            'unsuccessful_calls' => 'nullable|integer|min:0',
+            'title' => 'nullable|string|max:255', 'description' => 'required|string',
+            'successful_calls' => 'nullable|integer|min:0', 'unsuccessful_calls' => 'nullable|integer|min:0',
         ]);
-
-        $authUser = Auth::user();
-
-        if ($authUser->hasRole('Admin')) {
-            $report = Report::where('id', $report->id)->firstOrFail();
-        } elseif ($authUser->hasRole('Manager')) {
-            $report = Report::where('id', $report->id)->firstOrFail();
-        } else {
-            $report = Report::where('user_id', $authUser->id)->where('id', $report->id)->firstOrFail();
-        }
-
-        $this->ensureReviewReportEditable($report);
-
-        $oldData = $report->getOriginal();
-        $report->update($data);
-
-        activity()
-            ->causedBy($authUser)
-            ->performedOn($report)
-            ->withProperties(['old' => $oldData, 'new' => $report->toArray()])
-            ->log('ویرایش گزارش (با بروزرسانی تماس‌ها)');
-
-        return redirect()->back()->with('success', 'گزارش با موفقیت بروزرسانی شد.');
+        \Illuminate\Support\Facades\DB::transaction(function () use ($report, $data): void {
+            $locked = Report::query()->whereKey($report->id)->lockForUpdate()->firstOrFail();
+            $locked->setRelation('reviewWorkflow', $locked->reviewWorkflow()->lockForUpdate()->first());
+            $this->authorize('update', $locked);
+            $oldData = $locked->getOriginal();
+            $locked->update($data);
+            activity()->causedBy(Auth::user())->performedOn($locked)
+                ->withProperties(['old' => $oldData, 'new' => $locked->toArray()])->log('ویرایش گزارش');
+        });
+        return back()->with('success', 'گزارش با موفقیت بروزرسانی شد.');
     }
 
     public function destroy(Report $report, User $user = null)
     {
-        $authUser = Auth::user();
-
-        if ($authUser->hasRole('Admin')) {
-            $report = Report::where('id', $report->id)->firstOrFail();
-        } elseif ($authUser->hasRole('Manager')) {
-            $report = Report::where('id', $report->id)
-                ->where(function($query) use ($authUser) {
-                    $query->where('user_id', $authUser->id)
-                          ->orWhereIn('user_id', $authUser->employees->pluck('id'));
-                })
-                ->firstOrFail();
-        } else {
-            $report = Report::where('id', $report->id)
-                ->where('user_id', $authUser->id)
-                ->firstOrFail();
-        }
-
-        // Review snapshots must not be silently cascaded away through the
-        // legacy report deletion endpoint during an active pilot.
-        abort_if(
-            $report->reviewWorkflow()->exists(),
-            403,
-            'گزارش دارای گردش تأیید قابل حذف نیست.'
-        );
-
-        activity()
-            ->causedBy($authUser)
-            ->performedOn($report)
-            ->withProperties(['action' => 'delete'])
-            ->log('حذف گزارش');
-
-        $report->delete();
-
-        return redirect()->back()->with('success', 'گزارش با موفقیت حذف شد.');
+        \Illuminate\Support\Facades\DB::transaction(function () use ($report): void {
+            $locked = Report::query()->whereKey($report->id)->lockForUpdate()->firstOrFail();
+            $this->authorize('delete', $locked);
+            activity()->causedBy(Auth::user())->performedOn($locked)->log('حذف گزارش');
+            $locked->delete();
+        });
+        return back()->with('success', 'گزارش با موفقیت حذف شد.');
     }
-    /**
-     * New review-pilot reports must not be changed between review decisions.
-     * The existing legacy report editor remains unchanged when the feature is off.
-     */
-    private function ensureReviewReportEditable(Report $report): void
-    {
-        // A stored workflow is authoritative even after the pilot flag is
-        // switched off. Turning off new routing must not unfreeze a report.
-        $workflow = $report->reviewWorkflow;
-        if (! $workflow) {
-            return;
-        }
-
-        abort_unless(
-            $workflow->status === 'needs_revision'
-                && (int) Auth::id() === (int) $report->user_id,
-            403,
-            'گزارش در گردش تأیید است و فقط پس از بازگشت برای اصلاح توسط نویسنده قابل ویرایش است.'
-        );
-    }
-
 }

@@ -12,6 +12,30 @@
         </div>
         <div id="report-review-feedback" class="alert" role="alert" hidden></div>
 
+        @if($attention)
+            <h3 class="fs-5 fw-bold mt-4">نیازمند تعیین مسئول بررسی ({{ $attention->total() }})</h3>
+            <p class="small text-muted">مسئول این گزارش‌ها غیرفعال، مسدود یا از سازمان خارج شده است. تغییر مسئول فقط با ثبت دلیل انجام می‌شود.</p>
+            @foreach($attention as $workflow)
+                <article class="card card-body mb-3">
+                    <h4 class="fs-6">{{ $workflow->report->title ?: 'گزارش شماره '.$workflow->report_id }} — {{ $workflow->report->user?->name ?? 'حساب آرشیوشده' }}</h4>
+                    <label class="small mb-1" for="reviewer-{{ $workflow->id }}">مسئول جدید</label>
+                    <select id="reviewer-{{ $workflow->id }}" class="form-select mb-2" data-reviewer-for="{{ $workflow->id }}">
+                        <option value="">انتخاب مسئول</option>
+                        @foreach($reviewers as $person)
+                            @if((int) $person->id !== (int) $workflow->report->user_id && ! $workflow->steps->where('sequence', '!=', $workflow->current_sequence)->contains('reviewer_id', $person->id))
+                                <option value="{{ $person->id }}">{{ $person->name }}</option>
+                            @endif
+                        @endforeach
+                    </select>
+                    <label class="small mb-1" for="reason-{{ $workflow->id }}">دلیل تغییر مسئول</label>
+                    <textarea id="reason-{{ $workflow->id }}" class="form-control mb-2" rows="2" maxlength="1000" data-reason-for="{{ $workflow->id }}"></textarea>
+                    <button type="button" class="btn btn-outline-primary btn-sm align-self-start"
+                        data-review-action="{{ route('report-review.reassign', $workflow) }}" data-workflow="{{ $workflow->id }}" data-action-kind="reassign">ثبت ارجاع و دلیل</button>
+                </article>
+            @endforeach
+            {{ $attention->links() }}
+        @endif
+
         <h3 class="fs-5 fw-bold mb-3">در انتظار تصمیم من ({{ $assigned->total() }})</h3>
         @forelse($assigned as $workflow)
             @php
@@ -26,23 +50,8 @@
                         </div>
                         <span class="badge bg-primary">مرحله {{ $workflow->current_sequence }} از {{ $workflow->steps->count() }}</span>
                     </div>
-                    <p class="mb-3" style="white-space:pre-wrap">{{ $workflow->report->description }}</p>
-                    <details class="mb-3">
-                        <summary class="small fw-bold">مسیر تأیید ثبت‌شده</summary>
-                        <ol class="mt-2">
-                            @foreach($workflow->steps->sortBy('sequence') as $step)
-                                <li>
-                                    {{ $step->reviewer_name }} —
-                                    {{ match ($step->decision) {
-                                        'approved' => 'تأیید شده',
-                                        'returned' => 'ارجاع برای اصلاح',
-                                        'pending' => 'در حال بررسی',
-                                        default => 'در صف'
-                                    } }}
-                                </li>
-                            @endforeach
-                        </ol>
-                    </details>
+                    <p class="mb-3" style="white-space:pre-wrap;overflow-wrap:anywhere">{{ $workflow->report->description }}</p>
+                    @include('reports.review-history', ['report' => $workflow->report, 'hideReviewLink' => true])
                     <div class="row g-2">
                         <div class="col-12 col-lg-9">
                             <label class="small fw-semibold mb-1" for="review-comment-{{ $workflow->id }}">نظر مسئول بررسی</label>
@@ -78,6 +87,7 @@
                 <h4 class="fs-6 fw-bold">{{ $workflow->report->title ?: 'گزارش کار شماره '.$workflow->report_id }}</h4>
                 @php($reviewStep = $workflow->steps->firstWhere('sequence', $workflow->current_sequence))
                 <p class="small">نظر مسئول بررسی: {{ $reviewStep?->comment ?: 'توضیحی ثبت نشده است.' }}</p>
+                @include('reports.review-history', ['report' => $workflow->report, 'hideReviewLink' => true])
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{{ route('user.reports.edit', $workflow->report) }}" class="btn btn-outline-primary btn-sm">ویرایش متن گزارش</a>
                     <button type="button" class="btn btn-primary btn-sm"

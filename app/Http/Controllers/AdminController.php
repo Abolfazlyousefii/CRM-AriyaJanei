@@ -17,6 +17,7 @@ class AdminController extends Controller
 {
 public function reports(Request $request)
 {
+    $reportScope = app(\App\Services\ReportAccessService::class)->visibleTeamIds($request->user());
     // 📊 داده‌های نمودار دایره‌ای
     $referenceData = Customer::selectRaw('reference_type_id, COUNT(*) as count')
         ->groupBy('reference_type_id')
@@ -41,6 +42,7 @@ public function reports(Request $request)
 
     // 📋 جدول بازاریاب‌ها
     $marketerStats = User::role('Marketer')
+        ->when($reportScope !== null, fn ($query) => $query->whereIn('id', $reportScope))
         ->withCount([
             'customers as customers_count',
             'notes as notes_count',
@@ -65,6 +67,7 @@ $startOfMonthGregorian = $startOfMonth->toDateTimeString(); // خروجی Carbon
 $endOfMonthGregorian = $endOfMonth->toDateTimeString();
 
 $query = Report::query()
+    ->when($reportScope !== null, fn ($query) => $query->whereIn('user_id', $reportScope))
     ->whereBetween('submitted_at', [$startOfMonthGregorian, $endOfMonthGregorian]);
 
 if ($marketerId) {
@@ -84,7 +87,7 @@ $reportsByDay = $query
             'unsuccessful' => (int) $item->unsuccessful,
         ];
     });
-    $marketers = User::role('Marketer')->get();
+    $marketers = User::role('Marketer')->when($reportScope !== null, fn ($query) => $query->whereIn('id', $reportScope))->get();
 
     return view('admin.reports.dashboard', compact(
         'referenceData', 'cityData', 'marketerStats', 'marketers', 'reportsByDay', 'month', 'year', 'marketerId'

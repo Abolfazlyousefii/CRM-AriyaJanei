@@ -59,11 +59,14 @@
                                     <td>
                                         <a href="{{ route('user.reports.show', $report) }}" class="btn btn-sm btn-primary">مشاهده</a>
 
-                                        @if($report->created_at->gt(now()->subHours(2)))
+                                        @if($report->created_at->gt(now()->subHours(2)) || $report->reviewWorkflow?->status === 'needs_revision')
                                             
                                        
 
+                                        @can('update', $report)
                                         <a href="{{ route('user.reports.edit', $report) }}" class="btn btn-sm btn-success">ویرایش</a>
+                                        @endcan
+                                        @can('delete', $report)
                                             <form action="{{ route('user.reports.destroy', $report) }}"
                                                   method="POST" class="d-inline">
                                                 @csrf
@@ -73,6 +76,7 @@
                                                     حذف
                                                 </button>
                                             </form>
+                                            @endcan
                                              @endif
                                     </td>
                                 </tr>

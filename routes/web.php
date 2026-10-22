@@ -90,6 +90,7 @@ use App\Http\Controllers\UserManagementController;
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->group(function () {
     Route::get('/settings/leaves', [\App\Http\Controllers\LeaveSettingsController::class, 'edit'])->name('leaves.settings.edit');
     Route::put('/settings/leaves', [\App\Http\Controllers\LeaveSettingsController::class, 'update'])->name('leaves.settings.update');
+    Route::patch('/settings/leaves/{leave}/assignee', [\App\Http\Controllers\LeaveSettingsController::class, 'reassign'])->name('leaves.reassign');
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
 
     // Real-time organizational chart and personnel management (phase 2).
@@ -289,11 +290,11 @@ Route::post('/admin/products/store', [AdminController::class, 'storeProduct'])->
 // ------------------------------
 // مسیرهای مربوط به نقش Guest
 // ------------------------------
-Route::middleware(['auth', 'role:User|Manager|Admin'])
+Route::middleware(['auth', 'blocked'])
     ->prefix('user')
     ->name('user.')
     ->group(function () {
-        Route::get('reports/{report}/submit', [ReportController::class, 'submit'])
+        Route::post('reports/{report}/submit', [ReportController::class, 'submit'])
             ->name('reports.submit');
         Route::put('reports/{report}/feedback/', [ReportController::class, 'feedback'])
             ->name('reports.feedback');
@@ -321,6 +322,7 @@ Route::middleware(['auth', 'blocked'])->prefix('report-review')->name('report-re
     Route::post('/{workflow}/approve', [\App\Http\Controllers\ReportReviewController::class, 'approve'])->name('approve');
     Route::post('/{workflow}/return', [\App\Http\Controllers\ReportReviewController::class, 'returnForRevision'])->name('return');
     Route::post('/{workflow}/resubmit', [\App\Http\Controllers\ReportReviewController::class, 'resubmit'])->name('resubmit');
+    Route::post('/{workflow}/reassign', [\App\Http\Controllers\ReportReviewController::class, 'reassign'])->name('reassign');
 });
 
 // ------------------------------

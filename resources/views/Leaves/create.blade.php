@@ -20,6 +20,13 @@
         </h2>
     </x-slot>
     <div class="bg-white shadow-sm rounded-lg p-6" dir="rtl">
+        <p class="mb-4 text-sm" role="status">
+            @if($leaveApprover ?? null)
+                مسئول بررسی این درخواست: <strong>{{ $leaveApprover->name }}</strong>
+            @else
+                این درخواست از مسیر تأییدکنندگان تعیین‌شده در تنظیمات مرخصی بررسی می‌شود.
+            @endif
+        </p>
         <form action="{{ route('leaves.store') }}" method="POST">
             @csrf
             @if(strtoupper($method) !== 'POST')

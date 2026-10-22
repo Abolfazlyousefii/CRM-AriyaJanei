@@ -8,6 +8,7 @@
 
         <div class="w-full max-w-3xl bg-white shadow-lg rounded-2xl p-6 space-y-6 border-t-4 border-green-500">
             <h3 class="text-xl font-bold text-gray-700 border-b pb-2">جزئیات گزارش</h3>
+            @include('reports.review-history')
 
             <p class="text-center text-gray-600 mt-1">
                 <span class="font-semibold">
@@ -93,7 +94,7 @@
                 @endif
             </div>
 
-            @if($user->hasRole('Admin') || $user->hasRole('internalManager') || $user->hasRole('Manager'))
+            @if(auth()->user()->can('feedback', $report))
                 <form action="{{ route('user.reports.feedback', [$report]) }}" method="POST" class="space-y-6" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')

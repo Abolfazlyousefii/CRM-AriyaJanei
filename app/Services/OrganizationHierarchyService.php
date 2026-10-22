@@ -18,10 +18,10 @@ class OrganizationHierarchyService
      * The existing users.manager_id is authoritative. Department leadership is
      * a fallback only for staff who have no explicit reporting manager.
      */
-    public function directManager(User $user): ?User
+    public function directManager(User $user, ?Collection $people = null): ?User
     {
         if ($user->manager_id !== null) {
-            return $user->manager()->first();
+            return $people !== null ? $people->get((int) $user->manager_id) : $user->manager;
         }
 
         $department = $user->department;
@@ -30,10 +30,10 @@ class OrganizationHierarchyService
             return null;
         }
 
-        return $this->departmentFallback($user, $department);
+        return $this->departmentFallback($user, $department, $people);
     }
 
-    public function departmentFallback(User $user, Department $department): ?User
+    public function departmentFallback(User $user, Department $department, ?Collection $people = null): ?User
     {
         $isSupervisor = (int) $department->supervisor_id === (int) $user->id
             && $department->supervisor_id !== null;
@@ -59,7 +59,7 @@ class OrganizationHierarchyService
                 continue;
             }
 
-            $candidate = User::query()->find($id);
+            $candidate = $people !== null ? $people->get((int) $id) : User::query()->find($id);
 
             if ($candidate && $candidate->isActive() && ! $candidate->isBlocked()) {
                 return $candidate;
@@ -75,14 +75,14 @@ class OrganizationHierarchyService
      *
      * @return Collection<int, User>
      */
-    public function managerChain(User $user): Collection
+    public function managerChain(User $user, ?Collection $people = null): Collection
     {
         $managers = collect();
         $seen = [(int) $user->id => true];
         $current = $user;
 
         for ($depth = 0; $depth < 200; $depth++) {
-            $manager = $this->directManager($current);
+            $manager = $this->directManager($current, $people);
 
             if (! $manager) {
                 return $managers;
@@ -112,30 +112,19 @@ class OrganizationHierarchyService
     /** @return list<int> */
     public function subordinateIds(User $leader): array
     {
-        $children = [];
-        User::query()->with('department')->get()->each(function (User $user) use (&$children): void {
-            $manager = $this->directManager($user);
-            if ($manager) {
-                $children[(int) $manager->id][] = (int) $user->id;
-            }
-        });
-
+        // Resolve the graph in memory, avoiding a query for every node/ancestor.
+        $people = User::query()->with('department')->get()->keyBy('id');
         $found = [];
-        $visited = [(int) $leader->id => true];
-        $queue = [(int) $leader->id];
-
-        while ($queue !== []) {
-            $parent = array_shift($queue);
-            foreach ($children[$parent] ?? [] as $child) {
-                if (isset($visited[$child])) {
-                    continue;
+        foreach ($people as $person) {
+            if ($person->is($leader)) continue;
+            try {
+                if ($this->managerChain($person, $people)->contains(fn (User $manager) => $manager->is($leader))) {
+                    $found[] = (int) $person->id;
                 }
-                $visited[$child] = true;
-                $found[] = $child;
-                $queue[] = $child;
+            } catch (DomainException) {
+                // A corrupt cycle cannot establish team authorization.
             }
         }
-
         return $found;
     }
 

@@ -17,7 +17,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
             // بعد از انیمیشن، display:none کن
             setTimeout(() => {
-                loader.style.display = "none";
+                loader.style.setProperty("display", "none", "important");
+                loader.setAttribute("aria-hidden", "true");
             }, 300); // 300ms مطابق transition
         }, 100); // 100ms تا مطمئن شود DOM آماده است
     }
@@ -35,7 +36,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
             // بعد از انیمیشن، display:none کن
             setTimeout(() => {
-                loader.style.display = "none";
+                loader.style.setProperty("display", "none", "important");
+                loader.setAttribute("aria-hidden", "true");
             }, 300); // 300ms مطابق transition
         }, 100); // 100ms تا مطمئن شود DOM آماده است
     }

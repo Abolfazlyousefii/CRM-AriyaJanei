@@ -27,32 +27,24 @@ class LeaveController extends Controller
 
         $query = Leave::with(['user', 'substituteUser', 'manager'])->latest();
 
-        if ($this->approval->isApprover($user) || $user->hasAnyRole(['Admin', 'Accountant', 'internalManager', 'InternalManager'])) {
-            // همه را می‌بیند
-        } elseif ($user->hasRole('Manager')) {
-            $query->where(function ($q) use ($user) {
-                $q->where('manager_id', $user->id)
-                    ->orWhere('user_id', $user->id)
-                    ->orWhere('substitute_user_id', $user->id);
-            });
-        } else {
-            $query->where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                    ->orWhere('substitute_user_id', $user->id);
-            });
-        }
+        $this->approval->visibleTo($query, $user);
 
-        $leaves = $query->paginate(15);
+        $leaves = $query->with('assignedApprover')->paginate(15);
+        $leaveAssignees = $user->hasRole('Admin') ? User::query()->where('is_active', true)
+            ->where(function ($active) {
+                $active->whereNull('blocked_until')->orWhere('blocked_until', '<=', now());
+            })->orderBy('name')->get(['id', 'name']) : collect();
 
-        return view('Leaves.index', compact('leaves'));
+        return view('Leaves.index', compact('leaves', 'leaveAssignees'));
     }
 
     public function create()
     {
         $user = auth()->user();
         $substitutes = $this->getSubstitutes($user);
+        $leaveApprover = $this->approval->responsiblePerson($user);
 
-        return view('Leaves.create', compact('substitutes'));
+        return view('Leaves.create', compact('substitutes', 'leaveApprover'));
     }
 
     public function edit(Leave $leave)
@@ -69,7 +61,7 @@ class LeaveController extends Controller
     {
         $user = auth()->user();
         $data = $this->validateLeaveForm($request, $user);
-        $leave = Leave::create([
+        $leave = Leave::create(array_merge([
             'user_id' => $user->id,
             'substitute_user_id' => $data['substitute']?->id,
             'leave_type' => $data['leave_type'], 'leave_unit' => $data['leave_unit'],
@@ -77,7 +69,7 @@ class LeaveController extends Controller
             'start_time' => $data['start_time'], 'end_time' => $data['end_time'],
             'reason' => $data['reason'], 'manager_id' => $user->manager_id,
             'status' => 'pending',
-        ]);
+        ], $this->approval->routingForNewRequest($user)));
         $this->approval->notifyApprovers($leave);
 
         return redirect()->route('leaves')->with('success', 'درخواست مرخصی ثبت شد و در انتظار بررسی تأییدکنندگان است.');
@@ -100,7 +92,8 @@ class LeaveController extends Controller
             'start_time' => $data['start_time'],
             'end_time' => $data['end_time'],
             'reason' => $data['reason'],
-            'manager_id' => $user->manager_id,
+            // Keep the original assignment when the organizational chart changes.
+            'manager_id' => $leave->manager_id,
             'status' => 'pending',
             'super_manager_id' => null,
         ]);
@@ -170,20 +163,7 @@ class LeaveController extends Controller
 
         $query = Leave::query()->with(['user', 'manager']);
 
-        if ($this->approval->isApprover($user) || $user->hasAnyRole(['Admin', 'Accountant', 'internalManager', 'InternalManager'])) {
-            // همه را می‌بیند
-        } elseif ($user->hasRole('Manager')) {
-            $query->where(function ($q) use ($user) {
-                $q->where('manager_id', $user->id)
-                    ->orWhere('user_id', $user->id)
-                    ->orWhere('substitute_user_id', $user->id);
-            });
-        } else {
-            $query->where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                    ->orWhere('substitute_user_id', $user->id);
-            });
-        }
+        $this->approval->visibleTo($query, $user);
 
         $query->whereBetween('start_date', [$from, $to])->latest();
 

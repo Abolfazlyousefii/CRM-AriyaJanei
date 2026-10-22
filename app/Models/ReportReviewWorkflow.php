@@ -24,4 +24,9 @@ class ReportReviewWorkflow extends Model
     {
         return $this->belongsTo(User::class, 'current_reviewer_id');
     }
+
+    public function events()
+    {
+        return $this->hasMany(ReportReviewEvent::class, 'workflow_id')->orderBy('id');
+    }
 }

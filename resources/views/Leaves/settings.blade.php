@@ -3,7 +3,7 @@
     <div class="container py-4" dir="rtl">
         @if(session('success')) <div class="alert alert-success">{{ session('success') }}</div> @endif
         <div class="card"><div class="card-body">
-            <p>یک یا چند نفر را برای تأیید و رد مرخصی انتخاب کنید. تصمیم هر یک از افراد منتخب کافی است. این انتخاب برای درخواست‌های معلق قبلی هم اعمال می‌شود.</p>
+            <p>درخواست‌های جدیدِ دارای چارت معتبر به مسئول مشخص همان فرد ارسال می‌شوند. افراد این فهرست، درخواست‌های قدیمی یا فاقد مسیر سازمانی را بررسی می‌کنند؛ تصمیم یکی از آنان کافی است. تغییر این فهرست مسئول درخواست‌های سازمانی قبلی را عوض نمی‌کند.</p>
             <form method="POST" action="{{ route('admin.leaves.settings.update') }}">
                 @csrf @method('PUT')
                 @foreach($users as $person)

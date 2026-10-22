@@ -26,6 +26,8 @@ class Leave extends Model
         'manager_id',
         'super_manager_id',
         'status',
+        'approval_route',
+        'assigned_approver_id',
     ];
 
 
@@ -46,6 +48,11 @@ class Leave extends Model
 
     public function manager() {
         return $this->belongsTo(User::class, 'manager_id');
+    }
+
+    public function assignedApprover()
+    {
+        return $this->belongsTo(User::class, 'assigned_approver_id');
     }
 
     public function accountant() {

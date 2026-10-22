@@ -11,6 +11,16 @@
         const kind = button.dataset.actionKind;
         const id = button.dataset.workflow;
         const comment = box.querySelector('[data-comment-for="' + id + '"]')?.value.trim() || '';
+        let payload = { comment: comment || null };
+        if (kind === 'reassign') {
+            const reviewer = Number(box.querySelector('[data-reviewer-for="' + id + '"]')?.value);
+            const reason = box.querySelector('[data-reason-for="' + id + '"]')?.value.trim() || '';
+            if (!reviewer || reason.length < 3) {
+                show('مسئول جدید را انتخاب کنید و دلیل تغییر را بنویسید.', true);
+                return;
+            }
+            payload = { reviewer_id: reviewer, reason };
+        }
         if (kind === 'return' && comment.length < 3) {
             show('برای ارجاع جهت اصلاح، حداقل سه کاراکتر توضیح بنویسید.', true);
             return;
@@ -30,7 +40,7 @@
                     'X-Requested-With': 'XMLHttpRequest',
                     'X-CSRF-TOKEN': box.dataset.csrf
                 },
-                body: JSON.stringify({ comment: comment || null })
+                body: JSON.stringify(payload)
             });
             const result = await response.json().catch(() => ({}));
             if (!response.ok) {

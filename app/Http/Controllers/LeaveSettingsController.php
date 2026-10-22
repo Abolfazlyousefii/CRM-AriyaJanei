@@ -29,7 +29,7 @@ class LeaveSettingsController extends Controller
         DB::transaction(function () use ($data, $approval) {
             DB::table('leave_approvers')->delete();
             DB::table('leave_approvers')->insert(array_map(fn ($id) => ['user_id' => $id], $data['approver_ids']));
-            Leave::query()->whereIn('status', LeaveApprovalService::PENDING_STATUSES)
+            Leave::query()->whereNull('approval_route')->whereIn('status', LeaveApprovalService::PENDING_STATUSES)
                 ->with('user')->chunkById(100, function ($leaves) use ($approval) {
                     foreach ($leaves as $leave) {
                         $approval->notifyApprovers($leave);
@@ -38,5 +38,15 @@ class LeaveSettingsController extends Controller
         });
 
         return back()->with('success', 'تأییدکنندگان ذخیره شدند و درخواست‌های معلق به آنان ارجاع داده شد.');
+    }
+
+    public function reassign(Request $request, Leave $leave, LeaveApprovalService $approval)
+    {
+        $data = $request->validate([
+            'assignee_id' => ['required', 'integer', Rule::exists('users', 'id')->where('is_active', true)->whereNull('deleted_at')],
+            'reason' => ['required', 'string', 'min:3', 'max:1000'],
+        ]);
+        $approval->reassign($leave, $request->user(), User::findOrFail($data['assignee_id']), $data['reason']);
+        return back()->with('success', 'مسئول بررسی تغییر کرد و دلیل آن در سابقه ثبت شد.');
     }
 }

@@ -1,4 +1,5 @@
 <x-layouts.app>
+    @include('reports.review-history')
     <x-slot name="header">
         <h2 class="font-semibold text-2xl text-center text-gray-800">نمایش گزارش</h2>
     </x-slot>
@@ -99,7 +100,7 @@
    @php
     $user = Auth::user();
 @endphp
-@if($user->hasRole('Admin') || $user->hasRole('internalManager') ||$user->hasRole('Manager'))
+@if(auth()->user()->can('feedback', $report))
         {{-- فرم ارسال بازخورد --}}
         
         <form action="{{ route('user.reports.feedback', [$report]) }}" method="POST" class="space-y-6">

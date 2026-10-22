@@ -121,13 +121,16 @@ class ReportReviewWorkflowService
         abort_unless(config('report_review.enabled', false), 404);
 
         return DB::transaction(function () use ($workflow, $actor, $decision, $comment): ReportReviewWorkflow {
+            $report = Report::query()->whereKey($workflow->report_id)->lockForUpdate()->firstOrFail();
             $workflow = ReportReviewWorkflow::query()->whereKey($workflow->id)->lockForUpdate()->firstOrFail();
+            $workflow->setRelation('report', $report);
             abort_unless($workflow->status === 'pending', 409);
             abort_unless((int) $workflow->current_reviewer_id === (int) $actor->id, 403);
             abort_unless($actor->isActive() && ! $actor->isBlocked(), 403);
 
             $step = $workflow->steps()->where('sequence', $workflow->current_sequence)->lockForUpdate()->firstOrFail();
             abort_unless($step->decision === 'pending', 409);
+            abort_unless((int) $step->reviewer_id === (int) $actor->id, 403);
 
             $step->update([
                 'decision' => $decision,
@@ -191,13 +194,17 @@ class ReportReviewWorkflowService
         abort_unless(config('report_review.enabled', false), 404);
 
         return DB::transaction(function () use ($workflow, $author): ReportReviewWorkflow {
+            $report = Report::query()->whereKey($workflow->report_id)->lockForUpdate()->firstOrFail();
             $workflow = ReportReviewWorkflow::query()->whereKey($workflow->id)->lockForUpdate()->firstOrFail();
+            $workflow->setRelation('report', $report);
             abort_unless((int) $workflow->report->user_id === (int) $author->id, 403);
             abort_unless($author->isActive() && ! $author->isBlocked(), 403);
             abort_unless($workflow->status === 'needs_revision', 409);
 
             $step = $workflow->steps()->where('sequence', $workflow->current_sequence)->lockForUpdate()->firstOrFail();
             abort_unless($step->decision === 'returned' && $step->reviewer_id, 409);
+            abort_unless($step->reviewer?->isActive() && ! $step->reviewer->isBlocked(), 409,
+                'مسئول بررسی در دسترس نیست؛ ابتدا مدیر سامانه باید مسئول جدید تعیین کند.');
             abort_unless(
                 $step->returned_description_hash
                     && ! hash_equals($step->returned_description_hash, hash('sha256', (string) $workflow->report->description)),
@@ -234,5 +241,33 @@ class ReportReviewWorkflowService
             'comment' => $comment,
             'created_at' => now(),
         ]);
+    }
+
+    public function reassign(ReportReviewWorkflow $workflow, User $actor, User $replacement, string $reason): ReportReviewWorkflow
+    {
+        abort_unless(config('report_review.enabled', false), 404);
+        abort_unless($actor->isActive() && ! $actor->isBlocked() && $actor->hasRole('Admin'), 403);
+        return DB::transaction(function () use ($workflow, $actor, $replacement, $reason): ReportReviewWorkflow {
+            Report::query()->whereKey($workflow->report_id)->lockForUpdate()->firstOrFail();
+            $locked = ReportReviewWorkflow::query()->whereKey($workflow->id)->lockForUpdate()->firstOrFail();
+            abort_unless(in_array($locked->status, ['pending', 'needs_revision'], true), 409);
+            $replacement = User::query()->findOrFail($replacement->id);
+            abort_unless($replacement->isActive() && ! $replacement->isBlocked()
+                && (int) $replacement->id !== (int) $locked->report->user_id, 422);
+            $step = $locked->steps()->where('sequence', $locked->current_sequence)->lockForUpdate()->firstOrFail();
+            abort_unless(in_array($step->decision, ['pending', 'returned'], true), 409);
+            abort_if($locked->steps()->where('sequence', '!=', $step->sequence)
+                ->where('reviewer_id', $replacement->id)->exists(), 422, 'این فرد قبلاً مسئول مرحله دیگری از همین گزارش است.');
+            $oldName = $step->reviewer_name;
+            $step->update(['reviewer_id' => $replacement->id, 'reviewer_name' => $replacement->name]);
+            $locked->update(['current_reviewer_id' => $replacement->id]);
+            $this->record($locked, $actor->id, 'reassigned', $step->sequence,
+                "مسئول قبلی: {$oldName}؛ مسئول جدید: {$replacement->name}؛ دلیل: {$reason}");
+            if ($locked->status === 'pending') {
+                Notification::create(['user_id' => $replacement->id, 'title' => 'گزارش کار در انتظار بررسی',
+                    'message' => 'گزارشی با ثبت دلیل برای بررسی به شما ارجاع شد.', 'seen' => false]);
+            }
+            return $locked->fresh();
+        });
     }
 }
