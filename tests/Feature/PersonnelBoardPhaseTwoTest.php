@@ -41,6 +41,38 @@ class PersonnelBoardPhaseTwoTest extends TestCase
             ->assertOk()->assertSee('ساختار سازمانی');
     }
 
+    public function test_create_and_edit_forms_expose_organizational_position_separately_from_role(): void
+    {
+        $admin = $this->loginAdmin();
+        $employee = User::factory()->create();
+        $employee->assignRole('User');
+
+        $this->actingAs($admin)->get(route('admin.users.create'))
+            ->assertOk()->assertSee('name="org_position"', false)
+            ->assertSee('name="roles[]"', false);
+
+        $this->get(route('admin.users.editEmployee', $employee))
+            ->assertOk()->assertSee('name="org_position"', false);
+    }
+
+    public function test_existing_account_creation_persists_staff_position_without_granting_manager_access(): void
+    {
+        $admin = $this->loginAdmin();
+        $unit = Department::create(['name' => 'پشتیبانی نمونه']);
+        $this->actingAs($admin)->post(route('admin.users.store'), [
+            'name' => 'New Board Staff', 'phone' => '09120000667',
+            'password' => 'strongpass123', 'password_confirmation' => 'strongpass123',
+            'roles' => ['User'], 'org_position' => 'staff',
+            'department_id' => $unit->id,
+        ])->assertSessionHasNoErrors()->assertRedirect(route('admin.users.index'));
+
+        $created = User::query()->where('phone', '09120000667')->firstOrFail();
+        $this->assertSame('staff', $created->org_position);
+        $this->assertSame($unit->id, $created->department_id);
+        $this->assertTrue($created->hasRole('User'));
+        $this->assertFalse($created->hasRole('Manager'));
+    }
+
     public function test_non_admin_cannot_open_or_read_personnel_board(): void
     {
         $person = User::factory()->create();
