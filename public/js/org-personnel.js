@@ -250,7 +250,9 @@
         : postForm(actionUrl + '/activate', 'فعال‌کردن حساب')) +
         (isBlocked(p)
           ? postForm(actionUrl + '/unblock', 'رفع مسدودیت')
-          : postForm(actionUrl + '/block', 'مسدودسازی ۲۴ ساعته', true, 'POST', { hours: 24 }))
+          : postForm(actionUrl + '/block', 'مسدودسازی ۲۴ ساعته', true, 'POST', { hours: 24 })) +
+        postForm(userBase + (isManagerial(p) ? '/delete-manager' : '/delete-employee'),
+          'آرشیو حساب و حفظ سابقه', true, 'DELETE')
         : '');
     $('org2-detail-body').innerHTML =
       '<div class="org2-profile"><span class="org2-avatar">' + html(shortName(p)) +
