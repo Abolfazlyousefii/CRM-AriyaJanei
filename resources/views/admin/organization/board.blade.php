@@ -36,6 +36,9 @@
         @if(session('success'))
             <div class="org2-alert" role="status">{{ session('success') }}</div>
         @endif
+        @if(config('report_review.enabled', false))
+            <p class="org2-footnote"><a href="{{ route('report-review.inbox') }}">ورود به صندوق بررسی گزارش‌های من ←</a></p>
+        @endif
         <div id="org2-alert" class="org2-alert" role="alert" hidden></div>
 
         <div class="org2-stats" aria-label="آمار سازمان">

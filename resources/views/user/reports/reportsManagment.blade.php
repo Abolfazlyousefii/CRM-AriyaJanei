@@ -6,6 +6,10 @@
         </div>
     </x-slot>
 
+    @if(config('report_review.enabled', false))
+        <div class="container mt-3" dir="rtl"><a href="{{ route('report-review.inbox') }}" class="btn btn-primary btn-sm">گزارش‌های منتظر بررسی من</a></div>
+    @endif
+
     @if(isset($usersWithoutYesterdayReport))
         <div class="alert alert-info card-soft mb-3" dir="rtl">
             <div class="fw-bold mb-2">افرادی که دیروز گزارش ارسال نکرده‌اند:</div>

@@ -302,6 +302,16 @@ Route::middleware(['auth', 'role:User|Manager|Admin'])
             ->name('reports.destroy');
     });
 Route::get('reportsManagment', [ReportController::class, 'reportsManagment'])->name('user.reports.reportsManagment');
+
+// Opt-in work-report review endpoints. Each mutation verifies the assigned reviewer
+// (or author) in ReportReviewWorkflowService; legacy report routes remain unchanged.
+Route::middleware(['auth', 'blocked'])->prefix('report-review')->name('report-review.')->group(function () {
+    Route::get('/inbox', [\App\Http\Controllers\ReportReviewController::class, 'inbox'])->name('inbox');
+    Route::post('/{workflow}/approve', [\App\Http\Controllers\ReportReviewController::class, 'approve'])->name('approve');
+    Route::post('/{workflow}/return', [\App\Http\Controllers\ReportReviewController::class, 'returnForRevision'])->name('return');
+    Route::post('/{workflow}/resubmit', [\App\Http\Controllers\ReportReviewController::class, 'resubmit'])->name('resubmit');
+});
+
 // ------------------------------
 // مسیرهای مربوط به نقش Marketer
 // ------------------------------

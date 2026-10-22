@@ -1,4 +1,4 @@
-name: Organization hierarchy phase 1
+name: Organization and report reviews
 
 on:
   pull_request:
@@ -9,6 +9,16 @@ on:
       - "public/css/org-personnel.css"
       - "resources/views/admin/organization/board.blade.php"
       - "tests/Feature/PersonnelBoardPhaseTwoTest.php"
+      - "app/Http/Controllers/ReportReviewController.php"
+      - "app/Http/Controllers/ReportController.php"
+      - "app/Services/ReportReviewWorkflowService.php"
+      - "app/Models/ReportReviewWorkflow.php"
+      - "app/Models/ReportReviewStep.php"
+      - "database/migrations/2026_10_22_100001_create_report_review_workflows.php"
+      - "config/report_review.php"
+      - "resources/views/reports/review-inbox.blade.php"
+      - "public/js/report-review.js"
+      - "tests/Feature/ReportReviewWorkflowPhaseThreeTest.php"
       - "app/Models/Department.php"
       - "app/Models/User.php"
       - "app/Rules/EligibleManager.php"
@@ -70,8 +80,13 @@ jobs:
           php -l tests/Feature/OrganizationHierarchyPhaseOneTest.php
           php -l tests/Feature/PersonnelBoardPhaseTwoTest.php
           node --check public/js/org-personnel.js
-      - name: Organization and personnel regression tests
-        run: php artisan test --filter="PersonnelBoardPhaseTwoTest|OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest|PersonnelSectionTest|SubordinateChainReportsTest|UnifiedUserManagementTest"
+          php -l app/Services/ReportReviewWorkflowService.php
+          php -l app/Http/Controllers/ReportReviewController.php
+          php -l database/migrations/2026_10_22_100001_create_report_review_workflows.php
+          php -l tests/Feature/ReportReviewWorkflowPhaseThreeTest.php
+          node --check public/js/report-review.js
+      - name: Organization, personnel and review regression tests
+        run: php artisan test --filter="ReportReviewWorkflowPhaseThreeTest|PersonnelBoardPhaseTwoTest|OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest|PersonnelSectionTest|SubordinateChainReportsTest|UnifiedUserManagementTest"
       - name: Full Laravel regression suite (informational)
         continue-on-error: true
         run: php artisan test
