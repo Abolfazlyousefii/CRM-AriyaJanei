@@ -141,13 +141,15 @@
     $('org2-dept-cards').innerHTML = state.departments.length ? state.departments.map((d) => {
       const people = state.people.filter((p) => Number(p.department_id) === Number(d.id));
       const leader = userById(d.supervisor_id) || userById(d.manager_id) || userById(d.parent_manager_id);
-      return '<button type="button" class="org2-unit ' +
-        (state.department === String(d.id) ? 'is-active' : '') +
-        '" data-dept-card="' + Number(d.id) + '">' +
-        '<div class="org2-unit-top"><span class="org2-unit-icon">▦</span><span class="org2-unit-count">' +
-        people.length + ' نفر</span></div><div><span>' + html(d.name) +
+      return '<div class="org2-unit ' +
+        (state.department === String(d.id) ? 'is-active' : '') + '">' +
+        '<button type="button" class="org2-unit-select" data-dept-card="' + Number(d.id) + '">' +
+        '<span class="org2-unit-top"><span class="org2-unit-icon">▦</span><span class="org2-unit-count">' +
+        people.length + ' نفر</span></span><span><span>' + html(d.name) +
         '</span><br><small>' + (leader ? 'مسئول: ' + html(leader.name) : 'هنوز مسئول مشخص نشده') +
-        '</small></div></button>';
+        '</small></span></button>' +
+        '<button type="button" class="org2-unit-edit" data-edit-dept="' + Number(d.id) +
+        '">ویرایش ساختار واحد ←</button></div>';
     }).join('') : '<p class="org2-empty">هنوز واحدی تعریف نشده است. از دکمه «ایجاد واحد» استفاده کنید.</p>';
   }
 
@@ -372,7 +374,7 @@
   }
 
   $('org2-add-dept').addEventListener('click', () => openDialog('department'));
-  $('org2-manage-depts').addEventListener('click', () => openDialog('department'));
+  $('org2-manage-depts').addEventListener('click', () => openDialog('department', state.department && state.department !== 'none' ? Number(state.department) : null));
   $('org2-close').addEventListener('click', closeDialog);
   $('org2-dialog-backdrop').addEventListener('click', (event) => {
     if (event.target.id === 'org2-dialog-backdrop') closeDialog();
@@ -385,6 +387,8 @@
     if (edit) return openDialog('person', Number(edit.dataset.editPerson));
     const person = event.target.closest('[data-person-id]');
     if (person) return selectPerson(person.dataset.personId);
+    const editUnit = event.target.closest('[data-edit-dept]');
+    if (editUnit) return openDialog('department', Number(editUnit.dataset.editDept));
     const dept = event.target.closest('[data-dept-card]');
     if (dept) {
       const id = String(dept.dataset.deptCard);
