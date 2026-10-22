@@ -5,6 +5,10 @@ on:
     paths:
       - "app/Http/Controllers/OrganizationStructureController.php"
       - "app/Http/Controllers/UserManagementController.php"
+      - "public/js/org-personnel.js"
+      - "public/css/org-personnel.css"
+      - "resources/views/admin/organization/board.blade.php"
+      - "tests/Feature/PersonnelBoardPhaseTwoTest.php"
       - "app/Models/Department.php"
       - "app/Models/User.php"
       - "app/Rules/EligibleManager.php"
@@ -64,8 +68,10 @@ jobs:
           php -l app/Rules/EligibleManager.php
           php -l database/migrations/2026_10_22_000001_add_organization_hierarchy_fields.php
           php -l tests/Feature/OrganizationHierarchyPhaseOneTest.php
+          php -l tests/Feature/PersonnelBoardPhaseTwoTest.php
+          node --check public/js/org-personnel.js
       - name: Organization and personnel regression tests
-        run: php artisan test --filter="OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest|PersonnelSectionTest|SubordinateChainReportsTest|UnifiedUserManagementTest"
+        run: php artisan test --filter="PersonnelBoardPhaseTwoTest|OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest|PersonnelSectionTest|SubordinateChainReportsTest|UnifiedUserManagementTest"
       - name: Full Laravel regression suite (informational)
         continue-on-error: true
         run: php artisan test
