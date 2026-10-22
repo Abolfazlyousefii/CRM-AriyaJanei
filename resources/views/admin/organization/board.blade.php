@@ -33,6 +33,9 @@
             </div>
         </header>
 
+        @if(session('success'))
+            <div class="org2-alert" role="status">{{ session('success') }}</div>
+        @endif
         <div id="org2-alert" class="org2-alert" role="alert" hidden></div>
 
         <div class="org2-stats" aria-label="آمار سازمان">
