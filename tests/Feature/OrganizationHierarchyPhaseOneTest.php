@@ -179,6 +179,32 @@ class OrganizationHierarchyPhaseOneTest extends TestCase
         )->assertUnprocessable()->assertJsonValidationErrors('manager_id');
     }
 
+    public function test_migration_adds_columns_without_deleting_existing_personnel(): void
+    {
+        $worker = $this->person();
+        $department = Department::create(['name' => 'آیتی']);
+
+        Schema::table('users', function (Blueprint $table): void {
+            $table->dropColumn('org_position');
+        });
+        Schema::table('departments', function (Blueprint $table): void {
+            $table->dropColumn(['supervisor_id', 'manager_id', 'parent_manager_id']);
+        });
+
+        $migration = require database_path('migrations/2026_10_22_000001_add_organization_hierarchy_fields.php');
+        $migration->up();
+
+        $this->assertTrue(Schema::hasColumn('users', 'org_position'));
+        foreach (['supervisor_id', 'manager_id', 'parent_manager_id'] as $field) {
+            $this->assertTrue(Schema::hasColumn('departments', $field));
+        }
+        $this->assertDatabaseHas('users', ['id' => $worker->id]);
+        $this->assertDatabaseHas('departments', ['id' => $department->id]);
+
+        $migration->down();
+        $this->assertFalse(Schema::hasColumn('users', 'org_position'));
+    }
+
     private function createIsolatedSchema(): void
     {
         Schema::dropAllTables();
