@@ -1,0 +1,62 @@
+name: Organization hierarchy phase 1
+
+on:
+  pull_request:
+    paths:
+      - "app/Http/Controllers/OrganizationStructureController.php"
+      - "app/Http/Controllers/UserManagementController.php"
+      - "app/Models/Department.php"
+      - "app/Models/User.php"
+      - "app/Rules/EligibleManager.php"
+      - "app/Services/OrganizationHierarchyService.php"
+      - "database/migrations/2026_10_22_000001_add_organization_hierarchy_fields.php"
+      - "routes/web.php"
+      - "tests/Feature/OrganizationHierarchyPhaseOneTest.php"
+      - "tests/Feature/UserLifecycleAndHierarchyTest.php"
+      - ".github/workflows/organization-hierarchy.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: crm_ariya_testing
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    env:
+      APP_ENV: testing
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      DB_DATABASE: crm_ariya_testing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, pdo_mysql, gd, bcmath, intl, zip
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: cp .env.example .env && php artisan key:generate
+      - name: Syntax check
+        run: |
+          php -l app/Services/OrganizationHierarchyService.php
+          php -l app/Http/Controllers/OrganizationStructureController.php
+          php -l app/Http/Controllers/UserManagementController.php
+          php -l app/Models/Department.php
+          php -l app/Models/User.php
+          php -l app/Rules/EligibleManager.php
+          php -l database/migrations/2026_10_22_000001_add_organization_hierarchy_fields.php
+          php -l tests/Feature/OrganizationHierarchyPhaseOneTest.php
+      - name: Focused regression tests
+        run: php artisan test --filter="OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest"
