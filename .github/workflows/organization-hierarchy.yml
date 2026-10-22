@@ -66,6 +66,6 @@ jobs:
           php -l tests/Feature/OrganizationHierarchyPhaseOneTest.php
       - name: Organization and personnel regression tests
         run: php artisan test --filter="OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest|PersonnelSectionTest|SubordinateChainReportsTest|UnifiedUserManagementTest"
-      - name: Full Laravel regression suite (informational: unrelated baseline failures)
+      - name: Full Laravel regression suite (informational)
         continue-on-error: true
         run: php artisan test
