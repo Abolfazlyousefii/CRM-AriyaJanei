@@ -116,9 +116,9 @@ class ReportReviewWorkflowService
 
         return DB::transaction(function () use ($workflow, $actor, $decision, $comment): ReportReviewWorkflow {
             $workflow = ReportReviewWorkflow::query()->whereKey($workflow->id)->lockForUpdate()->firstOrFail();
+            abort_unless($workflow->status === 'pending', 409);
             abort_unless((int) $workflow->current_reviewer_id === (int) $actor->id, 403);
             abort_unless($actor->isActive() && ! $actor->isBlocked(), 403);
-            abort_unless($workflow->status === 'pending', 409);
 
             $step = $workflow->steps()->where('sequence', $workflow->current_sequence)->lockForUpdate()->firstOrFail();
             abort_unless($step->decision === 'pending', 409);
@@ -189,6 +189,12 @@ class ReportReviewWorkflowService
 
             $step = $workflow->steps()->where('sequence', $workflow->current_sequence)->lockForUpdate()->firstOrFail();
             abort_unless($step->decision === 'returned' && $step->reviewer_id, 409);
+            abort_unless(
+                $workflow->report->updated_at && $step->decided_at
+                && $workflow->report->updated_at->greaterThan($step->decided_at),
+                422,
+                'قبل از ارسال مجدد، متن گزارش را اصلاح و ذخیره کنید.'
+            );
             $step->update(['decision' => 'pending']);
             $workflow->update(['status' => 'pending']);
 
