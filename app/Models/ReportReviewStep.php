@@ -8,7 +8,7 @@ class ReportReviewStep extends Model
 {
     protected $fillable = [
         'workflow_id', 'sequence', 'reviewer_id', 'reviewer_name',
-        'decision', 'comment', 'decided_at', 'decided_by',
+        'decision', 'comment', 'returned_description_hash', 'decided_at', 'decided_by',
     ];
 
     protected function casts(): array
