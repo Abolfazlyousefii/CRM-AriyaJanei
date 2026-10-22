@@ -265,6 +265,8 @@ class ReportController extends Controller
             $data['voice_path'] = $request->file('voice_file')->store('voices', 'public');
         }
 
+        $this->ensureReviewReportEditable($report);
+
         $oldData = $report->getOriginal();
         $report->update($data);
 
@@ -508,6 +510,8 @@ class ReportController extends Controller
             $report = Report::where('user_id', $authUser->id)->where('id', $report->id)->firstOrFail();
         }
 
+        $this->ensureReviewReportEditable($report);
+
         $view = 'user.reports.edit';
 
         activity()
@@ -579,4 +583,27 @@ class ReportController extends Controller
 
         return redirect()->back()->with('success', 'گزارش با موفقیت حذف شد.');
     }
+    /**
+     * New review-pilot reports must not be changed between review decisions.
+     * The existing legacy report editor remains unchanged when the feature is off.
+     */
+    private function ensureReviewReportEditable(Report $report): void
+    {
+        if (! config('report_review.enabled', false)) {
+            return;
+        }
+
+        $workflow = $report->reviewWorkflow;
+        if (! $workflow) {
+            return;
+        }
+
+        abort_unless(
+            $workflow->status === 'needs_revision'
+                && (int) Auth::id() === (int) $report->user_id,
+            403,
+            'گزارش در گردش تأیید است و فقط پس از بازگشت برای اصلاح توسط نویسنده قابل ویرایش است.'
+        );
+    }
+
 }
