@@ -79,7 +79,7 @@ class PersonnelBoardPhaseTwoTest extends TestCase
     public function test_admin_updates_department_leadership_and_personnel_from_board_endpoints(): void
     {
         $admin = $this->loginAdmin();
-        $department = Department::create(['name' => 'انبار']);
+        $department = Department::create(['name' => 'انبار آزمایشی فاز دو']);
         $supervisor = User::factory()->create([
             'department_id' => $department->id, 'org_position' => 'supervisor',
         ]);
@@ -117,7 +117,7 @@ class PersonnelBoardPhaseTwoTest extends TestCase
     {
         $admin = $this->loginAdmin();
         $accounting = Department::create(['name' => 'مالی']);
-        $warehouse = Department::create(['name' => 'انبار']);
+        $warehouse = Department::create(['name' => 'انبار آزمایشی فاز دو']);
         $outsider = User::factory()->create(['department_id' => $warehouse->id]);
 
         $this->actingAs($admin)->patchJson(
