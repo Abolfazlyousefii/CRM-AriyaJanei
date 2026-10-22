@@ -33,6 +33,8 @@
                 'selectedManagerId' => old('manager_id', $manager->id),
                 'required' => true,
             ])
+            @include('admin.users.partials.department-select', ['selectedDepartmentId' => old('department_id')])
+            @include('admin.users.partials.organization-position-select', ['selectedPosition' => old('org_position', 'staff')])
             @include('admin.users.partials.role-selector', ['selectedRoles' => ['User']])
 
             <button type="submit" class="mt-4 bg-green-600 text-white px-4 py-2 rounded">
