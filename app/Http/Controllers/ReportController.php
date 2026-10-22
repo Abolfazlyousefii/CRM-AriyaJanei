@@ -398,14 +398,26 @@ class ReportController extends Controller
 
         $route = 'user.reports.index';
 
-        $managerIds = User::role(['Admin', 'Manager'])->pluck('id')->toArray();
-        $uniqueIds = array_unique($managerIds);
+        // The new approval engine is opt-in. With the feature disabled or no
+        // valid organizational route, the existing notification flow stays intact.
+        $reviewerIds = null;
 
-        foreach ($uniqueIds as $id) {
+        if (config('report_review.enabled', false)) {
+            $workflow = app(\App\Services\ReportReviewWorkflowService::class)->start($report);
+            if ($workflow) {
+                $reviewerIds = [$workflow->current_reviewer_id];
+            }
+        }
+
+        $recipientIds = $reviewerIds ?? User::role(['Admin', 'Manager'])->pluck('id')->all();
+
+        foreach (array_unique(array_filter($recipientIds)) as $id) {
             Notification::create([
                 'user_id' => $id,
-                'title' => 'گزارش کار جدید',
-                'message' => "گزارش جدیدی ثبت شده است.",
+                'title' => $reviewerIds !== null ? 'گزارش کار در انتظار بررسی' : 'گزارش کار جدید',
+                'message' => $reviewerIds !== null
+                    ? 'گزارش جدیدی برای بررسی به شما ارجاع شده است.'
+                    : 'گزارش جدیدی ثبت شده است.',
                 'seen' => false,
             ]);
         }
