@@ -166,6 +166,13 @@ class ReportReviewWorkflowPhaseThreeTest extends TestCase
         $this->postJson(route('report-review.resubmit', $workflow))->assertForbidden();
 
         $this->actingAs($author)->postJson(route('report-review.resubmit', $workflow))
+            ->assertUnprocessable();
+
+        // The employee must save a real correction before resending.
+        $report->update(['description' => 'Corrected daily report with missing information']);
+        $report->touch();
+
+        $this->postJson(route('report-review.resubmit', $workflow))
             ->assertOk()->assertJsonPath('status', 'pending');
 
         $this->assertSame('pending', $workflow->fresh()->status);
