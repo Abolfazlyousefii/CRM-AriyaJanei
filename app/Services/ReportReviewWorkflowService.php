@@ -24,6 +24,12 @@ class ReportReviewWorkflowService
             return null;
         }
 
+        $pilotUsers = array_map('intval', config('report_review.pilot_user_ids', []));
+        if (! config('report_review.all_users', false)
+            && ! in_array((int) $report->user_id, $pilotUsers, true)) {
+            return null;
+        }
+
         $existing = ReportReviewWorkflow::query()->where('report_id', $report->id)->first();
         if ($existing) {
             return $existing;
