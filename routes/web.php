@@ -81,6 +81,9 @@ use App\Http\Controllers\UserManagementController;
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->group(function () {
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
 
+    // Real-time organizational chart and personnel management (phase 2).
+    Route::get('/organization/board', [\App\Http\Controllers\OrganizationStructureController::class, 'board'])->name('organization.board');
+
     // Organization hierarchy foundation (JSON endpoints; interface comes in phase 2).
     Route::get('/organization', [\App\Http\Controllers\OrganizationStructureController::class, 'index'])->name('organization.index');
     Route::post('/organization/departments', [\App\Http\Controllers\OrganizationStructureController::class, 'storeDepartment'])->name('organization.departments.store');
