@@ -576,7 +576,7 @@ class ReportController extends Controller
         // Review snapshots must not be silently cascaded away through the
         // legacy report deletion endpoint during an active pilot.
         abort_if(
-            config('report_review.enabled', false) && $report->reviewWorkflow()->exists(),
+            $report->reviewWorkflow()->exists(),
             403,
             'گزارش دارای گردش تأیید قابل حذف نیست.'
         );
@@ -597,10 +597,8 @@ class ReportController extends Controller
      */
     private function ensureReviewReportEditable(Report $report): void
     {
-        if (! config('report_review.enabled', false)) {
-            return;
-        }
-
+        // A stored workflow is authoritative even after the pilot flag is
+        // switched off. Turning off new routing must not unfreeze a report.
         $workflow = $report->reviewWorkflow;
         if (! $workflow) {
             return;
