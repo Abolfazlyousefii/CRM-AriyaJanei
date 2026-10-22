@@ -142,6 +142,21 @@ class OrganizationHierarchyPhaseOneTest extends TestCase
         $this->assertFalse($worker->fresh()->hasRole('Manager'));
     }
 
+    public function test_supervisor_cannot_leave_unit_while_still_assigned_as_its_leader(): void
+    {
+        $admin = $this->person([], 'Admin');
+        $warehouse = Department::create(['name' => 'انبار']);
+        $supervisor = $this->person(['department_id' => $warehouse->id, 'org_position' => 'supervisor']);
+        $warehouse->update(['supervisor_id' => $supervisor->id]);
+
+        $this->actingAs($admin)->patchJson(
+            route('admin.organization.personnel.update', $supervisor),
+            ['department_id' => null]
+        )->assertUnprocessable()->assertJsonValidationErrors('supervisor_id');
+
+        $this->assertSame($warehouse->id, $supervisor->fresh()->department_id);
+    }
+
     public function test_regular_employee_cannot_modify_organization_structure(): void
     {
         $employee = $this->person();
