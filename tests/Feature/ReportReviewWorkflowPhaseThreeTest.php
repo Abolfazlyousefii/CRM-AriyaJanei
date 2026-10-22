@@ -242,6 +242,33 @@ class ReportReviewWorkflowPhaseThreeTest extends TestCase
         $this->assertSame([1, 2], $workflow->steps()->orderBy('sequence')->pluck('sequence')->all());
     }
 
+    public function test_submitted_pilot_report_cannot_be_changed_or_deleted_until_returned(): void
+    {
+        $supervisor = $this->person('supervisor');
+        $supervisor->assignRole('Manager');
+        $employee = $this->person('staff', $supervisor);
+        $employee->assignRole('User');
+        $report = $this->report($employee);
+        $workflow = app(ReportReviewWorkflowService::class)->start($report);
+
+        $this->actingAs($employee)->put(route('user.reports.update', $report), [
+            'description' => 'Trying to change an unreturned report',
+        ])->assertForbidden();
+
+        $this->delete(route('user.reports.destroy', $report))->assertForbidden();
+        $this->assertDatabaseHas('reports', ['id' => $report->id, 'description' => 'Daily report']);
+
+        $this->actingAs($supervisor)->postJson(route('report-review.return', $workflow), [
+            'comment' => 'Add operational details',
+        ])->assertOk();
+
+        $this->actingAs($employee)->put(route('user.reports.update', $report), [
+            'description' => 'Corrected with full operational detail',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame('Corrected with full operational detail', $report->fresh()->description);
+    }
+
     public function test_enabled_workflow_does_not_duplicate_steps_on_repeated_start(): void
     {
         $manager = $this->person('supervisor');
