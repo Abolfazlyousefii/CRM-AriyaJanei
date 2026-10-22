@@ -181,6 +181,50 @@ class ReportReviewWorkflowPhaseThreeTest extends TestCase
         $this->assertSame('Need more detail', $workflow->steps()->first()->comment);
     }
 
+    public function test_legacy_report_submission_still_notifies_admin_and_manager_when_disabled(): void
+    {
+        config()->set('report_review.enabled', false);
+        $admin = $this->person('staff');
+        $admin->assignRole('Admin');
+        $manager = $this->person('supervisor');
+        $manager->assignRole('Manager');
+        $author = $this->person('staff', $manager);
+        $author->assignRole('User');
+
+        $this->actingAs($author)->post(route('user.reports.store'), [
+            'title' => 'Legacy submission',
+            'description' => 'Nothing should change in old notification behaviour',
+        ])->assertRedirect();
+
+        $this->assertDatabaseCount('report_review_workflows', 0);
+        $this->assertEqualsCanonicalizing(
+            [$admin->id, $manager->id],
+            Notification::query()->pluck('user_id')->all()
+        );
+    }
+
+    public function test_enabled_submission_notifies_only_direct_reviewer_when_the_chain_is_valid(): void
+    {
+        $admin = $this->person('staff');
+        $admin->assignRole('Admin');
+        $internal = $this->person('internal_manager');
+        $internal->assignRole('Manager');
+        $supervisor = $this->person('supervisor', $internal);
+        $supervisor->assignRole('Manager');
+        $author = $this->person('staff', $supervisor);
+        $author->assignRole('User');
+
+        $this->actingAs($author)->post(route('user.reports.store'), [
+            'title' => 'Routed submission',
+            'description' => 'New workflow enabled on a complete chain',
+        ])->assertRedirect();
+
+        $workflow = ReportReviewWorkflow::query()->firstOrFail();
+        $this->assertSame($supervisor->id, $workflow->current_reviewer_id);
+        $this->assertSame([$supervisor->id], Notification::query()->pluck('user_id')->all());
+        $this->assertSame([1, 2], $workflow->steps()->orderBy('sequence')->pluck('sequence')->all());
+    }
+
     public function test_enabled_workflow_does_not_duplicate_steps_on_repeated_start(): void
     {
         $manager = $this->person('supervisor');
