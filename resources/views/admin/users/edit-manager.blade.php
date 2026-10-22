@@ -17,6 +17,7 @@
 
             @include('admin.users.partials.manager-select', ['selectedManagerId' => old('manager_id', $manager->manager_id)])
             @include('admin.users.partials.department-select', ['selectedDepartmentId' => $manager->department_id])
+            @include('admin.users.partials.organization-position-select', ['selectedPosition' => $manager->org_position])
             @include('admin.users.partials.role-selector', ['selectedRoles' => $manager->getRoleNames()])
 
             <button type="submit" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded">بروزرسانی</button>

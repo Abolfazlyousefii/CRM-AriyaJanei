@@ -20,6 +20,8 @@
                 <input type="password" name="password_confirmation" class="border p-2 w-full">
             </div>
             @include('admin.users.partials.manager-select', ['selectedManagerId' => old('manager_id')])
+            @include('admin.users.partials.department-select', ['selectedDepartmentId' => old('department_id')])
+            @include('admin.users.partials.organization-position-select', ['selectedPosition' => old('org_position', 'department_manager')])
             @include('admin.users.partials.role-selector', ['selectedRoles' => ['Manager']])
             <button type="submit" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded">ذخیره</button>
         </form>
