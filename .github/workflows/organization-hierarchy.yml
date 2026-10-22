@@ -60,3 +60,5 @@ jobs:
           php -l tests/Feature/OrganizationHierarchyPhaseOneTest.php
       - name: Focused regression tests
         run: php artisan test --filter="OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest"
+      - name: Full Laravel regression suite
+        run: php artisan test
