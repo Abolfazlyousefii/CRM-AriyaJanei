@@ -265,8 +265,6 @@ class ReportController extends Controller
             $data['voice_path'] = $request->file('voice_file')->store('voices', 'public');
         }
 
-        $this->ensureReviewReportEditable($report);
-
         $oldData = $report->getOriginal();
         $report->update($data);
 
@@ -541,6 +539,8 @@ class ReportController extends Controller
         } else {
             $report = Report::where('user_id', $authUser->id)->where('id', $report->id)->firstOrFail();
         }
+
+        $this->ensureReviewReportEditable($report);
 
         $oldData = $report->getOriginal();
         $report->update($data);
