@@ -126,6 +126,15 @@ class OrganizationStructureController extends Controller
             ]);
         }
 
+        foreach (['supervisor_id', 'manager_id'] as $field) {
+            $leaderId = $department->{$field};
+            if ($leaderId !== null && (int) User::query()->whereKey($leaderId)->value('department_id') !== (int) $department->id) {
+                throw ValidationException::withMessages([
+                    $field => 'سرپرست و مدیر واحد باید عضو همین دپارتمان باشند.',
+                ]);
+            }
+        }
+
         try {
             $hierarchy->assertDepartmentAcyclic($department);
         } catch (DomainException $exception) {
