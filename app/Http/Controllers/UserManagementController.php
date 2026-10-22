@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Department;
 use App\Models\User;
 use App\Rules\EligibleManager;
+use App\Services\OrganizationHierarchyService;
 use App\Services\UserAccountService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -67,12 +68,14 @@ class UserManagementController extends Controller
         $validated = $request->validate(array_merge($this->identityRules(), $this->roleRules(), [
             'manager_id' => ['nullable', 'integer', new EligibleManager],
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
+            'org_position' => ['sometimes', 'nullable', Rule::in(OrganizationHierarchyService::POSITIONS)],
         ]));
 
         $this->accounts->create([
             'name' => $validated['name'], 'phone' => $validated['phone'],
             'password' => $validated['password'], 'manager_id' => $validated['manager_id'] ?? null,
             'department_id' => $validated['department_id'] ?? null,
+            'org_position' => $validated['org_position'] ?? null,
         ], $validated['roles']);
 
         return redirect()->route('admin.users.index')->with('success', 'کاربر با موفقیت ایجاد شد.');
@@ -97,6 +100,7 @@ class UserManagementController extends Controller
         $validated = $request->validate(array_merge($this->identityRules(), $this->roleRules(), [
             'manager_id' => ['nullable', 'integer', new EligibleManager],
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
+            'org_position' => ['sometimes', 'nullable', Rule::in(OrganizationHierarchyService::POSITIONS)],
         ]));
         $this->ensureAtLeastOneManagerialRole($validated['roles']);
 
@@ -104,6 +108,7 @@ class UserManagementController extends Controller
             'name' => $validated['name'], 'phone' => $validated['phone'],
             'password' => $validated['password'], 'manager_id' => $validated['manager_id'] ?? null,
             'department_id' => $validated['department_id'] ?? null,
+            'org_position' => $validated['org_position'] ?? null,
         ], $validated['roles']);
 
         return redirect()->route('admin.users.index')->with('success', 'مدیر با موفقیت ایجاد شد.');
@@ -119,6 +124,7 @@ class UserManagementController extends Controller
         $validated = $request->validate(array_merge($this->identityRules($manager), $this->roleRules(), [
             'manager_id' => ['nullable', 'integer', new EligibleManager($manager)],
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
+            'org_position' => ['sometimes', 'nullable', Rule::in(OrganizationHierarchyService::POSITIONS)],
         ]));
         $this->ensureAtLeastOneManagerialRole($validated['roles']);
 
@@ -126,6 +132,7 @@ class UserManagementController extends Controller
             'name' => $validated['name'], 'phone' => $validated['phone'],
             'manager_id' => $validated['manager_id'] ?? null,
             'department_id' => $validated['department_id'] ?? null,
+            ...(array_key_exists('org_position', $validated) ? ['org_position' => $validated['org_position']] : []),
         ], $validated['roles']);
 
         return redirect()->route('admin.users.index')->with('success', 'اطلاعات و دسترسی‌های مدیر به‌روزرسانی شد.');
@@ -149,12 +156,14 @@ class UserManagementController extends Controller
         $validated = $request->validate(array_merge($this->identityRules(), $this->roleRules(), [
             'manager_id' => ['required', 'integer', new EligibleManager],
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
+            'org_position' => ['sometimes', 'nullable', Rule::in(OrganizationHierarchyService::POSITIONS)],
         ]));
 
         $this->accounts->create([
             'name' => $validated['name'], 'phone' => $validated['phone'],
             'password' => $validated['password'], 'manager_id' => $validated['manager_id'],
             'department_id' => $validated['department_id'] ?? null,
+            'org_position' => $validated['org_position'] ?? null,
         ], $validated['roles']);
 
         return redirect()->route('admin.users.index')->with('success', 'کاربر با نقش‌ها و مدیر انتخاب‌شده ایجاد شد.');
@@ -170,6 +179,7 @@ class UserManagementController extends Controller
         $validated = $request->validate(array_merge($this->identityRules($employee), $this->roleRules(), [
             'manager_id' => ['nullable', 'integer', new EligibleManager($employee)],
             'department_id' => ['nullable', 'integer', 'exists:departments,id'],
+            'org_position' => ['sometimes', 'nullable', Rule::in(OrganizationHierarchyService::POSITIONS)],
         ]));
         $this->ensureManagerKeepsManagerialRole($employee, $validated['roles']);
 
@@ -177,6 +187,7 @@ class UserManagementController extends Controller
             'name' => $validated['name'], 'phone' => $validated['phone'],
             'manager_id' => $validated['manager_id'] ?? null,
             'department_id' => $validated['department_id'] ?? null,
+            ...(array_key_exists('org_position', $validated) ? ['org_position' => $validated['org_position']] : []),
         ], $validated['roles']);
 
         return redirect()->route('admin.users.index')->with('success', 'اطلاعات، نقش‌ها و مدیر مستقیم کاربر به‌روزرسانی شد.');
