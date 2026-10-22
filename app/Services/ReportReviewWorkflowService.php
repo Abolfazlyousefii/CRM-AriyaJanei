@@ -126,6 +126,9 @@ class ReportReviewWorkflowService
             $step->update([
                 'decision' => $decision,
                 'comment' => $comment,
+                'returned_description_hash' => $decision === 'returned'
+                    ? hash('sha256', (string) $workflow->report->description)
+                    : null,
                 'decided_at' => now(),
                 'decided_by' => $actor->id,
             ]);
@@ -190,8 +193,8 @@ class ReportReviewWorkflowService
             $step = $workflow->steps()->where('sequence', $workflow->current_sequence)->lockForUpdate()->firstOrFail();
             abort_unless($step->decision === 'returned' && $step->reviewer_id, 409);
             abort_unless(
-                $workflow->report->updated_at && $step->decided_at
-                && $workflow->report->updated_at->greaterThan($step->decided_at),
+                $step->returned_description_hash
+                    && ! hash_equals($step->returned_description_hash, hash('sha256', (string) $workflow->report->description)),
                 422,
                 'قبل از ارسال مجدد، متن گزارش را اصلاح و ذخیره کنید.'
             );
