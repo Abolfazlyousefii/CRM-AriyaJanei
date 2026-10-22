@@ -3,6 +3,7 @@
 namespace App\Rules;
 
 use App\Models\User;
+use App\Services\OrganizationHierarchyService;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
@@ -34,20 +35,8 @@ class EligibleManager implements ValidationRule
             return;
         }
 
-        $visited = [];
-        $current = $manager;
-
-        while ($current && ! isset($visited[$current->id])) {
-            if ($current->id === $this->subject->id) {
-                $fail('این انتخاب باعث ایجاد حلقه در ساختار سازمانی می‌شود.');
-
-                return;
-            }
-
-            $visited[$current->id] = true;
-            $current = $current->manager_id
-                ? User::query()->find($current->manager_id)
-                : null;
+        if (app(OrganizationHierarchyService::class)->wouldCreateCycle($this->subject, $manager)) {
+            $fail('این انتخاب باعث ایجاد حلقه در ساختار سازمانی می‌شود.');
         }
     }
 }

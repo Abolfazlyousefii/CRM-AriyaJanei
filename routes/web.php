@@ -80,6 +80,13 @@ use App\Http\Controllers\UserManagementController;
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->group(function () {
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+
+    // Organization hierarchy foundation (JSON endpoints; interface comes in phase 2).
+    Route::get('/organization', [\App\Http\Controllers\OrganizationStructureController::class, 'index'])->name('organization.index');
+    Route::post('/organization/departments', [\App\Http\Controllers\OrganizationStructureController::class, 'storeDepartment'])->name('organization.departments.store');
+    Route::patch('/organization/departments/{department}', [\App\Http\Controllers\OrganizationStructureController::class, 'updateDepartment'])->name('organization.departments.update');
+    Route::patch('/organization/personnel/{user}', [\App\Http\Controllers\OrganizationStructureController::class, 'updatePlacement'])->name('organization.personnel.update');
+
     Route::get('/personnel', [UserManagementController::class, 'personnel'])->name('personnel.index');
 
     // نقطه واحد افزودن کاربر (نقش‌ها و مدیر مستقیم اختیاری)

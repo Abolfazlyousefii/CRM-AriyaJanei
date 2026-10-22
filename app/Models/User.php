@@ -26,6 +26,7 @@ class User extends Authenticatable
         'password',
         'manager_id', // 👈 این خیلی مهمه
         'department_id',
+        'org_position',
         'is_active',
         'deactivated_at',
         'deactivation_reason',
@@ -122,8 +123,13 @@ class User extends Authenticatable
 
     public function scopeEligibleManagers(Builder $query): Builder
     {
-        return $query->active()->whereHas('roles', function (Builder $roles): void {
-            $roles->where('name', 'Owner')->orWhere('name', 'like', '%Manager');
+        return $query->active()->where(function (Builder $candidates): void {
+            $candidates->whereIn('org_position', [
+                'supervisor', 'department_manager', 'internal_manager',
+                'executive_manager', 'ceo',
+            ])->orWhereHas('roles', function (Builder $roles): void {
+                $roles->where('name', 'Owner')->orWhere('name', 'like', '%Manager');
+            });
         });
     }
 
