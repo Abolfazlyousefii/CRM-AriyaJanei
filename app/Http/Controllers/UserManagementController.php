@@ -29,7 +29,7 @@ class UserManagementController extends Controller
             ->with('roles')
             ->orderBy('name')->get();
 
-        return view('admin.users.index', compact('managers', 'roles', 'unassignedUsers'));
+        return view('admin.organization.board', compact('managers', 'roles', 'unassignedUsers'));
     }
 
     public function personnel(Request $request)

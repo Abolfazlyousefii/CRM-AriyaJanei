@@ -73,12 +73,6 @@
                 @enderror
             </div>
 
-            <div id="daily-limit-message" class="mb-4 rounded-md bg-yellow-50 text-yellow-700 p-3 text-sm">
-                در مرخصی روزانه، انتخاب امروز و فردا مجاز نیست.
-            </div>
-
-            <div id="daily-date-error" class="hidden mb-4 rounded-md bg-red-100 text-red-700 p-3 text-sm"></div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                     <label for="start_date" class="block mb-2 font-medium text-gray-700">تاریخ شروع</label>
@@ -157,16 +151,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const leaveUnit = document.getElementById('leave_unit');
-    const timeFields = document.getElementById('time-fields');
-    const startTime = document.getElementById('start_time');
-    const endTime = document.getElementById('end_time');
-    const startDate = document.getElementById('start_date');
-    const endDate = document.getElementById('end_date');
-    const form = document.getElementById('leave-form');
-    const dailyMessage = document.getElementById('daily-limit-message');
-    const dailyError = document.getElementById('daily-date-error');
-
     flatpickr("#start_time", {
         enableTime: true,
         noCalendar: true,
@@ -181,107 +165,11 @@ document.addEventListener('DOMContentLoaded', function () {
         time_24hr: true
     });
 
-    function toEnglishDigits(str) {
-        if (!str) return '';
-        const persian = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
-        const arabic  = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
-
-        return String(str)
-            .replace(/[۰-۹]/g, d => persian.indexOf(d))
-            .replace(/[٠-٩]/g, d => arabic.indexOf(d));
-    }
-
-    function normalizeJalaliDate(value) {
-        const clean = toEnglishDigits(value).replace(/-/g, '/').trim();
-        const parts = clean.split('/');
-
-        if (parts.length !== 3) return '';
-
-        const year = parts[0];
-        const month = String(parts[1]).padStart(2, '0');
-        const day = String(parts[2]).padStart(2, '0');
-
-        return `${year}/${month}/${day}`;
-    }
-
-    function getPersianDateAfter(days) {
-        const date = new Date();
-        date.setHours(0, 0, 0, 0);
-        date.setDate(date.getDate() + days);
-
-        const parts = new Intl.DateTimeFormat('en-US-u-ca-persian', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        }).formatToParts(date);
-
-        const year = parts.find(p => p.type === 'year')?.value;
-        const month = parts.find(p => p.type === 'month')?.value;
-        const day = parts.find(p => p.type === 'day')?.value;
-
-        return `${year}/${month}/${day}`;
-    }
-
-    function toggleLeaveUnitFields() {
-        const isDaily = leaveUnit.value === 'روزانه';
-
-        if (isDaily) {
-            timeFields.classList.remove('hidden');
-            startTime.disabled = false;
-            endTime.disabled = false;
-            dailyMessage.classList.add('hidden');
-
-            const minDate = getPersianDateAfter(2);
-            startDate.setAttribute('data-jdp-min-date', minDate);
-            endDate.setAttribute('data-jdp-min-date', minDate);
-        } else {
-            timeFields.classList.remove('hidden');
-            startTime.disabled = false;
-            endTime.disabled = false;
-            dailyMessage.classList.add('hidden');
-            startDate.removeAttribute('data-jdp-min-date');
-            endDate.removeAttribute('data-jdp-min-date');
-        }
-
-        dailyError.classList.add('hidden');
-        dailyError.innerText = '';
-    }
-
     jalaliDatepicker.startWatch({
         selector: '[data-jdp]',
         time: false,
         format: 'YYYY/MM/DD'
     });
 
-    toggleLeaveUnitFields();
-
-    leaveUnit.addEventListener('change', function () {
-        toggleLeaveUnitFields();
-    });
-
-    form.addEventListener('submit', function (e) {
-        dailyError.classList.add('hidden');
-        dailyError.innerText = '';
-
-        if (leaveUnit.value === 'روزانه') {
-            const minDate = getPersianDateAfter(2);
-            const startVal = normalizeJalaliDate(startDate.value);
-            const endVal = normalizeJalaliDate(endDate.value);
-
-            if (startVal && startVal < minDate) {
-                e.preventDefault();
-                dailyError.innerText = 'برای مرخصی روزانه، تاریخ شروع نمی‌تواند امروز یا فردا باشد.';
-                dailyError.classList.remove('hidden');
-                return;
-            }
-
-            if (endVal && endVal < minDate) {
-                e.preventDefault();
-                dailyError.innerText = 'برای مرخصی روزانه، تاریخ پایان نمی‌تواند امروز یا فردا باشد.';
-                dailyError.classList.remove('hidden');
-                return;
-            }
-        }
-    });
 });
 </script>

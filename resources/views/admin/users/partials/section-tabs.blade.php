@@ -1,8 +1,8 @@
 @php
     $sectionTabs = [
-        ['label' => 'پرسنل', 'route' => 'admin.personnel.index', 'pattern' => 'admin.personnel.*'],
-        ['label' => 'بازاریاب', 'route' => 'admin.marketers.index', 'pattern' => 'admin.marketers.*'],
         ['label' => 'مدیریت پرسنل', 'route' => 'admin.users.index', 'pattern' => 'admin.users.*'],
+        ['label' => 'بازاریاب', 'route' => 'admin.marketers.index', 'pattern' => 'admin.marketers.*'],
+        ['label' => 'فهرست کلاسیک پرسنل', 'route' => 'admin.personnel.index', 'pattern' => 'admin.personnel.*'],
     ];
 @endphp
 

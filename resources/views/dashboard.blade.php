@@ -48,9 +48,7 @@
             ['title' => 'مشتریان و شماره‌ها', 'route' => 'customersAdmin2.index', 'icon' => 'user-group'],
         ];
 
-        $linksSales = [
-            ['title' => 'اطلاعات ثبت شده در فرم', 'route' => 'admin.contacts', 'icon' => 'users'],
-        ];
+        $linksSales = [];
 
         $linksUser = [
             ['title' => 'گزارش‌های من', 'route' => 'user.reports.index', 'icon' => 'doc'],
@@ -100,6 +98,12 @@
             }
         }
 
+        if ($user && $user->can('viewAny', \App\Models\ShopContact::class)) {
+            $addLink(['title' => 'نقطه‌زنی و گزارش بازدیدها', 'route' => 'field-visits.index', 'icon' => 'chart', 'group' => 'reports']);
+        }
+        if ($user && $user->can('create', \App\Models\ShopContact::class)) {
+            $addLink(['title' => 'ثبت سریع بازدید و فروشگاه', 'route' => 'field-visits.create', 'icon' => 'users', 'group' => 'customers']);
+        }
         foreach ($linksForAllUsers as $item) {
             $addLink($item);
         }
@@ -876,6 +880,8 @@
                     setTimeout(() => document.getElementById('logoutBlockedForm')?.submit(), 1000);
                 </script>
             @endif
+
+            @include('field-visits.home-shortcuts')
 
             <div class="row g-3 mb-4 align-items-stretch">
                 <div class="col-12 col-xl-7 top-stack-order-1">

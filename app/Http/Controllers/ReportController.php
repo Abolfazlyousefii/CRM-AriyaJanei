@@ -398,14 +398,26 @@ class ReportController extends Controller
 
         $route = 'user.reports.index';
 
-        $managerIds = User::role(['Admin', 'Manager'])->pluck('id')->toArray();
-        $uniqueIds = array_unique($managerIds);
+        // The new approval engine is opt-in. With the feature disabled or no
+        // valid organizational route, the existing notification flow stays intact.
+        $reviewerIds = null;
 
-        foreach ($uniqueIds as $id) {
+        if (config('report_review.enabled', false)) {
+            $workflow = app(\App\Services\ReportReviewWorkflowService::class)->start($report);
+            if ($workflow) {
+                $reviewerIds = [$workflow->current_reviewer_id];
+            }
+        }
+
+        $recipientIds = $reviewerIds ?? User::role(['Admin', 'Manager'])->pluck('id')->all();
+
+        foreach (array_unique(array_filter($recipientIds)) as $id) {
             Notification::create([
                 'user_id' => $id,
-                'title' => 'گزارش کار جدید',
-                'message' => "گزارش جدیدی ثبت شده است.",
+                'title' => $reviewerIds !== null ? 'گزارش کار در انتظار بررسی' : 'گزارش کار جدید',
+                'message' => $reviewerIds !== null
+                    ? 'گزارش جدیدی برای بررسی به شما ارجاع شده است.'
+                    : 'گزارش جدیدی ثبت شده است.',
                 'seen' => false,
             ]);
         }
@@ -496,6 +508,8 @@ class ReportController extends Controller
             $report = Report::where('user_id', $authUser->id)->where('id', $report->id)->firstOrFail();
         }
 
+        $this->ensureReviewReportEditable($report);
+
         $view = 'user.reports.edit';
 
         activity()
@@ -525,6 +539,8 @@ class ReportController extends Controller
         } else {
             $report = Report::where('user_id', $authUser->id)->where('id', $report->id)->firstOrFail();
         }
+
+        $this->ensureReviewReportEditable($report);
 
         $oldData = $report->getOriginal();
         $report->update($data);
@@ -557,6 +573,14 @@ class ReportController extends Controller
                 ->firstOrFail();
         }
 
+        // Review snapshots must not be silently cascaded away through the
+        // legacy report deletion endpoint during an active pilot.
+        abort_if(
+            $report->reviewWorkflow()->exists(),
+            403,
+            'گزارش دارای گردش تأیید قابل حذف نیست.'
+        );
+
         activity()
             ->causedBy($authUser)
             ->performedOn($report)
@@ -567,4 +591,25 @@ class ReportController extends Controller
 
         return redirect()->back()->with('success', 'گزارش با موفقیت حذف شد.');
     }
+    /**
+     * New review-pilot reports must not be changed between review decisions.
+     * The existing legacy report editor remains unchanged when the feature is off.
+     */
+    private function ensureReviewReportEditable(Report $report): void
+    {
+        // A stored workflow is authoritative even after the pilot flag is
+        // switched off. Turning off new routing must not unfreeze a report.
+        $workflow = $report->reviewWorkflow;
+        if (! $workflow) {
+            return;
+        }
+
+        abort_unless(
+            $workflow->status === 'needs_revision'
+                && (int) Auth::id() === (int) $report->user_id,
+            403,
+            'گزارش در گردش تأیید است و فقط پس از بازگشت برای اصلاح توسط نویسنده قابل ویرایش است.'
+        );
+    }
+
 }

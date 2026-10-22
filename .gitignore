@@ -24,5 +24,19 @@ Homestead.yaml
 npm-debug.log
 Thumbs.db
 yarn-error.log
-
+/public/error_log
+public/site/public/error_log
+/public/site/public/C:*
 /storage/*.zip
+
+# Deployment secrets and source archives stay outside version control.
+*.pem
+*.key
+*.p12
+.rnd
+*.zip
+*.sql.gz
+.env.*
+!.env.example
+/storage/app/public/*
+!/storage/app/public/.gitignore

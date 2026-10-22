@@ -1,0 +1,18 @@
+<x-app-layout>
+    <x-slot name="header"><div class="d-flex flex-wrap justify-content-between gap-3"><h2 class="h4 mb-0">{{ $contact->shop_name }}</h2><div class="d-flex gap-2"><a href="{{ route('field-visits.index') }}" class="btn btn-outline-secondary">بازگشت به گزارش</a>@can('update',$contact)<a href="{{ route('field-visits.edit',$contact) }}" class="btn btn-primary">ویرایش اطلاعات</a>@endcan</div></div></x-slot>
+    @push('styles')<link rel="stylesheet" href="https://static.neshan.org/sdk/leaflet/v1.9.4/neshan-sdk/v1.0.8/index.css"><style>.visit-panel{border-radius:20px;border:1px solid var(--border);background:var(--surface);padding:24px;margin-bottom:24px}.visit-help{background:var(--surface-2);padding:16px;border-radius:14px}#detail-map{height:350px;z-index:1;border-radius:14px}</style>@endpush
+    <div class="container py-4">
+        @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
+        @if($errors->any())<div class="alert alert-danger">@foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
+        <div class="row g-4"><div class="col-lg-7"><div class="visit-panel"><h3 class="h6 mb-4">مشخصات فروشگاه و بازدید</h3><dl class="row g-2">
+        @foreach(['بازاریاب'=>$contact->user?->name ?? $contact->visitor_name.' (قدیمی)','تاریخ ثبت'=>\Hekmatinasser\Verta\Verta::instance($contact->created_at)->format('Y/m/d H:i'),'شهر'=>$contact->city,'آدرس'=>$contact->address,'مالک'=>$contact->owner_name,'تلفن'=>$contact->owner_phone,'نوع فعالیت'=>$contact->relation_type,'تمایل همکاری'=>$contact->cooperation_interest,'گرید'=>$contact->shop_grade,'زمینه فعالیت'=>$contact->activity_field,'اندازه'=>$contact->shop_size,'موقعیت'=>$contact->shop_location,'مشتری آریا'=>$contact->arya_customer,'پرداخت'=>$contact->payment_terms,'اجناس اصلی'=>implode('، ',$contact->main_goods ?? []),'فعالیت غیرمرتبط'=>$contact->nr_activity,'شغل دیگر'=>$contact->nr_activity_other,'اجناس غیرمرتبط'=>implode('، ',$contact->nr_goods ?? []),'اجناس دیگر'=>$contact->nr_goods_other,'توضیحات'=>$contact->description] as $label=>$value)
+        @if($value !== null && $value !== '')<dt class="col-sm-4">{{ $label }}</dt><dd class="col-sm-8" style="white-space:pre-wrap">{{ $value }}</dd>@endif
+        @endforeach</dl></div><div class="visit-panel"><h3 class="h6">موقعیت ثبت‌شده</h3><div id="detail-map"></div><p id="map-message" class="text-muted small mt-2"></p></div></div>
+        <div class="col-lg-5">@include('field-visits.wholesale-details')<div class="visit-panel"><h3 class="h6 mb-3">پیگیری همکاری</h3><form method="POST" action="{{ route('field-visits.follow-up',$contact) }}">@csrf @method('PATCH') @include('field-visits.follow-up-fields')<button class="btn btn-primary w-100">ذخیره پیگیری</button></form></div>
+        @can('delete',$contact)<div class="visit-panel"><p class="text-muted small">حذف این ثبت فقط برای ادمین و مالک مجاز است.</p><form method="POST" action="{{ route('field-visits.destroy',$contact) }}" onsubmit="return confirm('این فروشگاه و اطلاعات پیگیری حذف شود؟')">@csrf @method('DELETE')<button class="btn btn-outline-danger">حذف ثبت</button></form></div>@endcan</div></div>
+    </div>
+    @push('scripts')
+    @php($points = collect($contact->lat !== null && $contact->lng !== null ? [['lat'=>$contact->lat,'lng'=>$contact->lng,'name'=>$contact->shop_name,'city'=>$contact->city,'status'=>\App\Models\ShopContact::STATUSES[$contact->follow_up_status] ?? '', 'url'=>route('field-visits.show',$contact)]] : []))
+    @include('field-visits.map-script', ['points'=>$points,'mapId'=>'detail-map'])
+    @endpush
+</x-app-layout>

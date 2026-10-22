@@ -9,6 +9,7 @@
         "php": "^8.2",
         "blade-ui-kit/blade-heroicons": "^2.6",
         "doctrine/dbal": "^4.2",
+        "fakerphp/faker": "*",
         "hekmatinasser/verta": "^8.5",
         "intervention/image": "^3.11",
         "kavenegar/php": "^1.2",
@@ -16,13 +17,13 @@
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "maatwebsite/excel": "^3.1",
+        "melipayamak/php": "^1.0",
         "morilog/jalali": "^3.4",
         "spatie/laravel-activitylog": "^4.10",
         "spatie/laravel-ignition": "^2.9",
         "spatie/laravel-permission": "^6.21"
     },
     "require-dev": {
-        "fakerphp/faker": "^1.23",
         "laravel/breeze": "^2.3",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.13",
@@ -84,6 +85,9 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "platform": {
+            "php": "8.2.0"
         }
     },
     "minimum-stability": "stable",

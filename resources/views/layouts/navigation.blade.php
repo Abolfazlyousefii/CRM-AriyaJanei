@@ -894,6 +894,24 @@
 			font-size      : 13px;
 		}
 	}
+
+	@media (max-width : 575.98px) {
+		.mx-header__row {
+			flex-wrap     : wrap;
+			gap           : .5rem;
+			padding-block : .5rem;
+		}
+
+		.mx-header__row > .flex {
+			width           : 100%;
+			justify-content : space-between;
+		}
+
+		.mx-header__actions--mobile {
+			width           : 100%;
+			justify-content : center;
+		}
+	}
 </style>
 
 <nav class="mx-header">
@@ -911,9 +929,9 @@
 					$value = Arr::pull($token, 'string');
 					Arr::set($token, 'phone', $value)
                 @endphp
-				<a href="{{ env('INVENTORY_URL') }}/auth/phone/verify?{{Arr::query($token)}}" target="_blank" class="btn btn-primary d-none d-sm-inline-flex align-items-center gap-2 mx-header__dashboard-btn {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+				<a href="{{ env('INVENTORY_URL') }}/auth/phone/verify?{{Arr::query($token)}}" target="_blank" class="btn btn-primary d-inline-flex align-items-center gap-2 mx-header__dashboard-btn {{ request()->routeIs('dashboard') ? 'active' : '' }}">
 					<i class="bi bi-speedometer2"></i>
-					<span>ورود به انبار داری</span>
+					<span>ورود به سیستم ERP</span>
 				</a>
 
 			</div>
@@ -1092,12 +1110,10 @@
 
 								@php
 									$notifLeave = $notification->leave;
-									$canSubstituteAction = $notifLeave && $notifLeave->status === 'pending' && (int) $notifLeave->substitute_user_id === (int) auth()->id();
-									$canManagerAction = $notifLeave && $notifLeave->status === 'manager_approved' && auth()->user()->hasRole('Manager') && (int) $notifLeave->manager_id === (int) auth()->id();
-									$canInternalAction = $notifLeave && $notifLeave->status === 'internal_approved' && (auth()->user()->hasRole('Admin') || auth()->user()->hasAnyRole(['internalManager', 'InternalManager']));
+									$canLeaveAction = $notifLeave && auth()->user()->can('approve', $notifLeave);
 								@endphp
 
-								@if($canSubstituteAction || $canManagerAction || $canInternalAction)
+								@if($canLeaveAction)
 									<div class="d-flex gap-2 mt-3">
 										<form action="{{ route('leaves.approve', $notifLeave->id) }}" method="POST" class="d-inline">
 											@csrf

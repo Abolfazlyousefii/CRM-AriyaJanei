@@ -15,6 +15,11 @@ use Illuminate\Validation\ValidationException;
 
 class OrganizationStructureController extends Controller
 {
+    public function board(): \Illuminate\View\View
+    {
+        return view('admin.organization.board');
+    }
+
     public function index(): JsonResponse
     {
         return response()->json([
@@ -24,9 +29,9 @@ class OrganizationStructureController extends Controller
                 ->orderBy('name')
                 ->get(),
             'personnel' => User::query()
-                ->with(['department:id,name', 'manager:id,name'])
+                ->with(['department:id,name', 'manager:id,name', 'roles:id,name'])
                 ->orderBy('name')
-                ->get(['id', 'name', 'department_id', 'manager_id', 'org_position', 'is_active']),
+                ->get(['id', 'name', 'phone', 'department_id', 'manager_id', 'org_position', 'is_active', 'blocked_until']),
         ]);
     }
 

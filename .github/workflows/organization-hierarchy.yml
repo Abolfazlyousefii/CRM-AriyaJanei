@@ -1,10 +1,38 @@
-name: Organization hierarchy phase 1
+name: Organization and report reviews
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "config/**"
+      - "database/**"
+      - "resources/views/**"
+      - "public/js/org-personnel.js"
+      - "public/js/report-review.js"
+      - "routes/**"
+      - "tests/**"
+      - "composer.json"
+      - "composer.lock"
+      - ".github/workflows/organization-hierarchy.yml"
   pull_request:
     paths:
       - "app/Http/Controllers/OrganizationStructureController.php"
       - "app/Http/Controllers/UserManagementController.php"
+      - "public/js/org-personnel.js"
+      - "public/css/org-personnel.css"
+      - "resources/views/admin/organization/board.blade.php"
+      - "tests/Feature/PersonnelBoardPhaseTwoTest.php"
+      - "app/Http/Controllers/ReportReviewController.php"
+      - "app/Http/Controllers/ReportController.php"
+      - "app/Services/ReportReviewWorkflowService.php"
+      - "app/Models/ReportReviewWorkflow.php"
+      - "app/Models/ReportReviewStep.php"
+      - "database/migrations/2026_10_22_100001_create_report_review_workflows.php"
+      - "config/report_review.php"
+      - "resources/views/reports/review-inbox.blade.php"
+      - "public/js/report-review.js"
+      - "tests/Feature/ReportReviewWorkflowPhaseThreeTest.php"
       - "app/Models/Department.php"
       - "app/Models/User.php"
       - "app/Rules/EligibleManager.php"
@@ -19,6 +47,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ["8.2", "8.3"]
     services:
       mysql:
         image: mysql:8.0
@@ -43,7 +74,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.3"
+          php-version: ${{ matrix.php }}
           extensions: mbstring, pdo_mysql, gd, bcmath, intl, zip
           coverage: none
       - run: composer install --no-interaction --prefer-dist --no-progress
@@ -64,8 +95,15 @@ jobs:
           php -l app/Rules/EligibleManager.php
           php -l database/migrations/2026_10_22_000001_add_organization_hierarchy_fields.php
           php -l tests/Feature/OrganizationHierarchyPhaseOneTest.php
-      - name: Organization and personnel regression tests
-        run: php artisan test --filter="OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest|PersonnelSectionTest|SubordinateChainReportsTest|UnifiedUserManagementTest"
+          php -l tests/Feature/PersonnelBoardPhaseTwoTest.php
+          node --check public/js/org-personnel.js
+          php -l app/Services/ReportReviewWorkflowService.php
+          php -l app/Http/Controllers/ReportReviewController.php
+          php -l database/migrations/2026_10_22_100001_create_report_review_workflows.php
+          php -l tests/Feature/ReportReviewWorkflowPhaseThreeTest.php
+          node --check public/js/report-review.js
+      - name: Organization, personnel and review regression tests
+        run: php artisan test --filter="ReportReviewWorkflowPhaseThreeTest|PersonnelBoardPhaseTwoTest|OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest|PersonnelSectionTest|SubordinateChainReportsTest|UnifiedUserManagementTest|LeaveApprovalSettingsTest|ShopContactWorkflowTest|WholesaleFieldVisitTest"
       - name: Full Laravel regression suite (informational)
         continue-on-error: true
         run: php artisan test

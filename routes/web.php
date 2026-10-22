@@ -1,27 +1,37 @@
 <?php
 
+use App\Facades\Sms;
 use App\Http\Controllers\Admin\CustomerAdminController;
-use App\Http\Controllers\AdminController;
-use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\Admin\MonthlyEvaluationController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerNotesController;
+use App\Http\Controllers\EvaluationController;
+use App\Http\Controllers\FormController;
+use App\Http\Controllers\GuestController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\MarketerController;
+use App\Http\Controllers\MarketerOrderController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicProductsController;
+use App\Http\Controllers\ReferenceTypeController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RequestTicketController;
+use App\Services\Sms\SmsManager;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AnnouncementController;
+use App\Http\Controllers\Admin\UserBlockController;
 use App\Http\Controllers\CustomerSatisfactionFormController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ErpLaunchController;
-use App\Http\Controllers\GuestController;
-use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LeaveController;
-use App\Http\Controllers\MarketerController;
 use App\Http\Controllers\MessageController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ReferenceTypeController;
 use App\Http\Controllers\RemindersController;
-use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserPanelController;
-use Illuminate\Support\Facades\Route;
 
 Route::get('/launch/erp', ErpLaunchController::class)->middleware('auth')->name('erp.launch');
 
@@ -58,7 +68,6 @@ Route::patch('leaves/{leave}/reject', [LeaveController::class, 'reject'])->name(
 Route::get('/', function () {
     return view('welcome');
 })->name('welcome');
-use App\Http\Controllers\Admin\UserBlockController;
 
 Route::middleware(['auth', 'blocked'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -79,7 +88,12 @@ Route::prefix('admin/tasks')->name('admin.tasks.')->group(function () {
 use App\Http\Controllers\UserManagementController;
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->group(function () {
+    Route::get('/settings/leaves', [\App\Http\Controllers\LeaveSettingsController::class, 'edit'])->name('leaves.settings.edit');
+    Route::put('/settings/leaves', [\App\Http\Controllers\LeaveSettingsController::class, 'update'])->name('leaves.settings.update');
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+
+    // Real-time organizational chart and personnel management (phase 2).
+    Route::get('/organization/board', [\App\Http\Controllers\OrganizationStructureController::class, 'board'])->name('organization.board');
 
     // Organization hierarchy foundation (JSON endpoints; interface comes in phase 2).
     Route::get('/organization', [\App\Http\Controllers\OrganizationStructureController::class, 'index'])->name('organization.index');
@@ -299,6 +313,16 @@ Route::middleware(['auth', 'role:User|Manager|Admin'])
             ->name('reports.destroy');
     });
 Route::get('reportsManagment', [ReportController::class, 'reportsManagment'])->name('user.reports.reportsManagment');
+
+// Opt-in work-report review endpoints. Each mutation verifies the assigned reviewer
+// (or author) in ReportReviewWorkflowService; legacy report routes remain unchanged.
+Route::middleware(['auth', 'blocked'])->prefix('report-review')->name('report-review.')->group(function () {
+    Route::get('/inbox', [\App\Http\Controllers\ReportReviewController::class, 'inbox'])->name('inbox');
+    Route::post('/{workflow}/approve', [\App\Http\Controllers\ReportReviewController::class, 'approve'])->name('approve');
+    Route::post('/{workflow}/return', [\App\Http\Controllers\ReportReviewController::class, 'returnForRevision'])->name('return');
+    Route::post('/{workflow}/resubmit', [\App\Http\Controllers\ReportReviewController::class, 'resubmit'])->name('resubmit');
+});
+
 // ------------------------------
 // مسیرهای مربوط به نقش Marketer
 // ------------------------------
@@ -482,7 +506,6 @@ Route::middleware(['auth', 'role:Admin'])->prefix('admin')->name('admin.')->grou
         ->name('evaluations.questions.delete');
 });
 
-use App\Http\Controllers\EvaluationController;
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/evaluations', [EvaluationController::class, 'index'])->name('evaluations.index');
@@ -491,7 +514,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/evaluations/{target}', [EvaluationController::class, 'store'])->name('evaluations.store');
 });
 // routes/web.php
-use App\Http\Controllers\Admin\MonthlyEvaluationController;
 
 Route::middleware(['auth', 'role:Admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('evaluations/monthly', [MonthlyEvaluationController::class, 'index'])
@@ -502,7 +524,6 @@ Route::delete('admin/evaluations/forms/{form}', [EvaluationFormController::class
 // routes/web.php
 Route::delete('/leaves/{leave}', [LeaveController::class, 'destroy'])
     ->name('leaves.destroy');
-use App\Http\Controllers\RequestTicketController;
 
 // لیست/ساخت/ویرایش/حذف
 Route::resource('requests', RequestTicketController::class)
@@ -517,7 +538,6 @@ Route::get('requests/{requestTicket}/print', [RequestTicketController::class, 'p
 Route::get('/admin/reports', [App\Http\Controllers\AdminController::class, 'reports'])
     ->name('admin.reports')
     ->middleware(['auth', 'role:Admin|Manager']);
-use App\Http\Controllers\MarketerOrderController;
 
 Route::get('/marketer/orders/create', [MarketerOrderController::class, 'create'])->name('marketer.orders.create');
 Route::post('/marketer/orders', [MarketerOrderController::class, 'store'])->name('marketer.orders.store');
@@ -565,65 +585,37 @@ Route::middleware(['auth', 'role:customer_review|Admin|internalManager|InternalM
 
 Route::post('/embed/order-store', [MarketerOrderController::class, 'embedStore'])
     ->name('marketer.orders.embed.store');
-use App\Http\Controllers\FormController;
 
-Route::view('/contact/success', 'contact_success')->name('contact.success');
+use App\Http\Controllers\FieldVisitController;
 
-// ✅ فرم: visitor فقط عدد باشد
-Route::get('/contact/{visitor}', [FormController::class, 'show'])
-    ->whereNumber('visitor')
-    ->name('contact.form');
+Route::middleware('auth')->group(function () {
+    Route::get('/field-visits', [FieldVisitController::class, 'index'])->name('field-visits.index');
+    Route::get('/field-visits/location', [FieldVisitController::class, 'location'])->middleware('throttle:30,1')->name('field-visits.location');
+    Route::get('/field-visits/create', [FieldVisitController::class, 'create'])->name('field-visits.create');
+    Route::get('/field-visits/export', [FieldVisitController::class, 'export'])->name('field-visits.export');
+    Route::post('/field-visits', [FieldVisitController::class, 'store'])->name('field-visits.store');
+    Route::post('/field-visits/quick', [FieldVisitController::class, 'quickStore'])->name('field-visits.quick-store');
+    Route::put('/field-visits/{contact}/quick', [FieldVisitController::class, 'quickUpdate'])->name('field-visits.quick-update');
+    Route::get('/field-visits/{contact}', [FieldVisitController::class, 'show'])->name('field-visits.show');
+    Route::get('/field-visits/{contact}/edit', [FieldVisitController::class, 'edit'])->name('field-visits.edit');
+    Route::put('/field-visits/{contact}', [FieldVisitController::class, 'update'])->name('field-visits.update');
+    Route::patch('/field-visits/{contact}/follow-up', [FieldVisitController::class, 'followUp'])->name('field-visits.follow-up');
+    Route::delete('/field-visits/{contact}', [FieldVisitController::class, 'destroy'])->name('field-visits.destroy');
 
-// ✅ ارسال فرم
-Route::post('/contact/{visitor}', [FormController::class, 'submit'])
-    ->whereNumber('visitor')
-    ->name('contact.submit');
-
-// --- admin ---
-Route::get('/admin/contacts', [FormController::class, 'list'])->name('admin.contacts')->middleware(['auth', 'role:Sales']);
-
-Route::delete('/admin/contacts/{id}', [FormController::class, 'delete'])
-    ->name('contacts.delete');
-
-Route::get('/admin/contacts/export', [FormController::class, 'exportCsv'])
-    ->name('contacts.export');
+    // Older URLs use the same authenticated ownership and reporting rules.
+    Route::redirect('/contact/success', '/field-visits')->name('contact.success');
+    Route::get('/contact/{visitor}', [FieldVisitController::class, 'create'])->whereNumber('visitor')->name('contact.form');
+    Route::post('/contact/{visitor}', [FieldVisitController::class, 'store'])->whereNumber('visitor')->name('contact.submit');
+    Route::get('/admin/contacts', [FieldVisitController::class, 'index'])->name('admin.contacts');
+    Route::get('/admin/contacts/export', [FieldVisitController::class, 'export'])->name('contacts.export');
+    Route::get('/admin/contacts/{contact}/edit', [FieldVisitController::class, 'edit'])->name('contacts.edit');
+    Route::put('/admin/contacts/{contact}', [FieldVisitController::class, 'update'])->name('contacts.update');
+    Route::delete('/admin/contacts/{contact}', [FieldVisitController::class, 'destroy'])->name('contacts.delete');
+    Route::get('/c', [FieldVisitController::class, 'index'])->name('c');
+});
 
 Route::get('/leaves/export/csv', [LeaveController::class, 'exportCsv'])->name('leaves.export.csv');
 Route::get('/leaves/print/monthly', [LeaveController::class, 'printMonthly'])->name('leaves.print.monthly')->middleware(['auth', 'role:Accountant']);
-
-Route::post('/admin/access-code', function (\Illuminate\Http\Request $request) {
-
-    $code = $request->input('code');
-    $codes = config('access_codes');
-
-    if (! isset($codes[$code])) {
-        return back()->withErrors(['code' => 'کد نامعتبر است']);
-    }
-
-    session([
-        'access_code' => $code,
-        'allowed_visitor' => $codes[$code]['visitor_name'],
-    ]);
-
-    return back()->with('success', 'دسترسی فعال شد');
-})->name('admin.access.code');
-
-Route::get('/admin/contacts/{contact}/edit', [FormController::class, 'edit'])
-    ->middleware('visitor.access')
-    ->name('contacts.edit');
-
-Route::put('/admin/contacts/{contact}', [FormController::class, 'update'])
-    ->middleware('visitor.access')
-    ->name('contacts.update');
-
-Route::get('c', [FormController::class, 'list2'])->name('c');
-
-Route::delete('/admin/contacts/{id}', [FormController::class, 'delete'])
-    ->name('contacts.delete');
-
-Route::get('/admin/contacts/export', [FormController::class, 'exportCsv'])
-    ->name('contacts.export');
-
 // Draft در CRM
 Route::prefix('crm/orders')->name('crm.orders.')->group(function () {
     Route::post('/draft', [MarketerOrderController::class, 'saveDraft'])->name('draft.save');
@@ -661,7 +653,7 @@ Route::get('/marketer/orders/embed/products-excel', [MarketerOrderController::cl
 Route::get('/marketer/products-excel', [MarketerOrderController::class, 'exportProductsExcel'])
     ->name('marketer.products.excel');
 
-use App\Http\Controllers\PublicProductsController;
-
 Route::get('/public/products', [PublicProductsController::class, 'index']);
 Route::get('/public/products/{ariya_id}', [PublicProductsController::class, 'show']);
+
+Route::get('/test', function () {});

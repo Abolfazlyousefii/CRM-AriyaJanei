@@ -18,6 +18,13 @@
             </div>
         @endif
 
+        @if(auth()->user()->hasRole('Admin'))
+            <a href="{{ route('admin.leaves.settings.edit') }}" class="btn btn-secondary mb-4">تنظیمات مرخصی</a>
+            @if(app(\App\Services\LeaveApprovalService::class)->approvers()->isEmpty())
+                <div class="alert alert-warning">هنوز تأییدکننده‌ای انتخاب نشده است. از تنظیمات مرخصی افراد مسئول را انتخاب کنید.</div>
+            @endif
+        @endif
+
         <a href="{{ route('leaves.create') }}" class="btn btn-primary mb-4">ایجاد مرخصی جدید</a>
 
 
@@ -145,19 +152,17 @@
         <td class="whitespace-nowrap">
             @switch($leave->status)
                 @case('pending')
-                    <span class="badge bg-warning">در انتظار تایید جایگزین</span>
-                    @break
-
                 @case('manager_approved')
-                    @if($leave->substitute_user_id)
-                        <span class="badge bg-info">تایید جایگزین — منتظر تایید مدیر واحد</span>
-                    @else
-                        <span class="badge bg-info">بدون جایگزین — منتظر تایید مدیر واحد</span>
-                    @endif
+                @case('internal_approved')
+                @case('accounting_approved')
+                @case('pending_manager')
+                @case('pending_internal')
+                @case('pending_account')
+                    <span class="badge bg-warning">در انتظار بررسی تأییدکنندگان</span>
                     @break
 
-                @case('internal_approved')
-                    <span class="badge bg-primary">تایید مدیر واحد — منتظر تایید مدیر داخلی</span>
+                @case('final_rejected')
+                    <span class="badge bg-danger">رد شده</span>
                     @break
 
                 @case('final_approved')
@@ -182,7 +187,7 @@
         </td>
 
         <td class="whitespace-nowrap">
-            @if($leave->user_id === $user->id && in_array($leave->status, ['pending', 'manager_approved','internal_approved']))
+            @if($leave->user_id === $user->id && in_array($leave->status, \App\Services\LeaveApprovalService::PENDING_STATUSES))
                 <form action="{{ route('leaves.destroy', $leave->id) }}" method="POST" class="d-inline">
                     @csrf
                     @method('DELETE')
@@ -190,47 +195,16 @@
                 </form>
             @endif
 
-            @if($leave->status === 'pending' && $leave->substitute_user_id == $user->id)
+            @can('approve', $leave)
                 <form action="{{ route('leaves.approve', $leave->id) }}" method="POST" class="d-inline">
-                    @csrf
-                    @method('PATCH')
-                    <button class="btn btn-success btn-sm">تایید جایگزینی</button>
+                    @csrf @method('PATCH')
+                    <button class="btn btn-success btn-sm">تأیید</button>
                 </form>
-
                 <form action="{{ route('leaves.reject', $leave->id) }}" method="POST" class="d-inline">
-                    @csrf
-                    @method('PATCH')
+                    @csrf @method('PATCH')
                     <button class="btn btn-danger btn-sm">رد</button>
                 </form>
-            @endif
-
-            @if($user->hasRole('Manager') && $leave->status === 'manager_approved' && $leave->manager_id == $user->id)
-                <form action="{{ route('leaves.approve', $leave->id) }}" method="POST" class="d-inline">
-                    @csrf
-                    @method('PATCH')
-                    <button class="btn btn-success btn-sm">تایید مدیر واحد</button>
-                </form>
-
-                <form action="{{ route('leaves.reject', $leave->id) }}" method="POST" class="d-inline">
-                    @csrf
-                    @method('PATCH')
-                    <button class="btn btn-danger btn-sm">رد مدیر واحد</button>
-                </form>
-            @endif
-
-            @if(($user->hasRole('Admin') || $user->hasAnyRole(['internalManager', 'InternalManager'])) && $leave->status === 'internal_approved')
-                <form action="{{ route('leaves.approve', $leave->id) }}" method="POST" class="d-inline">
-                    @csrf
-                    @method('PATCH')
-                    <button class="btn btn-success btn-sm">تایید مدیر داخلی</button>
-                </form>
-
-                <form action="{{ route('leaves.reject', $leave->id) }}" method="POST" class="d-inline">
-                    @csrf
-                    @method('PATCH')
-                    <button class="btn btn-danger btn-sm">رد مدیر داخلی</button>
-                </form>
-            @endif
+            @endcan
         </td>
     </tr>
 @empty
