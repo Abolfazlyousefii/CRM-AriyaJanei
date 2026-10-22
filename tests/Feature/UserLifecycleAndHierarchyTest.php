@@ -127,6 +127,7 @@ class UserLifecycleAndHierarchyTest extends TestCase
         Schema::create('users', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('manager_id')->nullable();
+            $table->string('org_position', 40)->nullable();
             $table->string('name');
             $table->string('email')->nullable()->unique();
             $table->string('phone')->unique();
