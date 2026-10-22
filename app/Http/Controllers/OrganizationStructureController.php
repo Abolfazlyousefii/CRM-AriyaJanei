@@ -84,13 +84,13 @@ class OrganizationStructureController extends Controller
                 $hierarchy->managerChain($current);
 
                 if ($current->department_id) {
-                    $hierarchy->assertDepartmentAcyclic($current->department);
+                    $this->assertValidLeadership($current->department, $hierarchy);
                 }
 
                 if ($oldDepartmentId && $oldDepartmentId !== $current->department_id) {
                     $oldDepartment = Department::find($oldDepartmentId);
                     if ($oldDepartment) {
-                        $hierarchy->assertDepartmentAcyclic($oldDepartment);
+                        $this->assertValidLeadership($oldDepartment, $hierarchy);
                     }
                 }
             } catch (DomainException $exception) {
