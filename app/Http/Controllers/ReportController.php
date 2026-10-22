@@ -573,6 +573,14 @@ class ReportController extends Controller
                 ->firstOrFail();
         }
 
+        // Review snapshots must not be silently cascaded away through the
+        // legacy report deletion endpoint during an active pilot.
+        abort_if(
+            config('report_review.enabled', false) && $report->reviewWorkflow()->exists(),
+            403,
+            'گزارش دارای گردش تأیید قابل حذف نیست.'
+        );
+
         activity()
             ->causedBy($authUser)
             ->performedOn($report)
