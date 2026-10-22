@@ -47,6 +47,12 @@ jobs:
           extensions: mbstring, pdo_mysql, gd, bcmath, intl, zip
           coverage: none
       - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
       - run: cp .env.example .env && php artisan key:generate
       - name: Syntax check
         run: |
