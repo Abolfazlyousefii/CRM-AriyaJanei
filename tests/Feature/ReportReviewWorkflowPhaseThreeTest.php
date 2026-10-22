@@ -269,6 +269,30 @@ class ReportReviewWorkflowPhaseThreeTest extends TestCase
         $this->assertSame('Corrected with full operational detail', $report->fresh()->description);
     }
 
+    public function test_turning_off_pilot_keeps_existing_review_reports_protected(): void
+    {
+        $manager = $this->person('supervisor');
+        $manager->assignRole('Manager');
+        $author = $this->person('staff', $manager);
+        $author->assignRole('User');
+        $report = $this->report($author);
+        $workflow = app(ReportReviewWorkflowService::class)->start($report);
+        $this->assertNotNull($workflow);
+
+        config()->set('report_review.enabled', false);
+
+        $this->actingAs($author)->put(route('user.reports.update', $report), [
+            'description' => 'An unauthorized change after disabling the pilot',
+        ])->assertForbidden();
+        $this->delete(route('user.reports.destroy', $report))->assertForbidden();
+
+        $this->assertDatabaseHas('reports', [
+            'id' => $report->id,
+            'description' => 'Daily report',
+        ]);
+        $this->assertDatabaseHas('report_review_workflows', ['id' => $workflow->id]);
+    }
+
     public function test_enabled_workflow_does_not_duplicate_steps_on_repeated_start(): void
     {
         $manager = $this->person('supervisor');
