@@ -63,6 +63,11 @@ class Report extends Model
         $this->status = self::STATUS_READ;
         $this->save();
     }
+    public function reviewWorkflow()
+    {
+        return $this->hasOne(ReportReviewWorkflow::class);
+    }
+
     public function attachments()
     {
         return $this->hasMany(ReportAttachment::class);
