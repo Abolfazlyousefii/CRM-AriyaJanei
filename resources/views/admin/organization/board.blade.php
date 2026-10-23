@@ -7,7 +7,7 @@
         </div>
     </x-slot>
 
-    <link rel="stylesheet" href="{{ asset('css/org-personnel.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/org-personnel.css') }}?v={{ filemtime(public_path('css/org-personnel.css')) }}">
     <section
         id="org-board"
         class="org2"
@@ -53,6 +53,13 @@
             <div class="org2-stat"><span>واحدهای سازمانی</span><strong id="org2-stat-depts">—</strong><small>دپارتمان‌های تعریف‌شده</small></div>
             <div class="org2-stat"><span>بدون واحد</span><strong id="org2-stat-unassigned">—</strong><small>نیازمند تعیین جایگاه</small></div>
         </div>
+
+        <div class="org2-headline">
+            <h3>مدیران کل شرکت</h3>
+            <button type="button" id="org2-add-company-manager" class="org2-link">+ تعیین مدیر شرکت</button>
+        </div>
+        <p class="org2-help">تعداد مدیران شرکت آزاد است. این جایگاه از سرپرست و مدیر هر واحد جداست؛ مسیر ارجاع هر شخص از مدیر مستقیم و ساختار واحدش مشخص می‌شود.</p>
+        <div id="org2-company-managers" class="org2-chips"></div>
 
         <div class="org2-headline">
             <h3>واحدهای سازمان</h3>
@@ -111,7 +118,7 @@
             </details>
         @endisset
 
-        <p class="org2-footnote">نقش‌های نرم‌افزاری (Role) مستقل از سمت سازمانی هستند. تغییر سمت به‌تنهایی مجوزهای حساب را تغییر نمی‌دهد. گردش تأیید گزارش‌کار در فاز بعدی به این ساختار متصل می‌شود.</p>
+        <p class="org2-footnote">دسترسی نرم‌افزاری مستقل از سمت سازمانی است. تغییر سمت به‌تنهایی مجوزهای حساب یا درخواست‌های قبلی را تغییر نمی‌دهد.</p>
 
         <div id="org2-dialog-backdrop" class="org2-backdrop" hidden>
             <div class="org2-dialog" role="dialog" aria-modal="true" aria-labelledby="org2-dialog-title">
@@ -140,22 +147,46 @@
                     <button class="org2-btn org2-btn-primary org2-submit" type="submit">ذخیره جایگاه سازمانی</button>
                 </form>
 
+                <form id="org2-edit-company" hidden>
+                    <label for="org2-company-person">انتخاب کاربر</label>
+                    <select id="org2-company-person" required></select>
+                    <label for="org2-company-position">جایگاه در کل شرکت</label>
+                    <select id="org2-company-position">
+                        <option value="internal_manager">مدیر داخلی</option>
+                        <option value="executive_manager">مدیر اجرایی</option>
+                        <option value="ceo">مدیرعامل</option>
+                    </select>
+                    <label for="org2-company-manager">گزارش‌دهی به مدیر شرکت دیگر (اختیاری)</label>
+                    <select id="org2-company-manager"></select>
+                    <p class="org2-help">«بدون مدیر بالادستی» یعنی این شخص در رأس چارت قرار می‌گیرد و ارتباط مدیر مستقیم قبلی او حذف می‌شود. دسترسی نرم‌افزاری از صفحهٔ مشخصات قابل تنظیم است.</p>
+                    <button type="submit" class="org2-btn org2-btn-primary">ذخیره مدیر شرکت</button>
+                </form>
+
                 <form id="org2-edit-dept" hidden>
                     <input type="hidden" name="department_id" id="org2-dept-id">
                     <label for="org2-dept-name">نام واحد *</label>
                     <input id="org2-dept-name" name="name" required maxlength="255" placeholder="مثلاً پشتیبانی">
+                    <label for="org2-member-search">۱. انتخاب اعضای واحد</label>
+                    <input id="org2-member-search" type="search" placeholder="جستجوی نام یا موبایل…">
+                    <div class="org2-actions">
+                        <button type="button" id="org2-select-unassigned" class="org2-btn org2-btn-muted">انتخاب افراد بدون واحد</button>
+                        <span id="org2-member-count" class="org2-help" role="status"></span>
+                    </div>
+                    <div id="org2-members" class="org2-member-picker"></div>
+                    <label class="org2-routing"><input type="checkbox" id="org2-unit-routing" checked> تبعیت اعضا از ساختار این واحد (حذف مدیر مستقیم قبلی)</label>
+                    <p class="org2-help">هر فرد یک واحد اصلی دارد. انتخاب فرد از واحد دیگر، او را منتقل می‌کند. انتقال مسئول یک واحد، ابتدا به تعیین جایگزین در آن واحد نیاز دارد.</p>
+                    <p class="org2-help" id="org2-members-preview" aria-live="polite"></p>
+                    <h4 class="org2-track-title">۲. تعیین مسئولیت‌ها از بین اعضای انتخاب‌شده</h4>
                     <label for="org2-dept-supervisor">سرپرست واحد (اختیاری)</label>
                     <select id="org2-dept-supervisor" name="supervisor_id"></select>
                     <label for="org2-dept-manager">مدیر واحد (اختیاری)</label>
                     <select id="org2-dept-manager" name="manager_id"></select>
-                    <label for="org2-dept-parent">مسئول بالادستی (اختیاری)</label>
-                    <select id="org2-dept-parent" name="parent_manager_id"></select>
-                    <p class="org2-help">سرپرست و مدیر باید عضو همین واحد باشند؛ مسئول بالادستی می‌تواند از مدیریت مرکزی انتخاب شود. سه مسئول باید افراد متفاوتی باشند.</p>
+                    <p class="org2-help">هر واحد می‌تواند یک سرپرست و یک مدیر داشته باشد یا بدون مسئول بماند. مدیران کل شرکت در بخش مستقل بالای صفحه تعریف می‌شوند.</p>
                     <button class="org2-btn org2-btn-primary org2-submit" type="submit">ذخیره واحد سازمانی</button>
                 </form>
                 <p id="org2-form-error" class="org2-form-error" role="alert" hidden></p>
             </div>
         </div>
     </section>
-    <script src="{{ asset('js/org-personnel.js') }}" defer></script>
+    <script src="{{ asset('js/org-personnel.js') }}?v={{ filemtime(public_path('js/org-personnel.js')) }}" defer></script>
 </x-layouts.app>

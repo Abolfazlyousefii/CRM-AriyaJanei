@@ -16,7 +16,7 @@
   const state = {
     people: [], departments: [], selected: null, view: 'tree', search: '',
     department: '', role: '', collapsed: new Set(), dialog: '', editId: null,
-    lastFocus: null
+    lastFocus: null, members: new Set(), initialMembers: [], bodyOverflow: ''
   };
 
   const userById = (id) => state.people.find((p) => Number(p.id) === Number(id));
@@ -158,6 +158,11 @@
   }
 
   function renderUnits() {
+    const company = state.people.filter((p) => ['ceo', 'executive_manager', 'internal_manager'].includes(p.org_position));
+    $('org2-company-managers').innerHTML = company.length ? company.map((p) =>
+      '<button type="button" class="org2-chip" data-edit-person="' + Number(p.id) + '">' +
+      html(p.name) + ' · ' + html(position(p)) + (active(p) ? '' : ' · غیرفعال') + '</button>').join('') :
+      '<p class="org2-help">هنوز مدیر شرکت تعیین نشده است.</p>';
     $('org2-dept-cards').innerHTML = state.departments.length ? state.departments.map((d) => {
       const people = state.people.filter((p) => Number(p.department_id) === Number(d.id));
       const leader = userById(d.supervisor_id) || userById(d.manager_id) || userById(d.parent_manager_id);
@@ -169,7 +174,7 @@
         '</span><br><small>' + (leader ? 'مسئول: ' + html(leader.name) : 'هنوز مسئول مشخص نشده') +
         '</small></span></button>' +
         '<button type="button" class="org2-unit-edit" data-edit-dept="' + Number(d.id) +
-        '">ویرایش ساختار واحد ←</button></div>';
+        '">اعضا و مسئولیت‌های واحد ←</button></div>';
     }).join('') : '<p class="org2-empty">هنوز واحدی تعریف نشده است. از دکمه «ایجاد واحد» استفاده کنید.</p>';
   }
 
@@ -325,6 +330,7 @@
 
   function openDialog(type, id = null) {
     state.lastFocus = document.activeElement;
+    state.bodyOverflow = document.body.style.overflow;
     state.dialog = type;
     state.editId = id;
     const deptForm = $('org2-edit-dept');
@@ -332,8 +338,13 @@
     $('org2-form-error').hidden = true;
     deptForm.hidden = type !== 'department';
     personForm.hidden = type !== 'person';
+    $('org2-edit-company').hidden = type !== 'company';
 
-    if (type === 'person') {
+    if (type === 'company') {
+      $('org2-dialog-title').textContent = 'تعیین مدیر در سطح کل شرکت';
+      $('org2-company-person').innerHTML = options(state.people.filter(active), null, 'انتخاب شخص');
+      fillCompanyManagers();
+    } else if (type === 'person') {
       const p = userById(id);
       if (!p) return;
       $('org2-dialog-title').textContent = 'ویرایش جایگاه: ' + p.name;
@@ -356,23 +367,55 @@
       $('org2-dialog-title').textContent = d ? 'ویرایش واحد: ' + d.name : 'ایجاد واحد سازمانی';
       $('org2-dept-id').value = d?.id || '';
       $('org2-dept-name').value = d?.name || '';
-      const sameUnit = state.people.filter((p) => active(p) && d && Number(p.department_id) === Number(d.id));
-      const availableUpper = state.people.filter((p) => active(p) &&
-        (isManagerial(p) || ['internal_manager', 'executive_manager', 'ceo', 'department_manager'].includes(p.org_position)));
+      state.initialMembers = state.people.filter((p) => d && Number(p.department_id) === Number(d.id)).map((p) => Number(p.id));
+      state.members = new Set(state.initialMembers);
+      $('org2-member-search').value = '';
+      $('org2-unit-routing').checked = false;
       for (const [field, selected] of [
         ['supervisor', d?.supervisor_id], ['manager', d?.manager_id]
       ]) {
-        $( 'org2-dept-' + field ).innerHTML = options(sameUnit, selected, 'بدون ' + (field === 'manager' ? 'مدیر واحد' : 'سرپرست'));
+        $( 'org2-dept-' + field ).innerHTML = options(state.people.filter((p) => state.members.has(Number(p.id)) && active(p)), selected, 'بدون ' + (field === 'manager' ? 'مدیر واحد' : 'سرپرست'));
       }
-      $('org2-dept-parent').innerHTML = options(availableUpper, d?.parent_manager_id, 'بدون مسئول بالادستی');
+      renderMembers();
     }
     $('org2-dialog-backdrop').hidden = false;
-    const target = type === 'department' ? $('org2-dept-name') : $('org2-person-dept');
+    document.body.style.overflow = 'hidden';
+    const target = type === 'department' ? $('org2-dept-name') : type === 'company' ? $('org2-company-person') : $('org2-person-dept');
     target.focus();
+  }
+
+  function renderMembers() {
+    const query = $('org2-member-search').value.trim().toLowerCase();
+    const people = state.people.filter((p) => (p.name + ' ' + p.phone).toLowerCase().includes(query));
+    $('org2-members').innerHTML = people.length ? people.map((p) =>
+      '<label class="org2-member"><input type="checkbox" data-member-id="' + Number(p.id) + '"' +
+      (state.members.has(Number(p.id)) ? ' checked' : '') + '><span><strong>' + html(p.name) +
+      '</strong><small>' + html(personDept(p)?.name || 'بدون واحد') + (active(p) ? '' : ' · غیرفعال') +
+      '</small></span></label>').join('') : '<p class="org2-help">کاربری پیدا نشد.</p>';
+    $('org2-member-count').textContent = state.members.size + ' عضو انتخاب شده';
+    const added = state.people.filter((p) => state.members.has(Number(p.id)) && !state.initialMembers.includes(Number(p.id)));
+    const removed = state.people.filter((p) => !state.members.has(Number(p.id)) && state.initialMembers.includes(Number(p.id)));
+    $('org2-members-preview').textContent = [
+      added.length ? 'افزودن / انتقال به واحد: ' + added.map((p) => p.name).join('، ') : '',
+      removed.length ? 'خروج از واحد: ' + removed.map((p) => p.name).join('، ') : ''
+    ].filter(Boolean).join(' | ') || 'عضویت افراد تغییری نمی‌کند.';
+    for (const field of ['supervisor', 'manager']) {
+      const select = $('org2-dept-' + field);
+      const selected = select.value;
+      select.innerHTML = options(state.people.filter((p) => state.members.has(Number(p.id)) && active(p)), selected,
+        field === 'manager' ? 'بدون مدیر واحد' : 'بدون سرپرست');
+    }
+  }
+
+  function fillCompanyManagers() {
+    const subject = idOf($('org2-company-person').value);
+    $('org2-company-manager').innerHTML = options(state.people.filter((p) => Number(p.id) !== subject && active(p) &&
+      ['ceo', 'executive_manager', 'internal_manager'].includes(p.org_position)), null, 'بدون مدیر بالادستی (رأس چارت)');
   }
 
   function closeDialog() {
     $('org2-dialog-backdrop').hidden = true;
+    document.body.style.overflow = state.bodyOverflow;
     state.dialog = '';
     state.editId = null;
     state.lastFocus?.focus?.();
@@ -396,6 +439,23 @@
   }
 
   $('org2-add-dept').addEventListener('click', () => openDialog('department'));
+  $('org2-add-company-manager').addEventListener('click', () => openDialog('company'));
+  $('org2-company-person').addEventListener('change', fillCompanyManagers);
+  $('org2-member-search').addEventListener('input', renderMembers);
+  $('org2-members').addEventListener('change', (event) => {
+    const input = event.target.closest('[data-member-id]');
+    if (!input) return;
+    const id = Number(input.dataset.memberId);
+    if (input.checked) state.members.add(id); else state.members.delete(id);
+    renderMembers();
+    $('org2-members').querySelector('[data-member-id="' + id + '"]')?.focus();
+  });
+  $('org2-select-unassigned').addEventListener('click', () => {
+    const query = $('org2-member-search').value.trim().toLowerCase();
+    state.people.filter((p) => p.department_id == null && (p.name + ' ' + p.phone).toLowerCase().includes(query))
+      .forEach((p) => state.members.add(Number(p.id)));
+    renderMembers();
+  });
   $('org2-manage-depts').addEventListener('click', () => openDialog('department', state.department && state.department !== 'none' ? Number(state.department) : null));
   $('org2-close').addEventListener('click', closeDialog);
   $('org2-dialog-backdrop').addEventListener('click', (event) => {
@@ -403,6 +463,13 @@
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.dialog) closeDialog();
+    if (event.key === 'Tab' && state.dialog) {
+      const fields = [...$('org2-dialog-backdrop').querySelectorAll('button, input, select, a[href]')]
+        .filter((node) => !node.disabled && node.type !== 'hidden' && node.getClientRects().length);
+      const first = fields[0], last = fields[fields.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    }
   });
   root.addEventListener('click', (event) => {
     const edit = event.target.closest('[data-edit-person]');
@@ -413,11 +480,7 @@
     if (editUnit) return openDialog('department', Number(editUnit.dataset.editDept));
     const dept = event.target.closest('[data-dept-card]');
     if (dept) {
-      const id = String(dept.dataset.deptCard);
-      state.department = state.department === id ? '' : id;
-      $('org2-dept-filter').value = state.department;
-      render();
-      return;
+      return openDialog('department', Number(dept.dataset.deptCard));
     }
     const expand = event.target.closest('[data-expand-id]');
     if (expand) {
@@ -467,13 +530,26 @@
   $('org2-edit-dept').addEventListener('submit', (event) => {
     event.preventDefault();
     const id = idOf($('org2-dept-id').value);
+    if (!window.confirm($('org2-members-preview').textContent +
+      ($('org2-unit-routing').checked ? '\nمدیر مستقیم اعضای انتخاب‌شده پاک می‌شود تا از ساختار واحد تبعیت کنند.' : '') + '\nتغییرات ذخیره شود؟')) return;
     saveForm(event.currentTarget, root.dataset.departmentsUrl + (id ? '/' + id : ''),
       id ? 'PATCH' : 'POST', {
         name: $('org2-dept-name').value.trim(),
         supervisor_id: idOf($('org2-dept-supervisor').value),
         manager_id: idOf($('org2-dept-manager').value),
-        parent_manager_id: idOf($('org2-dept-parent').value)
+        member_ids: [...state.members],
+        expected_member_ids: state.initialMembers,
+        use_unit_routing: $('org2-unit-routing').checked
       });
+  });
+  $('org2-edit-company').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const id = idOf($('org2-company-person').value);
+    if (!id) return;
+    saveForm(event.currentTarget, root.dataset.peopleUrl + '/' + id, 'PATCH', {
+      org_position: $('org2-company-position').value,
+      manager_id: idOf($('org2-company-manager').value)
+    });
   });
   root.addEventListener('submit', (event) => {
     const form = event.target.closest('[data-confirm]');

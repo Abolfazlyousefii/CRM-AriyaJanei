@@ -23,6 +23,7 @@ on:
       - "public/css/org-personnel.css"
       - "resources/views/admin/organization/board.blade.php"
       - "tests/Feature/PersonnelBoardPhaseTwoTest.php"
+      - "tests/Feature/DepartmentMembershipTest.php"
       - "app/Http/Controllers/ReportReviewController.php"
       - "app/Http/Controllers/ReportController.php"
       - "app/Services/ReportReviewWorkflowService.php"
@@ -101,6 +102,7 @@ jobs:
           php -l database/migrations/2026_10_22_000001_add_organization_hierarchy_fields.php
           php -l tests/Feature/OrganizationHierarchyPhaseOneTest.php
           php -l tests/Feature/PersonnelBoardPhaseTwoTest.php
+          php -l tests/Feature/DepartmentMembershipTest.php
           node --check public/js/org-personnel.js
           php -l app/Services/ReportReviewWorkflowService.php
           php -l app/Http/Controllers/ReportReviewController.php
@@ -108,7 +110,7 @@ jobs:
           php -l tests/Feature/ReportReviewWorkflowPhaseThreeTest.php
           node --check public/js/report-review.js
       - name: Organization, personnel and review regression tests
-        run: php artisan test --filter="OrganizationalRoutingAcceptanceTest|ReportReviewWorkflowPhaseThreeTest|PersonnelBoardPhaseTwoTest|OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest|PersonnelSectionTest|SubordinateChainReportsTest|UnifiedUserManagementTest|LeaveApprovalSettingsTest|ShopContactWorkflowTest|WholesaleFieldVisitTest"
+        run: php artisan test --filter="DepartmentMembershipTest|OrganizationalRoutingAcceptanceTest|ReportReviewWorkflowPhaseThreeTest|PersonnelBoardPhaseTwoTest|OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest|PersonnelSectionTest|SubordinateChainReportsTest|UnifiedUserManagementTest|LeaveApprovalSettingsTest|ShopContactWorkflowTest|WholesaleFieldVisitTest"
       - name: Full Laravel regression suite (informational)
         continue-on-error: true
         run: php artisan test
