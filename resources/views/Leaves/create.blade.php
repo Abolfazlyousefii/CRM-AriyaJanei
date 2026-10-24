@@ -26,6 +26,7 @@
             </div>
             @if($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif
         @endif
+        @if(!config('organization_flow.enabled',false))
         <p class="mb-4 text-sm" role="status">
             @if($leaveApprover ?? null)
                 مسئول بررسی این درخواست: <strong>{{ $leaveApprover->name }}</strong>
@@ -33,6 +34,7 @@
                 این درخواست از مسیر تأییدکنندگان تعیین‌شده در تنظیمات مرخصی بررسی می‌شود.
             @endif
         </p>
+        @endif
         <form action="{{ route('leaves.store') }}" method="POST">
             @csrf
             @if(strtoupper($method) !== 'POST')
