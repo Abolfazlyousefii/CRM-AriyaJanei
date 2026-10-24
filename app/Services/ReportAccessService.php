@@ -18,6 +18,7 @@ class ReportAccessService
     {
         return $user->isActive() && ! $user->isBlocked()
             && ($user->hasAnyRole(['Admin', 'User', 'Marketer', 'Manager', 'Owner', 'InternalManager', 'internalManager', 'Supervisor'])
+                || (config('organization_flow.enabled',false) && $user->department_id!==null)
                 || $user->getAllPermissions()->contains(fn ($permission) => in_array($permission->name, ['reports.submit', 'reports.view-own'], true)));
     }
 

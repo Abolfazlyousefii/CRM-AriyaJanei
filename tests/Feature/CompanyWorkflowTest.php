@@ -293,6 +293,18 @@ class CompanyWorkflowTest extends TestCase
         $outsider = $this->person();
         $this->worker->update(['manager_id' => $outsider->id]);
         $chain = app(OrganizationHierarchyService::class)->managerChain($this->worker->fresh())->pluck('id')->all();
-        $this->assertSame([$this->supervisor->id, $this->manager->id, $this->internal->id, $this->executive->id],$chain);
+        $this->assertSame([$this->supervisor->id, $this->manager->id, $this->internal->id, $this->executive->id], $chain);
+    }
+
+    public function test_assigned_staff_with_a_custom_software_role_can_submit_their_own_report(): void
+    {
+        Role::findOrCreate('ITUser', 'web');
+        $outsider = $this->person();
+        $outsider->syncRoles(['ITUser']);
+        $this->actingAs($outsider)->get(route('user.reports.create'))->assertForbidden();
+        $this->worker->syncRoles(['ITUser']);
+        $this->actingAs($this->worker)->get(route('user.reports.create'))->assertOk();
+        $this->post(route('user.reports.store'), ['description' => 'گزارش پرسنل با نقش اختصاصی'])->assertRedirect();
+        $this->assertDatabaseHas('reports', ['user_id' => $this->worker->id, 'status' => 'submitted']);
     }
 }
