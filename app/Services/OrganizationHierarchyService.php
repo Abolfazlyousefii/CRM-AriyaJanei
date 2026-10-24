@@ -20,6 +20,26 @@ class OrganizationHierarchyService
      */
     public function directManager(User $user, ?Collection $people = null): ?User
     {
+        $company=app(CompanyStructureService::class);
+        $settings=$company->settings();
+        if($settings && (int)$user->id===(int)$settings->executive_manager_id)return null;
+        if($settings && (int)$user->id===(int)$settings->internal_manager_id) {
+            return $people!==null?$people->get((int)$settings->executive_manager_id):User::find($settings->executive_manager_id);
+        }
+        if($settings && $user->department) {
+            $department=$user->department;
+            $ids=(int)$department->manager_id===(int)$user->id
+                ? [$settings->internal_manager_id]
+                : ((int)$department->supervisor_id===(int)$user->id
+                    ? [$department->manager_id,$settings->internal_manager_id]
+                    : [$department->supervisor_id,$department->manager_id,$settings->internal_manager_id]);
+            foreach($ids as $id) {
+                if(!$id || (int)$id===(int)$user->id)continue;
+                $candidate=$people!==null?$people->get((int)$id):User::find($id);
+                if($candidate)return $candidate;
+            }
+            return null;
+        }
         if ($user->manager_id !== null) {
             return $people !== null ? $people->get((int) $user->manager_id) : $user->manager;
         }
@@ -64,6 +84,11 @@ class OrganizationHierarchyService
             if ($candidate && $candidate->isActive() && ! $candidate->isBlocked()) {
                 return $candidate;
             }
+        }
+
+        if(config('organization_flow.enabled',false)) {
+            $fallback=app(CompanyStructureService::class)->corporateFallback($user);
+            if($fallback && !$fallback->is($user))return $fallback;
         }
 
         return null;

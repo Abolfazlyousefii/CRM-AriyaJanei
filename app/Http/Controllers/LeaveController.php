@@ -60,6 +60,19 @@ class LeaveController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
+        if(config('organization_flow.enabled',false)) {
+            DB::transaction(function()use($request,$user){
+                $user=User::lockForUpdate()->findOrFail($user->id);
+                abort_unless($user->isActive() && !$user->isBlocked(),403);
+                $data=$this->validateLeaveForm($request,$user);
+                $flow=app(\App\Services\StagedLeaveService::class);$flow->assertRules($user,$data);
+                $leave=Leave::create(collect($data)->except('substitute')->all()+[
+                    'user_id'=>$user->id,'substitute_user_id'=>$data['substitute']?->id,'status'=>'pending',
+                ]);
+                $flow->start($leave,$user);
+            });
+            return redirect()->route('leaves')->with('success','مرخصی ثبت شد؛ نتیجه هر مرحله در همین صفحه نمایش داده می‌شود.');
+        }
         $data = $this->validateLeaveForm($request, $user);
         $leave = Leave::create(array_merge([
             'user_id' => $user->id,
@@ -112,14 +125,24 @@ class LeaveController extends Controller
         $this->authorize('delete', $model);
 
         try {
-            $model->forceDelete();
+            if($model->approval_route==='staged') {
+                DB::transaction(function()use($model){
+                    $locked=Leave::lockForUpdate()->findOrFail($model->id);$this->authorize('delete',$locked);
+                    $locked->events()->create(['actor_id'=>auth()->id(),'action'=>'cancelled','method'=>'account']);
+                    $locked->steps()->whereIn('status',['pending','waiting'])->update(['status'=>'cancelled']);
+                    $locked->update(['status'=>'cancelled','assigned_approver_id'=>null]);$locked->delete();
+                });
+            }elseif(config('organization_flow.enabled',false))$model->delete();
+            else $model->forceDelete();
 
             return redirect()
                 ->route('leaves')
                 ->with('success', 'مرخصی با موفقیت حذف شد.');
         } catch (QueryException $e) {
+            if($model->approval_route==='staged')throw $e;
             return back()->with('success', 'مرخصی با موفقیت حذف شد.');
         } catch (\Throwable $e) {
+            if($model->approval_route==='staged')throw $e;
             return back()->with('success', 'مرخصی با موفقیت حذف شد.');
         }
     }
@@ -136,6 +159,10 @@ class LeaveController extends Controller
 
     private function decide(Leave $leave, string $status, string $message)
     {
+        if($leave->approval_route==='staged') {
+            app(\App\Services\StagedLeaveService::class)->decide($leave,auth()->user(),$status==='final_approved',request()->validate(['reason'=>'nullable|string|max:2000'])['reason']??null);
+            return back()->with('success','نتیجه این مرحله ثبت شد.');
+        }
         DB::transaction(function () use ($leave, $status, $message) {
             $lockedLeave = Leave::query()->lockForUpdate()->findOrFail($leave->id);
             $this->authorize('approve', $lockedLeave);
@@ -306,7 +333,9 @@ class LeaveController extends Controller
             ]);
         }
 
-        $sameUnit = (int) $substitute->manager_id === (int) $user->manager_id;
+        $sameUnit = config('organization_flow.enabled',false)
+            ? ($user->department_id && (int)$substitute->department_id===(int)$user->department_id && $substitute->isActive() && !$substitute->isBlocked())
+            : (int) $substitute->manager_id === (int) $user->manager_id;
 
         if (! $sameUnit) {
             throw ValidationException::withMessages([
@@ -337,6 +366,9 @@ class LeaveController extends Controller
 
     private function getSubstitutes(User $user)
     {
+        if(config('organization_flow.enabled',false))return User::where('id','!=',$user->id)->where('is_active',true)
+            ->whereNotNull('department_id')->where('department_id',$user->department_id)
+            ->where(fn($q)=>$q->whereNull('blocked_until')->orWhere('blocked_until','<=',now()))->orderBy('name')->get();
         return User::query()
             ->where('id', '!=', $user->id)
             ->when(
@@ -357,5 +389,22 @@ class LeaveController extends Controller
             'message' => $message,
             'seen' => false,
         ]);
+    }
+
+    public function requestExecutiveCode(Leave $leave)
+    {
+        app(\App\Services\ExecutiveLeaveCodeService::class)->request($leave,auth()->user());
+        return back()->with('success','کد تأیید فقط به شماره مدیر اجرایی ارسال شد؛ اعتبار آن پنج دقیقه است.');
+    }
+    public function verifyExecutiveCode(Request $request,Leave $leave)
+    {
+        try {
+            $data=$request->validate(['code'=>['required','regex:/^[0-9]{4}$/']]);
+            app(\App\Services\ExecutiveLeaveCodeService::class)->verify($leave,auth()->user(),$data['code']);
+        }catch(ValidationException $exception){
+            if($request->expectsJson())throw $exception;
+            return back()->withErrors($exception->errors());
+        }
+        return back()->with('success','تأیید نهایی به نام مدیر اجرایی با ثبت سابقه ورود کد توسط مدیر داخلی انجام شد.');
     }
 }

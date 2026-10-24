@@ -325,7 +325,9 @@ class ReportController extends Controller
             }
         }
 
-        $recipientIds = $reviewerIds ?? User::role(['Admin', 'Manager'])->pluck('id')->all();
+        $recipientIds = config('organization_flow.enabled',false)
+            ? app(\App\Services\ReportAccessService::class)->notificationIds($authUser)
+            : ($reviewerIds ?? User::role(['Admin', 'Manager'])->pluck('id')->all());
 
         foreach (array_unique(array_filter($recipientIds)) as $id) {
             Notification::create([
@@ -347,6 +349,11 @@ class ReportController extends Controller
         $this->authorize('submit', $report);
         $report->markAsSubmitted();
         $workflow = app(\App\Services\ReportReviewWorkflowService::class)->start($report);
+        if(config('organization_flow.enabled',false)) {
+            foreach(app(\App\Services\ReportAccessService::class)->notificationIds(Auth::user()) as $viewerId) {
+                Notification::create(['user_id'=>$viewerId,'title'=>'گزارش کار جدید','message'=>'گزارش جدیدی طبق چارت برای شما قابل مشاهده است.','seen'=>false]);
+            }
+        }
         if ($workflow?->current_reviewer_id) {
             Notification::create([
                 'user_id' => $workflow->current_reviewer_id, 'title' => 'گزارش کار در انتظار بررسی',
@@ -364,6 +371,20 @@ class ReportController extends Controller
         if (! $owner && $report->status === Report::STATUS_SUBMITTED) $report->markAsRead();
         activity()->causedBy(Auth::user())->performedOn($report)->log('مشاهده گزارش');
         return view($owner ? 'user.reports.show' : 'reports.show', compact('report', 'user'));
+    }
+
+    public function comment(Request $request,Report $report)
+    {
+        $this->authorize('feedback',$report);
+        $data=$request->validate(['body'=>'required|string|max:4000']);
+        abort_if(trim($data['body'])==='',422,'متن نظر خالی است.');
+        \Illuminate\Support\Facades\DB::transaction(function()use($request,$report,$data){
+            $locked=Report::lockForUpdate()->findOrFail($report->id);$this->authorize('feedback',$locked);
+            $locked->comments()->create(['user_id'=>$request->user()->id,'body'=>trim($data['body'])]);
+            Notification::create(['user_id'=>$report->user_id,'title'=>'نظر جدید روی گزارش‌کار',
+                'message'=>$request->user()->name.' روی گزارش شماره '.$report->id.' نظر گذاشت.','seen'=>false]);
+        });
+        return back()->with('success','نظر ثبت شد و به صاحب گزارش اطلاع داده شد.');
     }
 
     public function edit(Report $report, User $user = null)

@@ -55,6 +55,9 @@ class Leave extends Model
         return $this->belongsTo(User::class, 'assigned_approver_id');
     }
 
+    public function steps(){return $this->hasMany(LeaveWorkflowStep::class)->orderBy('position');}
+    public function events(){return $this->hasMany(LeaveWorkflowEvent::class)->orderBy('id');}
+
     public function accountant() {
         return $this->belongsTo(User::class, 'accountant_id');
     }

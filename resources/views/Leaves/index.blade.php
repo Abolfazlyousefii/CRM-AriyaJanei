@@ -17,10 +17,11 @@
                 {{ session('error') }}
             </div>
         @endif
+        @if($errors->any())<div class="alert alert-danger" role="alert">{{ $errors->first() }}</div>@endif
 
         @if(auth()->user()->hasRole('Admin'))
             <a href="{{ route('admin.leaves.settings.edit') }}" class="btn btn-secondary mb-4">تنظیمات مرخصی</a>
-            @if(app(\App\Services\LeaveApprovalService::class)->approvers()->isEmpty())
+            @if(!config('organization_flow.enabled',false) && app(\App\Services\LeaveApprovalService::class)->approvers()->isEmpty())
                 <div class="alert alert-warning">هنوز تأییدکننده‌ای انتخاب نشده است. از تنظیمات مرخصی افراد مسئول را انتخاب کنید.</div>
             @endif
         @endif
@@ -139,7 +140,7 @@
     <tr>
         <td class="whitespace-nowrap">
             {{ $leave->user?->name ?? '-' }}
-            @if($leave->approval_route === 'organization')
+            @if(in_array($leave->approval_route,['organization','staged'],true))
                 <small class="d-block text-muted">مسئول بررسی: {{ $leave->assignedApprover?->name ?? 'نیازمند تعیین مسئول' }}</small>
             @endif
         </td>
@@ -155,6 +156,9 @@
         <td class="whitespace-nowrap">{{ $createdAt }}</td>
 
         <td class="whitespace-nowrap">
+            @if($leave->approval_route==='staged')
+                @include('Leaves.workflow',['leave'=>$leave])
+            @endif
             @switch($leave->status)
                 @case('pending')
                 @case('manager_approved')
@@ -192,13 +196,13 @@
         </td>
 
         <td class="whitespace-nowrap">
-            @if($leave->user_id === $user->id && in_array($leave->status, \App\Services\LeaveApprovalService::PENDING_STATUSES))
+            @can('delete',$leave)
                 <form action="{{ route('leaves.destroy', $leave->id) }}" method="POST" class="d-inline">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="btn btn-outline-danger btn-sm">حذف</button>
+                    <button type="submit" class="btn btn-outline-danger btn-sm">{{ config('organization_flow.enabled',false) ? 'لغو درخواست' : 'حذف' }}</button>
                 </form>
-            @endif
+            @endcan
 
             @can('approve', $leave)
                 <form action="{{ route('leaves.approve', $leave->id) }}" method="POST" class="d-inline">

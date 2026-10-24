@@ -16,7 +16,7 @@
   const state = {
     people: [], departments: [], selected: null, view: 'tree', search: '',
     department: '', role: '', collapsed: new Set(), dialog: '', editId: null,
-    lastFocus: null, members: new Set(), initialMembers: [], bodyOverflow: ''
+    lastFocus: null, members: new Set(), initialMembers: [], bodyOverflow: '', company: null
   };
 
   const userById = (id) => state.people.find((p) => Number(p.id) === Number(id));
@@ -32,6 +32,7 @@
 
   // Phase 1 contract: explicit manager wins; department routing is fallback.
   function managerOf(p) {
+    if(Object.prototype.hasOwnProperty.call(p,'effective_manager_id'))return userById(p.effective_manager_id)||null;
     if (p.manager_id != null) return userById(p.manager_id) || null;
     const d = personDept(p);
     if (!d || ['ceo', 'executive_manager', 'internal_manager'].includes(p.org_position) ||
@@ -104,6 +105,7 @@
     const result = await request(root.dataset.api);
     state.people = result.personnel || [];
     state.departments = result.departments || [];
+    state.company = result.company || null;
     if (state.selected && !userById(state.selected)) state.selected = null;
     fillFilters();
     render();
@@ -158,6 +160,12 @@
   }
 
   function renderUnits() {
+    const hierarchy=$('org2-company-hierarchy');
+    hierarchy.hidden=!state.company;
+    if(state.company){
+      const executive=userById(state.company.executive_manager_id),internal=userById(state.company.internal_manager_id);
+      hierarchy.innerHTML='<button type="button" class="org2-lead-node" data-edit-person="'+Number(executive?.id)+'"><small>مدیر اجرایی</small><strong>'+html(executive?.name)+'</strong></button><span class="org2-connector" aria-hidden="true">↓</span><button type="button" class="org2-lead-node org2-lead-internal" data-edit-person="'+Number(internal?.id)+'"><small>مدیر داخلی</small><strong>'+html(internal?.name)+'</strong></button><span class="org2-connector" aria-hidden="true">↓ واحدهای سازمان</span>';
+    }
     const company = state.people.filter((p) => ['ceo', 'executive_manager', 'internal_manager'].includes(p.org_position));
     $('org2-company-managers').innerHTML = company.length ? company.map((p) =>
       '<button type="button" class="org2-chip" data-edit-person="' + Number(p.id) + '">' +
@@ -172,10 +180,26 @@
         '<span class="org2-unit-top"><span class="org2-unit-icon">▦</span><span class="org2-unit-count">' +
         people.length + ' نفر</span></span><span><span>' + html(d.name) +
         '</span><br><small>' + (leader ? 'مسئول: ' + html(leader.name) : 'هنوز مسئول مشخص نشده') +
-        '</small></span></button>' +
+        '</small></span></button>' + unitMembers(d,people) +
         '<button type="button" class="org2-unit-edit" data-edit-dept="' + Number(d.id) +
         '">اعضا و مسئولیت‌های واحد ←</button></div>';
     }).join('') : '<p class="org2-empty">هنوز واحدی تعریف نشده است. از دکمه «ایجاد واحد» استفاده کنید.</p>';
+  }
+
+  function unitMembers(department,people){
+    if(!people.length)return '<p class="org2-help">با انتخاب این واحد، اعضا را اضافه کنید.</p>';
+    const ids=new Set(people.map((p)=>Number(p.id))),seen=new Set();
+    function node(person,path=new Set()){
+      if(path.has(Number(person.id)))return '';
+      seen.add(Number(person.id));const next=new Set(path);next.add(Number(person.id));
+      const children=people.filter((p)=>Number(managerOf(p)?.id)===Number(person.id));
+      const label=Number(department.manager_id)===Number(person.id)?'مدیر واحد':Number(department.supervisor_id)===Number(person.id)?'سرپرست':'پرسنل';
+      return '<li><button type="button" data-edit-person="'+Number(person.id)+'"><span>'+html(person.name)+'</span><small>'+label+'</small></button>'+
+        (children.length?'<ul>'+children.map((p)=>node(p,next)).join('')+'</ul>':'')+'</li>';
+    }
+    let content=people.filter((p)=>!ids.has(Number(managerOf(p)?.id))).map((p)=>node(p)).join('');
+    content+=people.filter((p)=>!seen.has(Number(p.id))).map((p)=>node(p)).join('');
+    return '<ul class="org2-unit-people">'+content+'</ul>';
   }
 
   function personCard(p, childCount = 0) {

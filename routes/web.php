@@ -65,6 +65,9 @@ Route::get('/leaves/create', [LeaveController::class, 'create'])->name('leaves.c
 Route::post('/leaves', [LeaveController::class, 'store'])->name('leaves.store'); // This route handles the form submission (POST)
 Route::patch('leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve'); // This route approves the leave (PATCH)
 Route::patch('leaves/{leave}/reject', [LeaveController::class, 'reject'])->name('leaves.reject'); // This route rejects the leave (PATCH)
+Route::post('/leaves/{leave}/executive-code', [LeaveController::class,'requestExecutiveCode'])->middleware(['auth','blocked','throttle:10,1'])->name('leaves.executive-code.request');
+Route::post('/leaves/{leave}/executive-code/verify', [LeaveController::class,'verifyExecutiveCode'])->middleware(['auth','blocked','throttle:10,1'])->name('leaves.executive-code.verify');
+Route::post('/reports/{report}/comments', [ReportController::class,'comment'])->middleware(['auth','blocked','throttle:20,1'])->name('reports.comments.store');
 Route::get('/', function () {
     return view('welcome');
 })->name('welcome');
@@ -95,6 +98,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:Admin'])->grou
 
     // Real-time organizational chart and personnel management (phase 2).
     Route::get('/organization/board', [\App\Http\Controllers\OrganizationStructureController::class, 'board'])->name('organization.board');
+    Route::get('/organization/workflow-settings',[\App\Http\Controllers\CompanyWorkflowSettingsController::class,'edit'])->name('organization.workflow-settings.edit');
+    Route::patch('/organization/workflow-settings',[\App\Http\Controllers\CompanyWorkflowSettingsController::class,'update'])->name('organization.workflow-settings.update');
 
     // Organization hierarchy foundation (JSON endpoints; interface comes in phase 2).
     Route::get('/organization', [\App\Http\Controllers\OrganizationStructureController::class, 'index'])->name('organization.index');

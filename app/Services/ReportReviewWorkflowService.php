@@ -20,6 +20,7 @@ class ReportReviewWorkflowService
      */
     public function start(Report $report): ?ReportReviewWorkflow
     {
+        if(config('organization_flow.enabled',false))return null;
         if (! config('report_review.enabled', false)) {
             return null;
         }

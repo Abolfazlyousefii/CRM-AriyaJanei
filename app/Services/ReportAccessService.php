@@ -8,6 +8,12 @@ class ReportAccessService
 {
     private array $teams = [];
 
+    public function notificationIds(User $author): array
+    {
+        try{return app(OrganizationHierarchyService::class)->activeManagerChain($author)->pluck('id')->all();}
+        catch(\DomainException){return [];}
+    }
+
     public function canUsePersonalReports(User $user): bool
     {
         return $user->isActive() && ! $user->isBlocked()
@@ -19,6 +25,7 @@ class ReportAccessService
     {
         return $user->isActive() && ! $user->isBlocked()
             && ($user->hasAnyRole(['Manager', 'Owner', 'InternalManager', 'internalManager', 'Supervisor'])
+                || app(CompanyStructureService::class)->isLeader($user)
                 || $user->getAllPermissions()->contains('name', 'reports.view-team'));
     }
 

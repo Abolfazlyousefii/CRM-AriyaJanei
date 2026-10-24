@@ -20,6 +20,12 @@
         </h2>
     </x-slot>
     <div class="bg-white shadow-sm rounded-lg p-6" dir="rtl">
+        @if(config('organization_flow.enabled',false))
+            <div class="alert alert-info">مسیر: جایگزین هم‌واحد ← مسئول واحد (برای کارمند) ← مدیر داخلی ← مدیر اجرایی.
+                مرخصی عادی روزانه: حداقل ۴۸ ساعت قبل؛ ساعتی: شروع و پایان در یک روز؛ اضطراری: حداکثر سه درخواست در ماه شمسی شروع مرخصی، شامل درخواست ردشده و لغوشده.
+            </div>
+            @if($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif
+        @endif
         <p class="mb-4 text-sm" role="status">
             @if($leaveApprover ?? null)
                 مسئول بررسی این درخواست: <strong>{{ $leaveApprover->name }}</strong>

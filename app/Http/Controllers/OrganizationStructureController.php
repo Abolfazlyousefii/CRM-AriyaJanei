@@ -22,16 +22,20 @@ class OrganizationStructureController extends Controller
 
     public function index(): JsonResponse
     {
+        $company=app(\App\Services\CompanyStructureService::class)->settings();
+        $people=User::query()->with(['department:id,name,supervisor_id,manager_id,parent_manager_id','manager:id,name','roles:id,name'])
+            ->orderBy('name')->get(['id','name','phone','department_id','manager_id','org_position','is_active','blocked_until'])->keyBy('id');
+        if($company)foreach($people as $person) {
+            $person->setAttribute('effective_manager_id',app(OrganizationHierarchyService::class)->directManager($person,$people)?->id);
+        }
         return response()->json([
+            'company'=>$company?->only(['internal_manager_id','executive_manager_id']),
             'departments' => Department::query()
                 ->with(['supervisor:id,name', 'manager:id,name', 'parentManager:id,name'])
                 ->withCount('users')
                 ->orderBy('name')
                 ->get(),
-            'personnel' => User::query()
-                ->with(['department:id,name', 'manager:id,name', 'roles:id,name'])
-                ->orderBy('name')
-                ->get(['id', 'name', 'phone', 'department_id', 'manager_id', 'org_position', 'is_active', 'blocked_until']),
+            'personnel' => $people->values(),
         ]);
     }
 

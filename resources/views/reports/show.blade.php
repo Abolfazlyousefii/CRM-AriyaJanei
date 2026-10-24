@@ -9,6 +9,7 @@
         <div class="w-full max-w-3xl bg-white shadow-lg rounded-2xl p-6 space-y-6 border-t-4 border-green-500">
             <h3 class="text-xl font-bold text-gray-700 border-b pb-2">جزئیات گزارش</h3>
             @include('reports.review-history')
+            @include('reports.comments')
 
             <p class="text-center text-gray-600 mt-1">
                 <span class="font-semibold">

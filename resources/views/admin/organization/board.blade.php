@@ -28,6 +28,7 @@
                 <p>دپارتمان‌ها، مدیران، سرپرستان و کارکنان را در یک فضای یکپارچه مدیریت کنید.</p>
             </div>
             <div class="org2-actions">
+                @if(config('organization_flow.enabled',false))<a href="{{ route('admin.organization.workflow-settings.edit') }}" class="org2-btn org2-btn-muted">مدیران اصلی چارت</a>@endif
                 <button type="button" id="org2-add-dept" class="org2-btn org2-btn-muted">+ ایجاد واحد</button>
                 <a href="{{ route('admin.users.create') }}" class="org2-btn org2-btn-primary">+ افزودن پرسنل</a>
             </div>
@@ -41,12 +42,6 @@
         @endif
         <div id="org2-alert" class="org2-alert" role="alert" hidden></div>
 
-        <details id="org2-health" class="org2-legacy-unassigned" hidden>
-            <summary id="org2-health-summary">بررسی ساختار سازمانی</summary>
-            <p class="org2-help">این فهرست برای اصلاح تنظیمات است؛ هیچ واحد، سمت یا مدیری خودکار به افراد اختصاص داده نمی‌شود. ابتدا ارتباط مدیران دارای حلقه را اصلاح کنید، سپس جایگاه سایر افراد را تعیین کنید.</p>
-            <div id="org2-health-items" class="org2-chips"></div>
-        </details>
-
         <div class="org2-stats" aria-label="آمار سازمان">
             <div class="org2-stat"><span>کل پرسنل</span><strong id="org2-stat-total">—</strong><small>همه حساب‌ها</small></div>
             <div class="org2-stat"><span>پرسنل فعال</span><strong id="org2-stat-active">—</strong><small>فعال و در دسترس</small></div>
@@ -54,12 +49,15 @@
             <div class="org2-stat"><span>بدون واحد</span><strong id="org2-stat-unassigned">—</strong><small>نیازمند تعیین جایگاه</small></div>
         </div>
 
+        <div id="org2-company-hierarchy" class="org2-company-hierarchy" aria-label="مدیریت کل سازمان" hidden></div>
+        @if(config('organization_flow.enabled',false))<details class="org2-directory"><summary>سایر جایگاه‌های مدیریتی و ویرایش سمت‌ها</summary>@endif
         <div class="org2-headline">
             <h3>مدیران کل شرکت</h3>
             <button type="button" id="org2-add-company-manager" class="org2-link">+ تعیین مدیر شرکت</button>
         </div>
         <p class="org2-help">تعداد مدیران شرکت آزاد است. این جایگاه از سرپرست و مدیر هر واحد جداست؛ مسیر ارجاع هر شخص از مدیر مستقیم و ساختار واحدش مشخص می‌شود.</p>
         <div id="org2-company-managers" class="org2-chips"></div>
+        @if(config('organization_flow.enabled',false))</details>@endif
 
         <div class="org2-headline">
             <h3>واحدهای سازمان</h3>
@@ -69,6 +67,8 @@
             <p class="org2-empty">در حال دریافت واحدهای سازمانی…</p>
         </div>
 
+        <details class="org2-directory">
+            <summary>جستجو و فهرست کامل حساب‌ها</summary>
         <div class="org2-layout">
             <main class="org2-panel org2-panel-main">
                 <div class="org2-panel-head">
@@ -104,6 +104,12 @@
             </aside>
         </div>
 
+        <details id="org2-health" class="org2-legacy-unassigned" hidden>
+            <summary id="org2-health-summary">بررسی ساختار سازمانی</summary>
+            <p class="org2-help">افراد بدون واحد یا ارتباط‌های قدیمی نیازمند بررسی در این قسمت مشخص می‌شوند.</p>
+            <div id="org2-health-items" class="org2-chips"></div>
+        </details>
+        </details>
         @isset($unassignedUsers)
             <details class="org2-legacy-unassigned">
                 <summary>کاربران بدون مدیر مستقیم ({{ $unassignedUsers->count() }})</summary>
@@ -141,9 +147,14 @@
                         <option value="executive_manager">مدیر اجرایی</option>
                         <option value="ceo">مدیرعامل</option>
                     </select>
+                    @if(config('organization_flow.enabled',false))<div hidden>@endif
                     <label for="org2-person-manager">مدیر مستقیم</label>
                     <select id="org2-person-manager" name="manager_id"></select>
-                    <p class="org2-help">«تبعیت از واحد» یعنی اگر سرپرست یا مدیر واحد تعریف شده باشد، مسیر به‌صورت خودکار از آن محاسبه شود. انتساب صریح بر این تنظیمات اولویت دارد.</p>
+                    @if(config('organization_flow.enabled',false))</div>
+                        <p class="org2-help">مسیر گزارش‌دهی از مسئولان واحد و مدیران اصلی چارت محاسبه می‌شود. برای تغییر آن، مسئولیت‌ها را داخل واحد تنظیم کنید.</p>
+                    @else
+                        <p class="org2-help">«تبعیت از واحد» یعنی اگر سرپرست یا مدیر واحد تعریف شده باشد، مسیر به‌صورت خودکار از آن محاسبه شود. انتساب صریح بر این تنظیمات اولویت دارد.</p>
+                    @endif
                     <button class="org2-btn org2-btn-primary org2-submit" type="submit">ذخیره جایگاه سازمانی</button>
                 </form>
 

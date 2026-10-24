@@ -30,6 +30,7 @@ class LeaveApprovalService
 
     public function canDecide(User $user, Leave $leave): bool
     {
+        if($leave->approval_route==='staged')return app(StagedLeaveService::class)->canDecide($user,$leave);
         if (! $user->isActive() || $user->isBlocked() || (int) $leave->user_id === (int) $user->id) {
             return false;
         }
@@ -65,11 +66,12 @@ class LeaveApprovalService
         if ($user->hasAnyRole(['Admin', 'Accountant'])) {
             return $query;
         }
-        $team = $user->hasAnyRole(['Manager', 'InternalManager', 'internalManager', 'Owner', 'Supervisor'])
+        $team = ($user->hasAnyRole(['Manager', 'InternalManager', 'internalManager', 'Owner', 'Supervisor']) || app(CompanyStructureService::class)->isLeader($user))
             ? $this->organization->subordinateIds($user) : [];
         return $query->where(function (Builder $visible) use ($user, $team): void {
             $visible->where('user_id', $user->id)->orWhere('substitute_user_id', $user->id)
                 ->orWhere('assigned_approver_id', $user->id);
+            if(config('organization_flow.enabled',false))$visible->orWhereHas('steps',fn($q)=>$q->where('approver_id',$user->id));
             if ($team !== []) {
                 $visible->orWhereIn('user_id', $team);
             }

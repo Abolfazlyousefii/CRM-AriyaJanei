@@ -1,5 +1,6 @@
 <x-layouts.app>
     @include('reports.review-history')
+    @include('reports.comments')
     <x-slot name="header">
         <h2 class="font-semibold text-2xl text-center text-gray-800">نمایش گزارش</h2>
     </x-slot>

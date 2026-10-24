@@ -24,6 +24,7 @@ on:
       - "resources/views/admin/organization/board.blade.php"
       - "tests/Feature/PersonnelBoardPhaseTwoTest.php"
       - "tests/Feature/DepartmentMembershipTest.php"
+      - "tests/Feature/CompanyWorkflowTest.php"
       - "app/Http/Controllers/ReportReviewController.php"
       - "app/Http/Controllers/ReportController.php"
       - "app/Services/ReportReviewWorkflowService.php"
@@ -110,7 +111,7 @@ jobs:
           php -l tests/Feature/ReportReviewWorkflowPhaseThreeTest.php
           node --check public/js/report-review.js
       - name: Organization, personnel and review regression tests
-        run: php artisan test --filter="DepartmentMembershipTest|OrganizationalRoutingAcceptanceTest|ReportReviewWorkflowPhaseThreeTest|PersonnelBoardPhaseTwoTest|OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest|PersonnelSectionTest|SubordinateChainReportsTest|UnifiedUserManagementTest|LeaveApprovalSettingsTest|ShopContactWorkflowTest|WholesaleFieldVisitTest"
+        run: php artisan test --filter="CompanyWorkflowTest|DepartmentMembershipTest|OrganizationalRoutingAcceptanceTest|ReportReviewWorkflowPhaseThreeTest|PersonnelBoardPhaseTwoTest|OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest|PersonnelSectionTest|SubordinateChainReportsTest|UnifiedUserManagementTest|LeaveApprovalSettingsTest|ShopContactWorkflowTest|WholesaleFieldVisitTest"
       - name: Full Laravel regression suite (informational)
         continue-on-error: true
         run: php artisan test

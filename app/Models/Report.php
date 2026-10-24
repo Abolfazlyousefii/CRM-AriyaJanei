@@ -74,4 +74,6 @@ class Report extends Model
         return $this->hasMany(ReportAttachment::class);
     }
 
+    public function comments(){return $this->hasMany(ReportComment::class)->orderBy('id');}
+
 }
