@@ -1,6 +1,5 @@
 <x-layouts.app>
     @include('reports.review-history')
-    @include('reports.comments')
     <x-slot name="header">
         <h2 class="font-semibold text-2xl text-center text-gray-800">نمایش گزارش</h2>
     </x-slot>
@@ -165,6 +164,7 @@
     </div>
 </div>
 
+    <div class="w-full max-w-3xl mx-auto px-4">@include('reports.comments')</div>
 </x-layouts.app>
 <script>
     document.querySelectorAll('.clickable-image').forEach(img => {
