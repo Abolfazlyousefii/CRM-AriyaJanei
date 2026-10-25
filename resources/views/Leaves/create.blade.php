@@ -22,7 +22,7 @@
     <div class="bg-white shadow-sm rounded-lg p-6" dir="rtl">
         @if(config('organization_flow.enabled',false))
             <div class="alert alert-info">مسیر: جایگزین هم‌واحد ← مسئول واحد (برای کارمند) ← مدیر داخلی ← مدیر اجرایی.
-                مرخصی عادی روزانه: حداقل ۴۸ ساعت قبل؛ ساعتی: شروع و پایان در یک روز؛ اضطراری: حداکثر سه درخواست در ماه شمسی شروع مرخصی، شامل درخواست ردشده و لغوشده.
+                مرخصی عادی روزانه: حداقل ۴۸ ساعت قبل؛ ساعتی: شروع و پایان در یک روز، با امکان ثبت برای روزهای گذشته؛ اضطراری: حداکثر سه درخواست در ماه شمسی شروع مرخصی، شامل درخواست ردشده و لغوشده.
             </div>
             @if($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif
         @endif
@@ -55,6 +55,7 @@
                         <option value="اضطراری" @selected($selectedLeaveType === 'اضطراری')>اضطراری</option>
                         <option value="استعلاجی" @selected($selectedLeaveType === 'استعلاجی')>استعلاجی</option>
                         <option value="استحقاقی" @selected($selectedLeaveType === 'استحقاقی')>استحقاقی</option>
+                        <option value="ماموریت" @selected($selectedLeaveType === 'ماموریت')>مأموریت</option>
                     </select>
                     @error('leave_type')
                         <span class="text-red-600 text-sm">{{ $message }}</span>

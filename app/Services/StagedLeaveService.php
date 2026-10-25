@@ -18,7 +18,7 @@ class StagedLeaveService
     public function assertRules(User $author, array $data): void
     {
         $start = $data['start_date']->copy()->setTimeFromTimeString($data['start_time']);
-        if ($start->copy()->startOfDay()->lt(now()->startOfDay())) {
+        if ($data['leave_unit'] !== 'ساعتی' && $start->copy()->startOfDay()->lt(now()->startOfDay())) {
             throw ValidationException::withMessages(['start_date' => 'تاریخ شروع نمی‌تواند قبل از امروز باشد.']);
         }
         if ($data['leave_unit'] === 'ساعتی' && ! $data['start_date']->isSameDay($data['end_date'])) {

@@ -283,7 +283,7 @@ class LeaveController extends Controller
     private function validateLeaveForm(Request $request, User $user, ?int $leaveId = null): array
     {
         $validated = $request->validate([
-            'leave_type' => 'required|in:اضطراری,استعلاجی,استحقاقی',
+            'leave_type' => 'required|in:اضطراری,استعلاجی,استحقاقی,ماموریت',
             'leave_unit' => 'required|in:روزانه,ساعتی',
             'start_date' => 'required|string',
             'end_date' => 'required|string',

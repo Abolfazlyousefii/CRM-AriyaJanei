@@ -124,6 +124,38 @@ class CompanyWorkflowTest extends TestCase
         $this->assertSame(3, Leave::withTrashed()->count());
     }
 
+    public function test_hourly_leave_can_be_recorded_retroactively_but_daily_leave_cannot(): void
+    {
+        foreach ([now()->subDay(), now()->subYear()] as $past) {
+            $date = Verta::instance($past)->format('Y/m/d');
+            $this->actingAs($this->worker)->post(route('leaves.store'), $this->payload([
+                'leave_unit' => 'ساعتی', 'start_date' => $date, 'end_date' => $date,
+            ]))->assertSessionHasNoErrors()->assertRedirect(route('leaves'));
+            $leave = Leave::latest('id')->firstOrFail();
+            $this->assertSame('pending', $leave->status);
+            $this->assertSame(['substitute', 'unit', 'internal', 'executive'], $leave->steps()->orderBy('position')->pluck('stage')->all());
+        }
+        $this->post(route('leaves.store'), $this->payload([
+            'start_date' => $date, 'end_date' => $date,
+        ]))->assertSessionHasErrors('start_date');
+        $this->assertDatabaseCount('leaves', 2);
+    }
+
+    public function test_mission_is_available_and_follows_the_same_approval_route(): void
+    {
+        $this->actingAs($this->worker)->get(route('leaves.create'))->assertOk()->assertSee('value="ماموریت"', false);
+        foreach (['ساعتی', 'روزانه'] as $unit) {
+            $this->post(route('leaves.store'), $this->payload(['leave_type' => 'ماموریت', 'leave_unit' => $unit]))
+                ->assertSessionHasNoErrors()->assertRedirect(route('leaves'));
+            $leave = Leave::latest('id')->firstOrFail();
+            $this->assertSame('ماموریت', $leave->leave_type);
+            foreach ([$this->substitute, $this->supervisor, $this->internal, $this->executive] as $actor) {
+                app(StagedLeaveService::class)->decide($leave, $actor, true);
+            }
+            $this->assertSame('final_approved', $leave->fresh()->status);
+        }
+    }
+
     public function test_report_viewers_follow_chart_without_manager_software_role_and_comments_do_not_overwrite(): void
     {
         $report = Report::create(['user_id' => $this->worker->id, 'description' => 'گزارش روزانه', 'status' => 'submitted', 'submitted_at' => now()]);
