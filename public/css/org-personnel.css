@@ -1,4 +1,4 @@
-/* Scoped personnel dashboard — dark navy styling based on approved HTML prototype. */
+/* Scoped personnel dashboard; palette follows the application's theme. */
 .org2 {--org2-bg:#080f1f;--org2-surface:#111c30;--org2-surface-2:#172742;--org2-border:#283a58;--org2-text:#ecf4ff;--org2-muted:#99afcd;--org2-blue:#2976f5;--org2-green:#23c6a3;color:var(--org2-text);background:var(--org2-bg);border-radius:19px;padding:24px;direction:rtl;min-height:600px;box-shadow:0 15px 45px #02091e18;font-family:inherit}
 .org2 *{box-sizing:border-box}.org2 h2,.org2 h3,.org2 p{margin-top:0}.org2 h2{font-size:26px;font-weight:800}.org2 h3{font-size:16px;font-weight:800;margin-bottom:0}.org2 a{color:inherit;text-decoration:none}.org2 button,.org2 select,.org2 input{font:inherit}.org2 button{cursor:pointer}
 .org2-hero{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}.org2-hero p{color:var(--org2-muted);font-size:13px;margin-bottom:0}.org2-hero .org2-kicker{color:#76a9ff;font-size:12px;font-weight:700;margin-bottom:10px}.org2-actions{display:flex;gap:9px;flex-wrap:wrap}
@@ -21,3 +21,32 @@
 .org2-member-picker{max-height:240px;overflow:auto;border:1px solid var(--org2-border);border-radius:10px;padding:5px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.org2-dialog .org2-member{display:flex;align-items:center;gap:9px;padding:9px;margin:0;background:#172742;border-radius:7px;cursor:pointer;min-width:0}.org2-member span{display:flex;flex-direction:column;min-width:0;overflow-wrap:anywhere}.org2-member small{font-size:10px;color:var(--org2-muted)}.org2 .org2-member input,.org2 .org2-routing input{width:18px;min-height:18px;flex-shrink:0;accent-color:#2976f5}.org2-dialog .org2-routing{display:flex;align-items:center;gap:8px;line-height:1.8}.org2-dialog form>*{min-width:0}.org2-dialog h4{margin-bottom:0}.org2-dialog #org2-members-preview{overflow-wrap:anywhere}.org2-company-managers{margin-bottom:12px}
 @media(max-width:600px){.org2-member-picker{grid-template-columns:minmax(0,1fr);max-height:220px}.org2-backdrop{padding:10px}.org2-dialog{max-height:94dvh}.org2-headline{gap:10px;flex-wrap:wrap}}
 .org2-company-hierarchy{display:flex;flex-direction:column;align-items:center;gap:7px;margin:25px 0 5px}.org2-lead-node{display:flex;flex-direction:column;gap:5px;min-width:220px;max-width:100%;padding:15px 22px;background:#153f70;border:1px solid #4185f7;border-radius:14px;color:#fff}.org2-lead-node small{color:#c5dcff;font-size:11px}.org2-lead-internal{background:#154438;border-color:#30b898}.org2-connector{font-size:13px;color:var(--org2-muted)}.org2-unit-people,.org2-unit-people ul{list-style:none;margin:12px 0 0;padding:0;min-width:0}.org2-unit-people ul{border-right:1px solid #385473;margin:5px 7px 8px 0;padding-right:9px}.org2-unit-people button{display:flex;flex-direction:column;gap:3px;text-align:right;width:100%;max-width:100%;border:0;background:#172742;color:#ecf4ff;padding:8px;border-radius:7px;margin-bottom:5px;overflow-wrap:anywhere}.org2-unit-people button span{font-size:11px}.org2-unit-people button small{font-size:10px;color:#a9bedb}.org2-unit-people{max-height:340px;overflow:auto}.org2-directory{margin-top:20px;border:1px solid var(--org2-border);padding:13px;border-radius:12px}.org2-directory>summary{cursor:pointer;font-size:13px;font-weight:700}.org2-units{align-items:start}
+
+/* Match Bootstrap's persisted theme, including dialogs and native form controls. */
+[data-bs-theme="light"] .org2{--org2-bg:#f3f6fc;--org2-surface:#fff;--org2-surface-2:#eaf0fa;--org2-border:#d3deed;--org2-text:#172b49;--org2-muted:#526984;--org2-blue:#1764d9;color-scheme:light}
+[data-bs-theme="dark"] .org2{color-scheme:dark}
+[data-bs-theme="light"] .org2 :is(.org2-btn-muted,.org2-switch,.org2-legacy-unassigned){background:#eaf0fa;color:var(--org2-text)}
+[data-bs-theme="light"] .org2 .org2-stat{background:linear-gradient(155deg,#fff,#edf3fc)}
+[data-bs-theme="light"] .org2 :is(input:not([type=hidden]),select,option){background:#fff;color:var(--org2-text);border-color:var(--org2-border)}
+[data-bs-theme="light"] .org2 input::placeholder{color:#677c96}
+[data-bs-theme="light"] .org2 :is(.org2-person,.org2-listing td,.org2-dialog,.org2-unit-people button,.org2-member){background:#fff;color:var(--org2-text);border-color:var(--org2-border)}
+[data-bs-theme="light"] .org2 :is(.org2-person:hover,.org2-person.is-selected,.org2-unit-people button:hover){background:#eaf2ff;border-color:#76a4ed}
+[data-bs-theme="light"] .org2 :is(.org2-chip,.org2-track li,.org2-close,.org2-disclosure){background:#e6eefb;color:#254d81;border-color:#c1d2ec}
+[data-bs-theme="light"] .org2 :is(.org2-avatar,.org2-unit-icon){background:#dfebff;color:#215cae}
+[data-bs-theme="light"] .org2 :is(.org2-link,.org2-unit-edit,.org2-kicker){color:#1c5cb7}
+[data-bs-theme="light"] .org2 :is(.org2-help,.org2-stat small,.org2-dialog form label,.org2-unit-people button small){color:var(--org2-muted)}
+[data-bs-theme="light"] .org2 :is(.org2-meta dd,.org2-name-btn){color:var(--org2-text)}
+[data-bs-theme="light"] .org2 :is(.org2-tag,.org2-tree-list .org2-tree-list,.org2-meta div,.org2-dialog-top,.org2-unit-edit,.org2-unit-people ul){border-color:var(--org2-border)}
+[data-bs-theme="light"] .org2 .org2-tag{color:#355f94}
+[data-bs-theme="light"] .org2 .org2-switch button.is-current{background:#d5e5ff;color:#174b95}
+[data-bs-theme="light"] .org2 .org2-indicator{background:#def5ec;color:#156549}
+[data-bs-theme="light"] .org2 .org2-indicator.off{background:#fbe6ea;color:#9a3148}
+[data-bs-theme="light"] .org2 .org2-alert{background:#e4efff;color:#224f88;border-color:#aac9ef}
+[data-bs-theme="light"] .org2 :is(.org2-form-error,.org2-alert.is-error,.org2-btn-danger){background:#fff0f1;color:#a52e46;border-color:#e9b7c1}
+[data-bs-theme="light"] .org2 .org2-content{scrollbar-color:#9cacc2 #edf2f9}
+.org2-dialog{overscroll-behavior:contain;scrollbar-gutter:stable;max-height:calc(100dvh - 40px)}
+.org2 :is(.org2-unit-people,.org2-member-picker){scrollbar-width:thin}
+.org2-unit-people{max-height:none;overflow:visible}
+.org2 button:focus-visible,.org2 summary:focus-visible{outline:3px solid #4a92ff;outline-offset:3px}
+@media(max-width:600px){.org2-dialog{max-height:calc(100dvh - 20px)}}
+@media(max-width:480px){.org2-units{grid-template-columns:minmax(0,1fr)}.org2-unit-people button{padding:10px}.org2-unit-people button span{font-size:12px}}

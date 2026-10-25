@@ -353,8 +353,11 @@
   }
 
   function openDialog(type, id = null) {
-    state.lastFocus = document.activeElement;
-    state.bodyOverflow = document.body.style.overflow;
+    if (type === 'person' && !userById(id)) return;
+    if (!state.dialog) {
+      state.lastFocus = document.activeElement;
+      state.bodyOverflow = document.body.style.overflow;
+    }
     state.dialog = type;
     state.editId = id;
     const deptForm = $('org2-edit-dept');
@@ -438,6 +441,7 @@
   }
 
   function closeDialog() {
+    if (!state.dialog) return;
     $('org2-dialog-backdrop').hidden = true;
     document.body.style.overflow = state.bodyOverflow;
     state.dialog = '';
