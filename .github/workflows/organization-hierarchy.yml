@@ -10,6 +10,8 @@ on:
       - "resources/views/**"
       - "public/js/org-personnel.js"
       - "public/js/report-review.js"
+      - "public/js/login-session.js"
+      - "bootstrap/app.php"
       - "routes/**"
       - "tests/**"
       - "composer.json"
@@ -34,6 +36,8 @@ on:
       - "config/report_review.php"
       - "resources/views/reports/review-inbox.blade.php"
       - "public/js/report-review.js"
+      - "public/js/login-session.js"
+      - "bootstrap/app.php"
       - "tests/Feature/ReportReviewWorkflowPhaseThreeTest.php"
       - "tests/Feature/OrganizationalRoutingAcceptanceTest.php"
       - "app/Policies/ReportPolicy.php"
@@ -111,7 +115,8 @@ jobs:
           php -l tests/Feature/ReportReviewWorkflowPhaseThreeTest.php
           node --check public/js/report-review.js
       - name: Organization, personnel and review regression tests
-        run: php artisan test --filter="CompanyWorkflowTest|DepartmentMembershipTest|OrganizationalRoutingAcceptanceTest|ReportReviewWorkflowPhaseThreeTest|PersonnelBoardPhaseTwoTest|OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest|PersonnelSectionTest|SubordinateChainReportsTest|UnifiedUserManagementTest|LeaveApprovalSettingsTest|ShopContactWorkflowTest|WholesaleFieldVisitTest"
+        run: php artisan test --filter="LoginSessionRecoveryTest|CompanyWorkflowTest|DepartmentMembershipTest|OrganizationalRoutingAcceptanceTest|ReportReviewWorkflowPhaseThreeTest|PersonnelBoardPhaseTwoTest|OrganizationHierarchyPhaseOneTest|UserLifecycleAndHierarchyTest|PersonnelSectionTest|SubordinateChainReportsTest|UnifiedUserManagementTest|LeaveApprovalSettingsTest|ShopContactWorkflowTest|WholesaleFieldVisitTest"
       - name: Full Laravel regression suite (informational)
         continue-on-error: true
         run: php artisan test
+

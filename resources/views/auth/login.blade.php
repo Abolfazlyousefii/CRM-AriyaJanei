@@ -16,7 +16,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('login') }}">
+    <form method="POST" action="{{ route('login') }}" data-login-form>
         
         @csrf
 
@@ -78,6 +78,8 @@
             </button>
         </div>
 
+        <p data-login-session-error role="alert" class="mt-3 text-sm text-red-700" hidden></p>
     </form>
+    <script src="{{ asset('js/login-session.js') }}?v={{ filemtime(public_path('js/login-session.js')) }}" defer></script>
 
 </x-guest-layout>
