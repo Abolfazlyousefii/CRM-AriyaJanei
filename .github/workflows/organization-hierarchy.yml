@@ -119,4 +119,3 @@ jobs:
       - name: Full Laravel regression suite (informational)
         continue-on-error: true
         run: php artisan test
-
