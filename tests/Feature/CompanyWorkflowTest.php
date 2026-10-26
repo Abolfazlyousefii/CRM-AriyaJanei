@@ -166,6 +166,7 @@ class CompanyWorkflowTest extends TestCase
 
     public function test_three_short_emergencies_use_three_occurrences_and_entitled_hourly_is_separate(): void
     {
+        $this->travelTo(Carbon::parse('2026-10-26 10:00:00', 'Asia/Tehran'));
         for ($i = 0; $i < 3; $i++) {
             $date = Verta::instance(now()->addDays($i))->format('Y/m/d');
             $this->actingAs($this->worker)->post(route('leaves.store'), $this->payload(['leave_type' => 'اضطراری', 'leave_unit' => 'ساعتی', 'start_date' => $date, 'end_date' => $date, 'end_time' => '12:00']))->assertSessionHasNoErrors();
