@@ -11,7 +11,7 @@ return [
 
         'melipayamak_api' => [
             'token' => env('MELIPAYAMAK_API_TOKEN'),
-            'from'  => env('MELIPAYAMAK_API_FROM_NUMBER', '5000xxx'),
+            'from'  => env('MELIPAYAMAK_API_FROM_NUMBER'),
         ],
 
         'sandbox' => [],

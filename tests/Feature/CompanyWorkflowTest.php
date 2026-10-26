@@ -109,14 +109,14 @@ class CompanyWorkflowTest extends TestCase
         $date = Verta::instance(now()->addDay())->format('Y/m/d');
         $this->actingAs($this->worker)->post(route('leaves.store'), $this->payload(['start_date' => $date, 'end_date' => $date]))->assertSessionHasErrors('start_date');
         $this->post(route('leaves.store'), $this->payload(['start_date' => $date, 'end_date' => $date, 'leave_unit' => 'ساعتی']))->assertSessionHasNoErrors();
-        $this->post(route('leaves.store'), $this->payload(['start_date' => $date, 'end_date' => $date, 'leave_type' => 'اضطراری']))->assertSessionHasNoErrors();
+        $this->post(route('leaves.store'), $this->payload(['start_date' => $date, 'end_date' => $date, 'leave_type' => 'اضطراری', 'leave_unit' => 'ساعتی', 'end_time' => '10:00']))->assertSessionHasNoErrors();
         $this->assertDatabaseCount('leaves', 2);
     }
 
     public function test_emergency_cap_counts_three_submissions_even_when_rejected_or_cancelled(): void
     {
         for ($i = 0; $i < 3; $i++) {
-            $this->actingAs($this->worker)->post(route('leaves.store'), $this->payload(['leave_type' => 'اضطراری']))->assertSessionHasNoErrors();
+            $this->actingAs($this->worker)->post(route('leaves.store'), $this->payload(['leave_type' => 'اضطراری', 'leave_unit' => 'ساعتی', 'end_time' => '10:00']))->assertSessionHasNoErrors();
         }
         Leave::first()->update(['status' => 'final_rejected']);
         Leave::latest('id')->first()->delete();
@@ -139,6 +139,40 @@ class CompanyWorkflowTest extends TestCase
             'start_date' => $date, 'end_date' => $date,
         ]))->assertSessionHasErrors('start_date');
         $this->assertDatabaseCount('leaves', 2);
+    }
+
+    public function test_emergency_is_hourly_and_cannot_exceed_four_hours(): void
+    {
+        $this->actingAs($this->worker)->post(route('leaves.store'), $this->payload(['leave_type' => 'اضطراری']))
+            ->assertSessionHasErrors('leave_unit');
+        $this->post(route('leaves.store'), $this->payload(['leave_type' => 'اضطراری', 'leave_unit' => 'ساعتی', 'end_time' => '13:01']))
+            ->assertSessionHasErrors('end_time');
+        $this->post(route('leaves.store'), $this->payload(['leave_type' => 'اضطراری', 'leave_unit' => 'ساعتی', 'end_time' => '13:00']))
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('leaves', 1);
+    }
+
+    public function test_emergency_daily_total_is_four_hours_without_carrying_unused_hours(): void
+    {
+        $today = Verta::instance(now())->format('Y/m/d');
+        $tomorrow = Verta::instance(now()->addDay())->format('Y/m/d');
+        $base = ['leave_type' => 'اضطراری', 'leave_unit' => 'ساعتی', 'start_date' => $today, 'end_date' => $today];
+        $this->actingAs($this->worker)->post(route('leaves.store'), $this->payload($base + ['end_time' => '11:00']))->assertSessionHasNoErrors();
+        $this->post(route('leaves.store'), $this->payload($base + ['start_time' => '12:00', 'end_time' => '14:00']))->assertSessionHasNoErrors();
+        $this->post(route('leaves.store'), $this->payload($base + ['start_time' => '15:00', 'end_time' => '16:00']))->assertSessionHasErrors('end_time');
+        $this->post(route('leaves.store'), $this->payload(['leave_type' => 'اضطراری', 'leave_unit' => 'ساعتی', 'start_date' => $tomorrow, 'end_date' => $tomorrow, 'end_time' => '14:00']))->assertSessionHasErrors('end_time');
+        $this->assertDatabaseCount('leaves', 2);
+    }
+
+    public function test_three_short_emergencies_use_three_occurrences_and_entitled_hourly_is_separate(): void
+    {
+        for ($i = 0; $i < 3; $i++) {
+            $date = Verta::instance(now()->addDays($i))->format('Y/m/d');
+            $this->actingAs($this->worker)->post(route('leaves.store'), $this->payload(['leave_type' => 'اضطراری', 'leave_unit' => 'ساعتی', 'start_date' => $date, 'end_date' => $date, 'end_time' => '12:00']))->assertSessionHasNoErrors();
+        }
+        $this->post(route('leaves.store'), $this->payload(['leave_type' => 'اضطراری', 'leave_unit' => 'ساعتی', 'end_time' => '10:00']))->assertSessionHasErrors('leave_type');
+        $this->post(route('leaves.store'), $this->payload(['leave_unit' => 'ساعتی']))->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('leaves', 4);
     }
 
     public function test_mission_is_available_and_follows_the_same_approval_route(): void
@@ -271,6 +305,20 @@ class CompanyWorkflowTest extends TestCase
         $this->assertSame('pending', $leave->fresh()->status);
     }
 
+    public function test_executive_code_can_use_the_configured_service_pattern_without_a_sender_line(): void
+    {
+        config(['organization_flow.executive_sms_pattern_id' => '123456']);
+        $leave = $this->executiveStage();
+        $this->mock(SmsManager::class, function ($mock) {
+            $mock->shouldNotReceive('send');
+            $mock->shouldReceive('sendPattern')->once()->withArgs(fn ($phone, $pattern, $args) => $phone === $this->executive->phone && $pattern === '123456' && count($args) === 1 && preg_match('/^[0-9]{4}$/', $args[0]))
+                ->andReturn(['status' => 'success', 'response' => ['recId' => 123456]]);
+        });
+        $this->actingAs($this->internal)->post(route('leaves.executive-code.request', $leave))->assertSessionHasNoErrors();
+        $this->assertSame('sent', DB::table('leave_executive_codes')->where('leave_id', $leave->id)->value('delivery_status'));
+        $this->assertSame('pending', $leave->fresh()->status);
+    }
+
     public function test_rejection_stops_route_and_duplicate_approval_is_forbidden(): void
     {
         $leave = $this->leave();
@@ -299,8 +347,8 @@ class CompanyWorkflowTest extends TestCase
         for ($i = 0; $i < 3; $i++) {
             Leave::create(['user_id' => $this->worker->id, 'leave_type' => 'اضطراری', 'leave_unit' => 'روزانه', 'start_date' => $last, 'end_date' => $last, 'start_time' => '09:00', 'end_time' => '17:00', 'status' => 'final_rejected']);
         }
-        $this->actingAs($this->worker)->post(route('leaves.store'), $this->payload(['leave_type' => 'اضطراری', 'start_date' => '1405/01/30', 'end_date' => '1405/01/30']))->assertSessionHasErrors('leave_type');
-        $this->post(route('leaves.store'), $this->payload(['leave_type' => 'اضطراری', 'start_date' => $next, 'end_date' => $next]))->assertSessionHasNoErrors();
+        $this->actingAs($this->worker)->post(route('leaves.store'), $this->payload(['leave_type' => 'اضطراری', 'leave_unit' => 'ساعتی', 'end_time' => '10:00', 'start_date' => '1405/01/30', 'end_date' => '1405/01/30']))->assertSessionHasErrors('leave_type');
+        $this->post(route('leaves.store'), $this->payload(['leave_type' => 'اضطراری', 'leave_unit' => 'ساعتی', 'end_time' => '10:00', 'start_date' => $next, 'end_date' => $next]))->assertSessionHasNoErrors();
         $this->assertSame(4, Leave::count());
     }
 

@@ -17,6 +17,9 @@ class StagedLeaveService
 
     public function assertRules(User $author, array $data): void
     {
+        if ($data['leave_type'] === 'اضطراری' && $data['leave_unit'] !== 'ساعتی') {
+            throw ValidationException::withMessages(['leave_unit' => 'مرخصی اضطراری فقط به‌صورت ساعتی ثبت می‌شود.']);
+        }
         $start = $data['start_date']->copy()->setTimeFromTimeString($data['start_time']);
         if ($data['leave_unit'] !== 'ساعتی' && $start->copy()->startOfDay()->lt(now()->startOfDay())) {
             throw ValidationException::withMessages(['start_date' => 'تاریخ شروع نمی‌تواند قبل از امروز باشد.']);
@@ -31,6 +34,8 @@ class StagedLeaveService
             throw ValidationException::withMessages(['substitute_user_id' => 'انتخاب جایگزین از همین واحد الزامی است.']);
         }
         if ($data['leave_type'] === 'اضطراری') {
+            $end = $data['end_date']->copy()->setTimeFromTimeString($data['end_time']);
+            $minutes = $start->diffInMinutes($end);
             $jalali = Verta::instance($start);
             $month = Verta::parse($jalali->format('Y/m').'/01')->startMonth();
             $from = Carbon::instance($month->datetime())->startOfDay();
@@ -38,6 +43,20 @@ class StagedLeaveService
             $count = Leave::withTrashed()->where('user_id', $author->id)->where('leave_type', 'اضطراری')->where('start_date', '>=', $from)->where('start_date', '<', $to)->count();
             if ($count >= 3) {
                 throw ValidationException::withMessages(['leave_type' => 'سهمیه سه درخواست اضطراری این ماه شمسی تکمیل شده است؛ درخواست ردشده یا لغوشده نیز شمرده می‌شود.']);
+            }
+            if ($minutes > 240) {
+                throw ValidationException::withMessages(['end_time' => 'هر نوبت مرخصی اضطراری حداکثر ۴ ساعت است؛ ساعت استفاده‌نشده ذخیره نمی‌شود.']);
+            }
+            // The controller holds the author's row lock, so simultaneous submissions cannot exceed this cap.
+            $usedMinutes = Leave::withTrashed()->where('user_id', $author->id)->where('leave_type', 'اضطراری')
+                ->whereDate('start_date', $start->toDateString())->get()->sum(function (Leave $previous) {
+                    $from = $previous->start_date->copy()->setTimeFromTimeString($previous->start_time->format('H:i:s'));
+                    $to = $previous->end_date->copy()->setTimeFromTimeString($previous->end_time->format('H:i:s'));
+
+                    return max(0, $from->diffInMinutes($to));
+                });
+            if ($usedMinutes + $minutes > 240) {
+                throw ValidationException::withMessages(['end_time' => 'مجموع درخواست‌های اضطراری یک روز نمی‌تواند بیشتر از ۴ ساعت باشد.']);
             }
         }
     }

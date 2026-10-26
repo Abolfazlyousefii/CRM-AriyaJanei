@@ -59,10 +59,15 @@ class ExecutiveLeaveCodeService
             return [DB::table('leave_executive_codes')->where('leave_id', $locked->id)->value('id'), $step->id, $executive->phone];
         });
         $sent = false;
+        $invalidSender = false;
         try {
             $context = $leave->fresh()->load('user');
-            $result = app(SmsManager::class)->send($mobile, 'مرخصی شماره '.$leave->id.'، '.$context->user?->name.'، '.verta($context->start_date)->format('Y/m/d').
-                '؛ کد تأیید نهایی: '.$code.' — اعتبار ۵ دقیقه. فقط برای تأیید همین درخواست.');
+            $pattern = config('organization_flow.executive_sms_pattern_id');
+            $result = filled($pattern)
+                ? app(SmsManager::class)->sendPattern($mobile, (string) $pattern, [$code])
+                : app(SmsManager::class)->send($mobile, 'مرخصی شماره '.$leave->id.'، '.$context->user?->name.'، '.verta($context->start_date)->format('Y/m/d').
+                    '؛ کد تأیید نهایی: '.$code.' — اعتبار ۵ دقیقه. فقط برای تأیید همین درخواست.');
+            $invalidSender = ($result['error_code'] ?? null) === 'invalid_sender';
             $body = $result['response'] ?? null;
             if (is_string($body)) {
                 $body = json_decode($body, true) ?? $body;
@@ -75,6 +80,9 @@ class ExecutiveLeaveCodeService
         DB::table('leave_executive_codes')->where('id', $challengeId)->where('step_id', $stepId)->where('delivery_status', 'sending')
             ->update(['delivery_status' => $sent ? 'sent' : 'failed', 'expires_at' => now()->addMinutes(5), 'updated_at' => now()]);
         if (! $sent) {
+            if ($invalidSender) {
+                throw ValidationException::withMessages(['code' => 'خط فرستنده پیامک تنظیم نشده یا معتبر نیست؛ مدیر سیستم باید شماره خط فعال پنل را تنظیم کند. درخواست هنوز تأیید نشده است.']);
+            }
             throw ValidationException::withMessages(['code' => 'ارسال پیامک تأیید نشد؛ درخواست هنوز تأیید نشده است. پس از یک دقیقه دوباره تلاش کنید.']);
         }
     }

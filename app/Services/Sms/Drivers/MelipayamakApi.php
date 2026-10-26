@@ -78,10 +78,12 @@ class MelipayamakApi implements SmsDriver {
     }
 
     public function send( string $mobile, string $message ): array {
-        if ( !$this->defaultFrom ) {
+        if ( !preg_match('/^\+?[0-9]{4,16}$/', (string) $this->defaultFrom) ) {
             return [
                 'driver'   => 'melipayamak_api',
-                'response' => [ 'status' => 'شماره فرستنده (from) در کانفیگ تنظیم نشده است.' ],
+                'status' => 'failed',
+                'error_code' => 'invalid_sender',
+                'response' => [ 'status' => 'شماره خط فرستنده پیامک معتبر نیست؛ مدیر سیستم باید خط فعال پنل را تنظیم کند.' ],
             ];
         }
 

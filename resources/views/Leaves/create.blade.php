@@ -22,7 +22,8 @@
     <div class="bg-white shadow-sm rounded-lg p-6" dir="rtl">
         @if(config('organization_flow.enabled',false))
             <div class="alert alert-info">مسیر: جایگزین هم‌واحد ← مسئول واحد (برای کارمند) ← مدیر داخلی ← مدیر اجرایی.
-                مرخصی عادی روزانه: حداقل ۴۸ ساعت قبل؛ ساعتی: شروع و پایان در یک روز، با امکان ثبت برای روزهای گذشته؛ اضطراری: حداکثر سه درخواست در ماه شمسی شروع مرخصی، شامل درخواست ردشده و لغوشده.
+                مرخصی عادی روزانه: حداقل ۴۸ ساعت قبل؛ ساعتی: شروع و پایان در یک روز، با امکان ثبت برای روزهای گذشته.
+                اضطراری: فقط ساعتی، حداکثر ۳ نوبت در ماه شمسی شروع مرخصی و هر نوبت حداکثر ۴ ساعت؛ مجموع یک روز نیز حداکثر ۴ ساعت است. ساعت باقی‌مانده ذخیره نمی‌شود و درخواست ردشده یا لغوشده نیز یک نوبت حساب می‌شود.
             </div>
             @if($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif
         @endif
@@ -60,6 +61,7 @@
                     @error('leave_type')
                         <span class="text-red-600 text-sm">{{ $message }}</span>
                     @enderror
+                    <p id="emergency-leave-help" class="text-sm mt-2" role="status" hidden>اضطراری فقط ساعتی است؛ هر درخواست حداکثر ۴ ساعت و مجموع یک روز حداکثر ۴ ساعت. هر درخواست کوتاه‌تر نیز یک نوبت از ۳ نوبت ماه شمسی حساب می‌شود.</p>
                 </div>
 
                 <div>
@@ -167,6 +169,18 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const type = document.getElementById('leave_type');
+    const unit = document.getElementById('leave_unit');
+    const daily = unit.querySelector('option[value="روزانه"]');
+    function updateEmergencyUnit() {
+        const emergency = type.value === 'اضطراری';
+        daily.disabled = emergency;
+        if (emergency) unit.value = 'ساعتی';
+        document.getElementById('emergency-leave-help').hidden = !emergency;
+    }
+    type.addEventListener('change', updateEmergencyUnit);
+    updateEmergencyUnit();
+
     flatpickr("#start_time", {
         enableTime: true,
         noCalendar: true,
