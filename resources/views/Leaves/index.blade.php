@@ -258,10 +258,14 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    jalaliDatepicker.startWatch({
-        selector: '.jalali-datepicker',
-        time: false,
-        format: 'YYYY/MM/DD'
-    });
+    if (window.jalaliDatepicker && typeof window.jalaliDatepicker.startWatch === 'function') {
+        window.jalaliDatepicker.startWatch({ selector: '.jalali-datepicker', time: false, format: 'YYYY/MM/DD' });
+    } else {
+        document.querySelectorAll('.jalali-datepicker').forEach(function (input) {
+            input.readOnly = false;
+            input.placeholder = '۱۴۰۵/۰۱/۰۱';
+            input.title = 'تاریخ شمسی را به شکل سال/ماه/روز وارد کنید.';
+        });
+    }
 });
 </script>

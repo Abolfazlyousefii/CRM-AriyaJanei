@@ -181,25 +181,25 @@ document.addEventListener('DOMContentLoaded', function () {
     type.addEventListener('change', updateEmergencyUnit);
     updateEmergencyUnit();
 
-    flatpickr("#start_time", {
-        enableTime: true,
-        noCalendar: true,
-        dateFormat: "H:i",
-        time_24hr: true
+    ['start_time', 'end_time'].forEach(function (name) {
+        if (typeof window.flatpickr === 'function') {
+            window.flatpickr('#' + name, { enableTime: true, noCalendar: true, dateFormat: 'H:i', time_24hr: true });
+        } else {
+            const input = document.getElementById(name);
+            input.type = 'time';
+            input.step = '60';
+        }
     });
 
-    flatpickr("#end_time", {
-        enableTime: true,
-        noCalendar: true,
-        dateFormat: "H:i",
-        time_24hr: true
-    });
-
-    jalaliDatepicker.startWatch({
-        selector: '[data-jdp]',
-        time: false,
-        format: 'YYYY/MM/DD'
-    });
+    if (window.jalaliDatepicker && typeof window.jalaliDatepicker.startWatch === 'function') {
+        window.jalaliDatepicker.startWatch({ selector: '[data-jdp]', time: false, format: 'YYYY/MM/DD' });
+    } else {
+        document.querySelectorAll('[data-jdp]').forEach(function (input) {
+            input.readOnly = false;
+            input.placeholder = '۱۴۰۵/۰۱/۰۱';
+            input.title = 'تاریخ شمسی را به شکل سال/ماه/روز وارد کنید.';
+        });
+    }
 
 });
 </script>
