@@ -1,0 +1,3325 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>بانکداری اینترنتی دانشگاه — نسخه نمایشی</title>
+
+  <style>
+    :root{
+      --header:#595b5d;
+      --header-dark:#2c4a4d;
+      --page:#ececec;
+      --card:#fff;
+      --line:#d6d6d6;
+      --text:#222;
+      --muted:#888;
+      --accent:#f0b600;
+      --danger:#ef3038;
+      --green:#15972a;
+      --shadow:0 2px 12px rgba(0,0,0,.22);
+      --radius:5px;
+      --sidebar:255px;
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      min-width:320px;
+      font-family:Tahoma, Arial, sans-serif;
+      color:var(--text);
+      background:
+        linear-gradient(135deg,rgba(255,255,255,.72),rgba(255,255,255,0) 45%),
+        repeating-linear-gradient(145deg,#efefef 0 95px,#e7e7e7 95px 190px);
+    }
+
+    button,input{font:inherit}
+    button{cursor:pointer}
+    a{text-decoration:none;color:inherit}
+    .hidden{display:none!important}
+
+    .demo-note{
+      position:fixed;
+      z-index:5000;
+      left:10px;
+      bottom:10px;
+      padding:7px 11px;
+      border-radius:5px;
+      background:#171717;
+      color:#fff;
+      font-size:10px;
+      box-shadow:0 4px 16px rgba(0,0,0,.25);
+    }
+
+    .toast{
+      position:fixed;
+      z-index:6000;
+      left:50%;
+      top:82px;
+      transform:translateX(-50%) translateY(-16px);
+      opacity:0;
+      pointer-events:none;
+      background:#242424;
+      color:#fff;
+      border-radius:6px;
+      padding:10px 15px;
+      font-size:12px;
+      box-shadow:0 5px 18px rgba(0,0,0,.25);
+      transition:.2s ease;
+    }
+
+    .toast.show{
+      opacity:1;
+      transform:translateX(-50%) translateY(0);
+    }
+
+    /* Header */
+    .topbar{
+      min-height:79px;
+      border-top:5px solid var(--header-dark);
+      background:var(--header);
+      color:#fff;
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr;
+      align-items:center;
+      gap:12px;
+      padding:0 18px;
+    }
+
+    .brand{
+      justify-self:start;
+      display:flex;
+      align-items:center;
+      gap:11px;
+      min-width:0;
+    }
+
+    .brand-logo{
+      width:46px;
+      height:46px;
+      flex:0 0 46px;
+    }
+
+    .brand-copy strong{
+      display:block;
+      font-size:23px;
+      line-height:1;
+      white-space:nowrap;
+    }
+
+    .brand-copy small{
+      display:block;
+      direction:ltr;
+      margin-top:5px;
+      font-size:11px;
+      opacity:.9;
+    }
+
+    .top-title{
+      text-align:center;
+      font-size:17px;
+      font-weight:700;
+    }
+
+    .top-actions{
+      justify-self:end;
+      display:flex;
+      align-items:center;
+      gap:7px;
+    }
+
+    .icon-btn{
+      width:34px;
+      height:34px;
+      display:grid;
+      place-items:center;
+      border:0;
+      border-radius:6px;
+      background:transparent;
+      color:#fff;
+      font-size:19px;
+    }
+
+    .icon-btn:hover{background:rgba(255,255,255,.12)}
+
+    .subbar{
+      min-height:35px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:0 15px;
+      background:#f5f5f5;
+      border-bottom:1px solid #c9c9c9;
+      box-shadow:0 3px 8px rgba(0,0,0,.15);
+      font-size:11px;
+    }
+
+    .timer-pill{
+      padding:4px 13px;
+      border:1px solid #b5dbb6;
+      border-radius:13px;
+      background:#e4f7e5;
+      color:#08761d;
+      font-weight:700;
+      white-space:nowrap;
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid #ccc;
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    /* Login */
+    .login-wrap{padding:18px 14px 48px}
+
+    .login-tabs{
+      height:41px;
+      display:flex;
+      align-items:flex-end;
+      justify-content:flex-start;
+      padding:0 8px;
+      border-bottom:1px solid #ddd;
+      overflow-x:auto;
+    }
+
+    .login-tab{
+      flex:0 0 auto;
+      height:40px;
+      padding:0 18px;
+      border:0;
+      border-bottom:3px solid transparent;
+      background:#fff;
+      color:#999;
+      white-space:nowrap;
+      font-size:12px;
+    }
+
+    .login-tab.active{
+      color:#444;
+      font-weight:700;
+      border-bottom-color:var(--accent);
+    }
+
+    .login-grid{
+      display:grid;
+      grid-template-columns:minmax(360px,34%) minmax(0,66%);
+      min-height:465px;
+    }
+
+    .login-side{
+      padding:22px 18px 25px;
+      border-left:1px solid var(--line);
+    }
+
+    .security-side{padding:22px 28px 25px}
+    .section-title{margin:0;font-size:15px;font-weight:700}
+
+    .warning{
+      margin:10px 0 22px;
+      font-size:12px;
+      line-height:1.95;
+    }
+
+    .field{position:relative;margin:17px 0}
+    .field input{
+      width:100%;
+      height:44px;
+      padding:17px 4px 5px;
+      border:0;
+      border-bottom:1px solid #777;
+      background:transparent;
+      outline:none;
+    }
+
+    .field label{
+      position:absolute;
+      right:4px;
+      top:14px;
+      color:#999;
+      font-size:12px;
+      pointer-events:none;
+      transition:.15s ease;
+    }
+
+    .field input:focus{border-bottom:2px solid var(--accent)}
+    .field input:focus + label,
+    .field input:not(:placeholder-shown) + label{
+      top:-3px;
+      font-size:10px;
+      color:#777;
+    }
+
+    .otp-row{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      gap:14px;
+      align-items:end;
+    }
+
+    .otp-row .field{margin-bottom:0}
+
+    .otp-btn{
+      min-width:105px;
+      height:36px;
+      border:1px solid #79a176;
+      border-radius:4px;
+      background:#dff1dc;
+      color:#0e7b19;
+      font-weight:700;
+    }
+
+    .login-btn{
+      display:block;
+      width:205px;
+      max-width:100%;
+      height:39px;
+      margin:44px auto 34px;
+      border:0;
+      border-radius:5px;
+      background:var(--danger);
+      color:#fff;
+      font-weight:700;
+      box-shadow:0 2px 5px rgba(0,0,0,.24);
+    }
+
+    .login-links{
+      display:flex;
+      justify-content:space-between;
+      gap:18px;
+      padding:0 28px;
+    }
+
+    .login-links a{
+      color:#21a4e4;
+      font-size:14px;
+      font-weight:700;
+    }
+
+    .security-list{
+      list-style:none;
+      margin:22px 0 0;
+      padding:0;
+    }
+
+    .security-list li{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      margin:18px 0;
+      font-size:12px;
+      line-height:1.9;
+    }
+
+    .shield{
+      width:18px;
+      height:18px;
+      flex:0 0 18px;
+      margin-top:3px;
+    }
+
+    .security-note{
+      margin-top:42px;
+      text-align:center;
+      font-size:18px;
+      font-weight:700;
+      line-height:1.8;
+    }
+
+    .security-note a{
+      color:red;
+      text-decoration:underline;
+    }
+
+    /* Dashboard */
+    .dashboard-shell{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) var(--sidebar);
+      direction:ltr;
+      min-height:calc(100vh - 114px);
+    }
+
+    .dashboard-main{
+      direction:rtl;
+      min-width:0;
+      padding:12px 16px 35px;
+    }
+
+    .dashboard-grid{
+      display:grid;
+      grid-template-columns:minmax(310px,31%) minmax(0,69%);
+      gap:25px;
+      align-items:start;
+      direction:ltr;
+    }
+
+    .side-column,
+    .main-column{
+      min-width:0;
+      direction:rtl;
+    }
+
+    /* Sidebar */
+    .sidebar{
+      direction:rtl;
+      background:#f3f3f3;
+      border-left:1px solid #bbb;
+      box-shadow:-3px 0 11px rgba(0,0,0,.14);
+    }
+
+    .sidebar-search{
+      height:40px;
+      display:flex;
+      align-items:center;
+      gap:9px;
+      padding:0 11px;
+      background:#646466;
+      color:#fff;
+    }
+
+    .sidebar-search input{
+      flex:1;
+      min-width:0;
+      border:0;
+      outline:none;
+      background:transparent;
+      color:#fff;
+      text-align:right;
+    }
+
+    .sidebar-search input::placeholder{color:#d0d0d0}
+
+    .sidebar-close{
+      display:none;
+      width:34px;
+      height:34px;
+      border:0;
+      background:transparent;
+      color:#fff;
+      font-size:28px;
+    }
+
+    .menu-list{
+      list-style:none;
+      margin:0;
+      padding:0;
+    }
+
+    .menu-list li{
+      min-height:41px;
+      display:flex;
+      align-items:center;
+      gap:9px;
+      padding:8px 11px;
+      border-bottom:1px solid #aaa;
+      background:#f3f3f3;
+      font-size:13px;
+      cursor:pointer;
+    }
+
+    .menu-list li:hover{background:#fff9e8}
+    .menu-icon{width:25px;flex:0 0 25px;text-align:center;font-size:18px;opacity:.82}
+
+    /* Left column */
+    .panel-head{
+      height:40px;
+      display:flex;
+      align-items:flex-end;
+      justify-content:flex-start;
+      padding:0 6px;
+      border-bottom:1px solid #ddd;
+      overflow-x:auto;
+    }
+
+    .panel-tab{
+      flex:0 0 auto;
+      height:39px;
+      display:flex;
+      align-items:center;
+      padding:0 15px;
+      border-bottom:3px solid transparent;
+      color:#999;
+      font-size:12px;
+      white-space:nowrap;
+    }
+
+    .panel-tab.active{
+      color:#444;
+      font-weight:700;
+      border-bottom-color:var(--accent);
+    }
+
+    .profile-card{
+      min-height:540px;
+      position:relative;
+    }
+
+    .profile-grid{
+      padding:18px 22px;
+      display:grid;
+      grid-template-columns:minmax(125px,1fr) minmax(0,1fr);
+      gap:18px 20px;
+      font-size:12px;
+      line-height:1.65;
+    }
+
+    .profile-label{white-space:nowrap}
+    .profile-value{
+      color:#f11;
+      font-weight:700;
+      direction:ltr;
+      text-align:left;
+      overflow-wrap:anywhere;
+    }
+
+    .profile-name{
+      direction:rtl;
+      text-align:left;
+      unicode-bidi:plaintext;
+    }
+
+    .lock-watermark{
+      position:absolute;
+      left:20px;
+      top:168px;
+      width:98px;
+      height:112px;
+      opacity:.07;
+      pointer-events:none;
+    }
+
+    .lock-watermark::before{
+      content:"";
+      position:absolute;
+      left:21px;
+      top:0;
+      width:54px;
+      height:58px;
+      border:17px solid #777;
+      border-bottom:0;
+      border-radius:45px 45px 0 0;
+    }
+
+    .lock-watermark::after{
+      content:"";
+      position:absolute;
+      left:0;
+      bottom:0;
+      width:98px;
+      height:78px;
+      border-radius:0 0 8px 8px;
+      background:#777;
+    }
+
+    .club-card{
+      min-height:352px;
+      margin-top:18px;
+    }
+
+    .expand-corner{
+      margin-left:auto;
+      align-self:center;
+      padding:0 5px;
+      color:#153149;
+      font-size:15px;
+    }
+
+    .club-body{
+      padding:10px 5px 0;
+      text-align:center;
+      color:#555;
+      font-size:12px;
+    }
+
+    .club-name{padding:1px 12px 18px}
+
+    .club-logo{
+      display:block;
+      width:92px;
+      height:92px;
+      margin:18px auto;
+    }
+
+    .club-description{
+      margin:0;
+      padding:0 12px;
+      font-size:10px;
+      line-height:2;
+      color:#333;
+      text-align:justify;
+      text-align-last:center;
+    }
+
+    .club-join{
+      width:calc(100% - 10px);
+      height:47px;
+      margin:28px 5px 5px;
+      border:0;
+      border-top:5px solid #a8e0e2;
+      background:#24afb4;
+      color:#fff;
+      font-size:16px;
+      font-weight:700;
+    }
+
+    /* Accounts */
+    .accounts-card{min-height:540px}
+    .accounts-title{padding:14px 18px 10px;font-size:14px;font-weight:700}
+    .accounts-wrap{padding:0 14px 16px;overflow-x:auto}
+
+    .accounts-table{
+      width:100%;
+      min-width:700px;
+      table-layout:fixed;
+      border-collapse:collapse;
+      font-size:12px;
+    }
+
+    .accounts-table th{
+      padding:10px 8px;
+      background:#e4e4e4;
+      border-bottom:1px solid #cfcfcf;
+      text-align:center;
+    }
+
+    .accounts-table td{
+      padding:13px 8px;
+      border-bottom:1px solid #ddd;
+      text-align:center;
+      background:#fff;
+    }
+
+    .account-row{cursor:pointer}
+    .account-row:nth-of-type(4n + 3) td{background:#f5f5f5}
+    .account-row:hover td{background:#fff9e8}
+    .account-row.is-open td{background:#fffdf5}
+
+    .status-icon{
+      display:inline-grid;
+      place-items:center;
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      background:#18374b;
+      color:#fff;
+      font-size:15px;
+      font-weight:700;
+      line-height:1;
+    }
+
+    .account-row.is-open .status-icon{background:#f11}
+
+    .toggle-details{
+      width:34px;
+      height:30px;
+      padding:0;
+      border:0;
+      border-radius:5px;
+      background:transparent;
+      color:#18374b;
+    }
+
+    .toggle-details:hover{background:#e8edf0}
+
+    .chevron{
+      display:block;
+      font-size:20px;
+      line-height:1;
+      transition:transform .2s ease;
+    }
+
+    .account-row.is-open .chevron{transform:rotate(180deg)}
+
+    .details-row td{
+      padding:0!important;
+      border-bottom:0;
+      background:#fffdf5!important;
+      text-align:right;
+    }
+
+    .details-animation{
+      display:grid;
+      grid-template-rows:0fr;
+      transition:grid-template-rows .28s ease;
+    }
+
+    .details-row.is-open .details-animation{grid-template-rows:1fr}
+    .details-overflow{min-height:0;overflow:hidden}
+
+    .account-details{
+      padding:14px 20px 18px;
+      border-bottom:1px solid #e2d9bb;
+      background:#fffdf5;
+      font-size:12px;
+      line-height:2.25;
+    }
+
+    .account-details > div{
+      display:flex;
+      gap:6px;
+      align-items:flex-start;
+    }
+
+    .account-details span{white-space:nowrap}
+    .account-details strong{font-weight:400;overflow-wrap:anywhere}
+    .amount-green,.amount-green span,.amount-green strong{color:var(--green)}
+    .ltr{direction:ltr;unicode-bidi:embed}
+
+    .promo-row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:18px;
+    }
+
+    .promo{
+      min-height:68px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:10px;
+      border:1px solid #ccc;
+      border-radius:4px;
+      background:#fff;
+      box-shadow:var(--shadow);
+      text-align:center;
+      font-size:19px;
+      font-weight:700;
+    }
+
+    .services-card{margin-top:16px;min-height:180px}
+
+    .services-tabs{
+      height:40px;
+      display:flex;
+      align-items:flex-end;
+      justify-content:flex-start;
+      padding:0 8px;
+      border-bottom:1px solid #ddd;
+      overflow-x:auto;
+    }
+
+    .services-tab{
+      flex:0 0 auto;
+      height:39px;
+      display:flex;
+      align-items:center;
+      padding:0 14px;
+      border-bottom:3px solid transparent;
+      color:#999;
+      font-size:12px;
+      white-space:nowrap;
+    }
+
+    .services-tab.active{
+      color:#444;
+      font-weight:700;
+      border-bottom-color:var(--accent);
+    }
+
+    .service-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+      padding:18px 14px;
+    }
+
+    .service-item{
+      min-height:92px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:12px 14px;
+      border:1px solid #dadada;
+      border-radius:5px;
+      background:#fbfbfb;
+    }
+
+    .service-text{
+      display:flex;
+      flex-direction:column;
+      gap:5px;
+      color:#2f2f2f;
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .service-icon{
+      width:55px;
+      height:55px;
+      flex:0 0 55px;
+      display:grid;
+      place-items:center;
+      border-right:1px solid #d3d3d3;
+      background:#fff;
+      color:#d9728c;
+      font-size:31px;
+    }
+
+    .mobile-menu-handle{
+      display:none;
+      position:fixed;
+      z-index:2300;
+      right:0;
+      top:260px;
+      width:56px;
+      height:58px;
+      align-items:center;
+      justify-content:center;
+      border:0;
+      border-radius:0 0 0 2px;
+      background:#656567;
+      color:#fff;
+      box-shadow:0 2px 10px rgba(0,0,0,.25);
+      font-size:31px;
+    }
+
+    .menu-overlay{display:none}
+
+    @media (max-width:1100px){
+      :root{--sidebar:220px}
+      .dashboard-grid{
+        grid-template-columns:minmax(280px,34%) minmax(0,66%);
+        gap:16px;
+      }
+    }
+
+    /* Mobile layout closely matching the supplied screenshots */
+    @media (max-width:760px){
+      body{padding-bottom:18px}
+
+      .topbar{
+        min-height:120px;
+        grid-template-columns:26px 1fr 26px;
+        gap:8px;
+        padding:0 12px;
+      }
+
+      .top-actions{
+        justify-self:start;
+        gap:0;
+      }
+
+      .top-actions .icon-btn{display:none}
+      .top-actions .more-btn{
+        display:grid;
+        width:26px;
+        height:26px;
+        font-size:24px;
+      }
+
+      .brand{
+        grid-column:2;
+        justify-self:center;
+        gap:8px;
+      }
+
+      .brand-logo{
+        width:42px;
+        height:42px;
+        flex-basis:42px;
+      }
+
+      .brand-copy strong{font-size:18px}
+      .brand-copy small{font-size:10px}
+
+      .top-title{
+        grid-column:1/-1;
+        grid-row:2;
+        min-height:39px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        margin:0 -12px;
+        border-top:1px solid rgba(255,255,255,.08);
+        border-bottom:1px solid #cfcfcf;
+        background:#f3f3f3;
+        color:#333;
+        box-shadow:0 2px 7px rgba(0,0,0,.1);
+        font-size:13px;
+      }
+
+      .subbar{
+        height:0;
+        min-height:0;
+        padding:0;
+        overflow:visible;
+        border:0;
+        background:transparent;
+        box-shadow:none;
+      }
+
+      .subbar span:not(.timer-pill){display:none}
+      .timer-pill{
+        position:relative;
+        margin:8px 14px 0 auto;
+        padding:4px 12px;
+      }
+
+      .dashboard-shell{display:block}
+      .dashboard-main{padding:16px 10px 26px}
+
+      .dashboard-grid{
+        grid-template-columns:1fr;
+        gap:16px;
+        direction:rtl;
+      }
+
+      .main-column{order:1}
+      .side-column{order:2}
+
+      .sidebar{
+        position:fixed;
+        z-index:3200;
+        top:0;
+        right:0;
+        width:min(82vw,285px);
+        height:100dvh;
+        overflow-y:auto;
+        transform:translateX(110%);
+        transition:transform .25s ease;
+        box-shadow:-10px 0 30px rgba(0,0,0,.32);
+      }
+
+      body.menu-open .sidebar{transform:translateX(0)}
+      .sidebar-close{display:grid;place-items:center}
+
+      .menu-overlay{
+        display:block;
+        position:fixed;
+        z-index:3100;
+        inset:0;
+        background:rgba(0,0,0,.35);
+        opacity:0;
+        visibility:hidden;
+        transition:.25s ease;
+      }
+
+      body.menu-open .menu-overlay{
+        opacity:1;
+        visibility:visible;
+      }
+
+      .mobile-menu-handle{display:flex}
+
+      .accounts-card,.profile-card,.club-card,.services-card,.promo{
+        border-radius:5px;
+      }
+
+      .accounts-card{min-height:auto}
+      .accounts-title{
+        padding:14px 12px 12px;
+        font-size:12px;
+      }
+
+      .accounts-wrap{
+        padding:0 8px 10px;
+        overflow:visible;
+      }
+
+      .accounts-table{
+        min-width:0;
+        width:100%;
+        table-layout:auto;
+      }
+
+      .accounts-table th{
+        padding:10px 4px;
+        font-size:12px;
+      }
+
+      .accounts-table td{
+        padding:12px 4px;
+        font-size:11px;
+      }
+
+      .accounts-table th:nth-child(1),
+      .accounts-table td:nth-child(1){width:10%}
+      .accounts-table th:nth-child(2),
+      .accounts-table td:nth-child(2){width:11%}
+      .accounts-table th:nth-child(3),
+      .accounts-table td:nth-child(3){width:31%}
+      .accounts-table th:nth-child(4),
+      .accounts-table td:nth-child(4){width:30%}
+      .accounts-table th:nth-child(5),
+      .accounts-table td:nth-child(5){width:18%}
+
+      .status-icon{
+        width:27px;
+        height:27px;
+        font-size:24px;
+      }
+
+      .toggle-details{
+        width:26px;
+        height:26px;
+      }
+
+      .chevron{font-size:16px}
+
+      .account-details{
+        padding:16px 10px 18px;
+        font-size:11px;
+        line-height:2.35;
+        text-align:right;
+      }
+
+      .account-details > div{
+        display:block;
+        text-align:right;
+      }
+
+      .profile-card{min-height:auto}
+
+      .panel-head{justify-content:flex-start}
+      .panel-tab{
+        padding:0 13px;
+        font-size:11px;
+      }
+
+      .profile-grid{
+        padding:18px 16px 28px;
+        grid-template-columns:minmax(110px,1fr) minmax(0,1fr);
+        gap:16px 12px;
+        font-size:11px;
+      }
+
+      .profile-value{font-size:11px}
+
+      .lock-watermark{
+        left:14px;
+        top:auto;
+        bottom:18px;
+        width:87px;
+        height:100px;
+      }
+
+      .lock-watermark::before{
+        left:18px;
+        width:48px;
+        height:52px;
+        border-width:15px;
+      }
+
+      .lock-watermark::after{
+        width:87px;
+        height:70px;
+      }
+
+      .promo-row{
+        grid-template-columns:1fr;
+        gap:10px;
+      }
+
+      .promo{
+        min-height:56px;
+        font-size:14px;
+      }
+
+      .club-card{min-height:auto}
+      .club-logo{
+        width:72px;
+        height:72px;
+        margin:14px auto;
+      }
+
+      .club-description{
+        padding:0 10px;
+        font-size:9px;
+        line-height:2.05;
+      }
+
+      .club-join{
+        height:44px;
+        margin-top:18px;
+        font-size:13px;
+      }
+
+      .services-tab{
+        padding:0 12px;
+        font-size:11px;
+      }
+
+      .service-grid{
+        grid-template-columns:1fr;
+        gap:12px;
+        padding:18px 12px;
+      }
+
+      .service-item{
+        min-height:92px;
+        padding:12px 10px 12px 12px;
+      }
+
+      .service-text{font-size:14px}
+
+      .service-icon{
+        width:60px;
+        height:58px;
+        flex-basis:60px;
+        font-size:30px;
+      }
+
+      .login-wrap{padding:10px 8px 34px}
+      .login-grid{grid-template-columns:1fr}
+      .login-side{
+        border-left:0;
+        border-bottom:1px solid var(--line);
+        padding:18px 14px 20px;
+      }
+      .security-side{padding:18px 14px 20px}
+      .otp-row{grid-template-columns:1fr;gap:8px}
+      .otp-btn{width:100%;height:40px}
+      .login-btn{width:100%;height:42px;margin:28px auto 22px}
+      .login-links{justify-content:center;flex-wrap:wrap;padding:0}
+      .security-note{font-size:16px;margin-top:30px}
+      .demo-note{left:8px;right:8px;text-align:center}
+    }
+
+    @media (max-width:430px){
+      .brand-copy strong{font-size:17px}
+      .brand-copy small{display:none}
+      .accounts-table th{font-size:11px}
+      .accounts-table td{font-size:10px}
+      .account-details{font-size:10px}
+      .service-text{font-size:13px}
+    }
+
+    /* Session timeout dialog */
+    .session-modal{
+      position:fixed;
+      z-index:7000;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      background:rgba(0,0,0,.46);
+      opacity:0;
+      visibility:hidden;
+      transition:opacity .2s ease, visibility .2s ease;
+    }
+
+    .session-modal.show{
+      opacity:1;
+      visibility:visible;
+    }
+
+    .session-modal-box{
+      width:min(92vw,420px);
+      overflow:hidden;
+      border:1px solid #c9c9c9;
+      border-radius:7px;
+      background:#fff;
+      box-shadow:0 12px 40px rgba(0,0,0,.35);
+      transform:translateY(-12px) scale(.98);
+      transition:transform .2s ease;
+    }
+
+    .session-modal.show .session-modal-box{
+      transform:translateY(0) scale(1);
+    }
+
+    .session-modal-head{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-height:48px;
+      padding:10px 15px;
+      border-bottom:1px solid #ddd;
+      background:#f3f3f3;
+      color:#333;
+      font-size:14px;
+      font-weight:700;
+    }
+
+    .session-modal-icon{
+      display:grid;
+      place-items:center;
+      width:27px;
+      height:27px;
+      flex:0 0 27px;
+      border-radius:50%;
+      background:#ef3038;
+      color:#fff;
+      font-size:18px;
+      font-weight:700;
+    }
+
+    .session-modal-body{
+      padding:24px 18px 20px;
+      text-align:center;
+      font-size:14px;
+      line-height:2;
+    }
+
+    .session-modal-button{
+      display:block;
+      width:150px;
+      height:39px;
+      margin:0 auto 20px;
+      border:0;
+      border-radius:5px;
+      background:#ef3038;
+      color:#fff;
+      font-weight:700;
+    }
+
+    .timer-expiring{
+      color:#c3151c;
+      border-color:#e9aeb1;
+      background:#fff1f1;
+      animation:timerPulse .8s ease-in-out infinite alternate;
+    }
+
+    @keyframes timerPulse{
+      from{opacity:1}
+      to{opacity:.62}
+    }
+
+  
+    .live-clock{
+      direction:rtl;
+      white-space:nowrap;
+      color:#333;
+      font-variant-numeric:tabular-nums;
+    }
+
+    @media (max-width:760px){
+      .subbar .live-clock{
+        display:inline-block !important;
+        position:relative;
+        margin:8px auto 0 8px;
+        padding:4px 10px;
+        border:1px solid #d0d0d0;
+        border-radius:13px;
+        background:#fff;
+        color:#333;
+        font-size:10px;
+      }
+    }
+
+  
+    /* Account rows matched to the supplied mobile reference */
+    .status-cell{
+      position:relative;
+      overflow:visible;
+    }
+
+    .status-toggle{
+      position:relative;
+      display:inline-grid;
+      place-items:center;
+      width:30px;
+      height:30px;
+      padding:0;
+      border:0;
+      border-radius:50%;
+      background:transparent;
+      outline:none;
+      overflow:visible;
+    }
+
+    .status-toggle::after{
+      content:"اطلاعات بیشتر";
+      position:absolute;
+      z-index:80;
+      top:calc(100% + 8px);
+      right:-25px;
+      width:185px;
+      padding:11px 12px;
+      border-radius:5px;
+      background:#666;
+      color:#fff;
+      box-shadow:0 2px 7px rgba(0,0,0,.18);
+      font-size:12px;
+      font-weight:400;
+      line-height:1.5;
+      text-align:center;
+      white-space:nowrap;
+      opacity:0;
+      visibility:hidden;
+      transform:translateY(-4px);
+      transition:opacity .15s ease, transform .15s ease, visibility .15s ease;
+      pointer-events:none;
+    }
+
+    .status-toggle:hover::after,
+    .status-toggle:focus-visible::after,
+    .status-toggle:focus::after{
+      opacity:1;
+      visibility:visible;
+      transform:translateY(0);
+    }
+
+    .status-icon{
+      width:22px;
+      height:22px;
+      font-size:19px;
+      background:#26323d;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+    }
+
+    .status-toggle:hover .status-icon,
+    .status-toggle:focus-visible .status-icon{
+      background:#ff1f24;
+    }
+
+    .account-row.is-open .status-icon{
+      background:#ff1118;
+    }
+
+    .toggle-details{
+      display:inline-grid;
+      place-items:center;
+      background:transparent;
+    }
+
+    .toggle-details:hover{
+      background:transparent;
+    }
+
+    .chevron{
+      width:0;
+      height:0;
+      margin:auto;
+      border-left:5px solid transparent;
+      border-right:5px solid transparent;
+      border-top:6px solid #111;
+      transition:none;
+    }
+
+    .account-row.is-open .chevron{
+      transform:none;
+    }
+
+    @media (max-width:760px){
+      .accounts-table th{
+        height:54px;
+        padding:8px 3px;
+        font-size:14px;
+        font-weight:700;
+        line-height:1.25;
+      }
+
+      .accounts-table td{
+        height:70px;
+        padding:14px 3px;
+        font-size:13px;
+        line-height:1.45;
+      }
+
+      .account-row:nth-of-type(4n + 3) td{
+        background:#f0f0f0;
+      }
+
+      .account-row:hover td{
+        background:inherit;
+      }
+
+      .account-row.is-open td{
+        background:#fff;
+      }
+
+      .status-toggle{
+        width:31px;
+        height:31px;
+      }
+
+      .status-icon{
+        width:25px;
+        height:25px;
+        font-size:22px;
+      }
+
+      .status-toggle::after{
+        top:calc(100% + 10px);
+        right:-68px;
+        width:205px;
+        padding:12px 10px;
+        border-radius:5px;
+        font-size:13px;
+      }
+
+      .toggle-details{
+        width:28px;
+        height:28px;
+      }
+
+      .chevron{
+        border-left-width:5px;
+        border-right-width:5px;
+        border-top-width:6px;
+      }
+
+      .details-row td{
+        height:auto;
+      }
+    }
+
+    @media (max-width:430px){
+      .accounts-table th{
+        font-size:13px;
+      }
+
+      .accounts-table td{
+        font-size:12px;
+      }
+    }
+
+  
+    .otp-exact-button:disabled{
+      cursor:not-allowed;
+      opacity:.78;
+      background:#eeeeee;
+      border-color:#cccccc;
+      color:#666666;
+    }
+
+  
+    /* ===== Status bar: clock + session timer, without date ===== */
+    .dashboard-statusbar{
+      justify-content:center;
+      gap:14px;
+    }
+
+    .clock-pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:86px;
+      padding:4px 13px;
+      border:1px solid #d0d0d0;
+      border-radius:14px;
+      background:#fff;
+      color:#333;
+      font-size:11px;
+      line-height:1;
+      white-space:nowrap;
+      direction:rtl;
+      font-variant-numeric:tabular-nums;
+    }
+
+    .dashboard-statusbar .timer-pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:128px;
+      line-height:1;
+    }
+
+    /* ===== Account table matching the reference ===== */
+    .accounts-title{
+      min-height:42px;
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      padding:10px 18px;
+      font-size:14px;
+    }
+
+    .accounts-table{
+      direction:rtl;
+    }
+
+    .accounts-table th{
+      height:43px;
+      background:#e5e5e5;
+      color:#111;
+      font-weight:700;
+      line-height:1.2;
+    }
+
+    .accounts-table td{
+      height:55px;
+      color:#151515;
+      vertical-align:middle;
+    }
+
+    .accounts-table th:nth-child(1),
+    .accounts-table td:nth-child(1){width:9%}
+
+    .accounts-table th:nth-child(2),
+    .accounts-table td:nth-child(2){width:12%}
+
+    .accounts-table th:nth-child(3),
+    .accounts-table td:nth-child(3){width:34%}
+
+    .accounts-table th:nth-child(4),
+    .accounts-table td:nth-child(4){width:33%}
+
+    .accounts-table th:nth-child(5),
+    .accounts-table td:nth-child(5){width:12%}
+
+    .account-row:nth-of-type(4n + 3) td{
+      background:#eeeeee;
+    }
+
+    .status-cell{
+      overflow:visible;
+    }
+
+    .status-toggle{
+      width:30px;
+      height:30px;
+    }
+
+    .status-icon{
+      width:24px;
+      height:24px;
+      background:#263746;
+      color:#fff;
+      font-size:21px;
+      font-weight:700;
+      line-height:24px;
+      box-shadow:none;
+    }
+
+    .account-row.is-open .status-icon{
+      background:#ff171d;
+    }
+
+    .toggle-details{
+      width:28px;
+      height:28px;
+    }
+
+    .chevron{
+      border-left-width:5px;
+      border-right-width:5px;
+      border-top-width:6px;
+      border-top-color:#111;
+    }
+
+    @media (max-width:760px){
+      .dashboard-statusbar{
+        height:24px;
+        min-height:24px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:8px;
+        overflow:visible;
+        padding:0 8px;
+        border-bottom:1px solid #d4d4d4;
+        background:#eeeeee;
+        box-shadow:0 2px 5px rgba(0,0,0,.12);
+      }
+
+      .dashboard-statusbar .clock-pill,
+      .dashboard-statusbar .timer-pill{
+        position:static;
+        margin:0;
+        height:24px;
+        padding:3px 11px;
+        font-size:9px;
+        border-radius:13px;
+      }
+
+      .dashboard-statusbar .clock-pill{
+        min-width:82px;
+      }
+
+      .dashboard-statusbar .timer-pill{
+        min-width:121px;
+      }
+
+      .dashboard-main{
+        padding-top:15px;
+      }
+
+      .accounts-card{
+        margin:0;
+        border-radius:4px;
+      }
+
+      .accounts-title{
+        min-height:43px;
+        padding:10px 12px;
+        font-size:12px;
+      }
+
+      .accounts-wrap{
+        padding:0 0 10px;
+      }
+
+      .accounts-table{
+        width:100%;
+        min-width:0;
+        table-layout:fixed;
+      }
+
+      .accounts-table th{
+        height:54px;
+        padding:8px 2px;
+        font-size:13px;
+        line-height:1.25;
+      }
+
+      .accounts-table td{
+        height:70px;
+        padding:12px 2px;
+        font-size:12px;
+        line-height:1.4;
+      }
+
+      .accounts-table th:nth-child(1),
+      .accounts-table td:nth-child(1){width:9%}
+
+      .accounts-table th:nth-child(2),
+      .accounts-table td:nth-child(2){width:12%}
+
+      .accounts-table th:nth-child(3),
+      .accounts-table td:nth-child(3){width:34%}
+
+      .accounts-table th:nth-child(4),
+      .accounts-table td:nth-child(4){width:33%}
+
+      .accounts-table th:nth-child(5),
+      .accounts-table td:nth-child(5){width:12%}
+
+      .status-toggle{
+        width:31px;
+        height:31px;
+      }
+
+      .status-icon{
+        width:25px;
+        height:25px;
+        font-size:22px;
+        line-height:25px;
+      }
+
+      .toggle-details{
+        width:28px;
+        height:28px;
+      }
+
+      .status-toggle::after{
+        width:min(205px,64vw);
+        right:-67px;
+        top:calc(100% + 10px);
+        padding:11px 10px;
+        font-size:13px;
+      }
+
+      .details-row td{
+        height:auto;
+      }
+
+      .account-details{
+        padding:15px 12px 18px;
+        font-size:11px;
+        line-height:2.3;
+      }
+    }
+
+    @media (max-width:390px){
+      .accounts-table th{
+        font-size:11px;
+      }
+
+      .accounts-table td{
+        font-size:10px;
+      }
+
+      .status-icon{
+        width:23px;
+        height:23px;
+        font-size:20px;
+        line-height:23px;
+      }
+
+      .dashboard-statusbar .clock-pill,
+      .dashboard-statusbar .timer-pill{
+        font-size:8px;
+        padding-left:8px;
+        padding-right:8px;
+      }
+    }
+
+  
+    /* ===== precise mobile match for the supplied dashboard section ===== */
+    .dashboard-statusbar{
+      justify-content:flex-start;
+      direction:ltr;
+      min-height:24px;
+      height:24px;
+      padding:0 6px;
+      background:#eeeeee;
+      border-bottom:1px solid #c9c9c9;
+      box-shadow:0 2px 5px rgba(0,0,0,.10);
+    }
+
+    .dashboard-statusbar .timer-pill{
+      min-width:82px;
+      height:22px;
+      padding:0 16px;
+      border-radius:13px;
+      border:1px solid #b7d9b4;
+      background:#d9f2d6;
+      color:#0d8920;
+      font-size:10px;
+      font-weight:700;
+      line-height:22px;
+      white-space:nowrap;
+      direction:rtl;
+    }
+
+    .accounts-card{
+      border-radius:2px;
+      overflow:visible;
+    }
+
+    .accounts-title{
+      min-height:38px;
+      padding:9px 14px;
+      font-size:13px;
+      font-weight:700;
+      border-bottom:1px solid #d8d8d8;
+      background:#fff;
+    }
+
+    .accounts-wrap{
+      padding:0;
+    }
+
+    .accounts-table{
+      width:100%;
+      border-collapse:collapse;
+    }
+
+    .accounts-table th{
+      height:39px;
+      padding:7px 4px;
+      background:#e6e6e6;
+      color:#111;
+      font-size:12px;
+      font-weight:700;
+      border-bottom:1px solid #d4d4d4;
+    }
+
+    .accounts-table td{
+      height:36px;
+      padding:8px 4px;
+      color:#1d1d1d;
+      font-size:12px;
+      border-bottom:1px solid #dfdfdf;
+      background:#fff;
+      vertical-align:middle;
+    }
+
+    .account-row:nth-of-type(4n + 3) td{
+      background:#f0f0f0;
+    }
+
+    .status-toggle{
+      width:26px;
+      height:26px;
+    }
+
+    .status-icon{
+      width:22px;
+      height:22px;
+      background:#273646;
+      color:#fff;
+      font-size:20px;
+      line-height:22px;
+      font-weight:700;
+      box-shadow:none;
+    }
+
+    .account-row.is-open .status-icon{
+      background:#ff171d;
+    }
+
+    .toggle-details{
+      width:22px;
+      height:22px;
+    }
+
+    .chevron{
+      border-left:4px solid transparent;
+      border-right:4px solid transparent;
+      border-top:6px solid #111;
+    }
+
+    .mobile-menu-handle{
+      width:34px;
+      height:44px;
+      top:139px;
+      right:0;
+      display:flex;
+      background:#666668;
+      color:#fff;
+      font-size:20px;
+      border-radius:0;
+      box-shadow:none;
+      z-index:2300;
+    }
+
+    .mobile-menu-handle span{
+      transform:none;
+    }
+
+    @media (max-width:760px){
+      .topbar{
+        min-height:64px;
+        grid-template-columns:24px 1fr 24px;
+        gap:6px;
+        padding:0 8px;
+      }
+
+      .top-actions{
+        justify-self:start;
+      }
+
+      .top-actions .more-btn{
+        width:22px;
+        height:22px;
+        font-size:22px;
+      }
+
+      .brand{
+        gap:7px;
+      }
+
+      .brand-logo{
+        width:34px;
+        height:34px;
+        flex-basis:34px;
+      }
+
+      .brand-copy strong{
+        font-size:15px;
+        line-height:1;
+      }
+
+      .brand-copy small{
+        display:block;
+        margin-top:2px;
+        font-size:8px;
+      }
+
+      .top-title{
+        min-height:26px;
+        height:26px;
+        margin:0 -8px;
+        font-size:11px;
+        font-weight:700;
+      }
+
+      .dashboard-main{
+        padding:7px 4px 20px;
+      }
+
+      .dashboard-statusbar{
+        justify-content:flex-start;
+        direction:ltr;
+        min-height:24px;
+        height:24px;
+        padding:0 4px;
+        overflow:visible;
+      }
+
+      .dashboard-statusbar .timer-pill{
+        margin:0;
+        min-width:79px;
+        height:20px;
+        line-height:20px;
+        padding:0 13px;
+        font-size:10px;
+      }
+
+      .dashboard-grid{
+        gap:8px;
+      }
+
+      .accounts-card{
+        margin-top:6px;
+        border-radius:2px;
+      }
+
+      .accounts-title{
+        min-height:34px;
+        padding:8px 12px;
+        font-size:11px;
+      }
+
+      .accounts-wrap{
+        padding:0;
+      }
+
+      .accounts-table{
+        table-layout:fixed;
+      }
+
+      .accounts-table th{
+        height:36px;
+        padding:6px 2px;
+        font-size:11px;
+      }
+
+      .accounts-table td{
+        height:42px;
+        padding:8px 2px;
+        font-size:11px;
+      }
+
+      .accounts-table th:nth-child(1),
+      .accounts-table td:nth-child(1){width:10%}
+
+      .accounts-table th:nth-child(2),
+      .accounts-table td:nth-child(2){width:13%}
+
+      .accounts-table th:nth-child(3),
+      .accounts-table td:nth-child(3){width:34%}
+
+      .accounts-table th:nth-child(4),
+      .accounts-table td:nth-child(4){width:30%}
+
+      .accounts-table th:nth-child(5),
+      .accounts-table td:nth-child(5){width:13%}
+
+      .status-toggle{
+        width:24px;
+        height:24px;
+      }
+
+      .status-icon{
+        width:21px;
+        height:21px;
+        font-size:18px;
+        line-height:21px;
+      }
+
+      .toggle-details{
+        width:20px;
+        height:20px;
+      }
+
+      .chevron{
+        border-left-width:4px;
+        border-right-width:4px;
+        border-top-width:5px;
+      }
+
+      .mobile-menu-handle{
+        width:30px;
+        height:39px;
+        top:108px;
+        font-size:18px;
+      }
+
+      .status-toggle::after{
+        right:-74px;
+        top:calc(100% + 8px);
+        width:170px;
+        padding:9px 10px;
+        font-size:11px;
+      }
+
+      .details-row td{
+        height:auto;
+      }
+
+      .account-details{
+        padding:12px 10px 14px;
+        font-size:10px;
+      }
+    }
+
+    @media (max-width:390px){
+      .brand-copy strong{font-size:14px}
+      .brand-copy small{font-size:7px}
+      .accounts-table th{font-size:10px}
+      .accounts-table td{font-size:10px}
+      .mobile-menu-handle{top:108px}
+    }
+
+  
+    /* move login-info card directly under accounts on mobile */
+    #mobileProfileMount{
+      display:none;
+    }
+
+    @media (max-width:760px){
+      #mobileProfileMount{
+        display:block;
+      }
+
+      #mobileProfileMount .profile-card{
+        margin-top:10px;
+      }
+
+      #mobileProfileMount + .promo-row{
+        margin-top:12px;
+      }
+    }
+.brand {
+  display: flex;
+  align-items: center;
+}
+
+.brand-logo {
+  width: 150px;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+.otp-exact-row {
+  position: relative !important;
+  display: block !important;
+
+  width: calc(100% - 18px) !important;
+  height: 58px !important;
+  margin: 0 9px !important;
+  padding: 0 !important;
+
+  border: 0 !important;
+ 
+  border-bottom: 1px solid #555 !important;
+  border-radius: 0 !important;
+
+  background: #fff !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+/* قسمت ورود کد در سمت راست */
+.otp-exact-field {
+  position: absolute !important;
+  right: 0 !important;
+  left: 110px !important;
+  bottom: 2px !important;
+
+  height: 35px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border: 0 !important;
+  background: transparent !important;
+  box-sizing: border-box !important;
+}
+
+/* خود input */
+.otp-exact-field input {
+  position: absolute !important;
+  inset: 0 !important;
+
+  display: block !important;
+  width: 100% !important;
+  height: 35px !important;
+
+  margin: 0 !important;
+  padding: 0 8px !important;
+
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+
+  background: transparent !important;
+  color: #333 !important;
+
+  direction: rtl !important;
+  text-align: right !important;
+
+  font-family: inherit !important;
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  line-height: 35px !important;
+
+  box-sizing: border-box !important;
+}
+
+/* متن راهنما */
+.otp-exact-field label {
+  position: absolute !important;
+  z-index: 2 !important;
+
+  top: 50% !important;
+  right: 8px !important;
+  left: auto !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  transform: translateY(-50%) !important;
+
+  border: 0 !important;
+  background: transparent !important;
+  color: #aaa !important;
+
+  direction: rtl !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+
+  font-family: inherit !important;
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  line-height: 1 !important;
+
+  pointer-events: none !important;
+  transition: none !important;
+}
+
+/* هنگام تایپ، متن راهنما مخفی شود */
+.otp-exact-field input:not(:placeholder-shown) + label {
+  display: none !important;
+}
+
+/* دکمه دقیقاً سمت چپ */
+.otp-exact-button {
+  position: absolute !important;
+  left: 0 !important;
+  right: auto !important;
+  bottom: 2px !important;
+
+  display: block !important;
+  width: 100px !important;
+  min-width: 100px !important;
+  max-width: 100px !important;
+  height: 35px !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border: 1px solid #667767 !important;
+  border-radius: 5px !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+
+  background: #d3efd4 !important;
+  color: #008522 !important;
+
+  font-family: inherit !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 33px !important;
+  text-align: center !important;
+
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+.otp-exact-button:hover,
+.otp-exact-button:focus {
+  background: #d3efd4 !important;
+  color: #008522 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+div {
+    font-size: .8rem !important;
+}
+
+.toggle-details{
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.chevron{
+  display: block;
+  width: 0;
+  height: 0;
+  font-size: 0;
+  line-height: 0;
+
+  /* دقیقاً مثل فلش کوچک مشکی داخل عکس */
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid #111;
+}
+
+/* اگر خواستی وقتی باز شد فلش برعکس شود */
+.toggle-details[aria-expanded="true"] .chevron{
+  transform: rotate(180deg);
+}
+  </style>
+</head>
+
+<body>
+ 
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="session-modal" id="sessionModal" role="alertdialog" aria-modal="true" aria-labelledby="sessionModalTitle">
+    <div class="session-modal-box">
+      <div class="session-modal-head">
+        <span class="session-modal-icon">!</span>
+        <span id="sessionModalTitle">پایان نشست</span>
+      </div>
+
+      <div class="session-modal-body">
+        اتصال قطع شد و نشست شما به پایان رسید.
+      </div>
+
+      <button class="session-modal-button" id="sessionModalButton" type="button">
+        تأیید
+      </button>
+    </div>
+  </div>
+
+
+  <!-- LOGIN VIEW -->
+  <section id="loginView">
+    <header class="topbar">
+      <div class="top-actions">
+        <button class="icon-btn more-btn" type="button">⋮</button>
+      </div>
+
+     <div class="brand">
+    <img
+      class="brand-logo"
+      src="./assets/logo-small.png"
+      alt="لوگو"
+    >
+  </div>
+
+       
+
+      <div></div>
+      <div class="top-title">بانکداری اینترنتی بانک ملت</div>
+    </header>
+
+    <main class="login-wrap">
+      <section class="card">
+        <nav class="login-tabs">
+          <button class="login-tab active" type="button">اشخاص حقیقی</button>
+      
+          <button class="login-tab" type="button">اشخاص حقوقی</button>
+        </nav>
+
+        <div class="login-grid">
+          <section class="login-side">
+            <h2 class="section-title">ورود به سامانه</h2>
+
+            <p class="warning">
+هشدار: به منظور پیشگیری از خطر سوءاستفاده توسط سایتهای جعلی، اطمینان حاصل نمایید که نشانی این صفحه https://ebanking.bankmellat.ir باشد و درصورت مغایرت فوراً از صفحه جعلی خارج شوید            </p>
+
+            <form id="loginForm" autocomplete="off">
+              <div class="field">
+                <input id="customerId" type="text" placeholder=" ">
+                <label for="customerId">شناسه مشتری</label>
+              </div>
+
+              <div class="field">
+                <input id="password" type="password" placeholder=" ">
+                <label for="password">رمز ورود</label>
+              </div>
+
+            <div class="otp-exact-row">
+  <div class="otp-exact-field">
+    <input
+      id="otpInput"
+      type="text"
+      inputmode="numeric"
+      autocomplete="one-time-code"
+      placeholder=" "
+    />
+
+    <label for="otpInput">
+      درج <bdi dir="ltr">OTP</bdi> / پیامک یکباررمز
+    </label>
+  </div>
+
+  <button id="sendOtpBtn" class="otp-exact-button" type="button">
+    ارسال پیامک
+  </button>
+</div>
+              <button class="login-btn" type="submit">ورود</button>
+
+              <div class="login-links">
+                <a href="#" data-demo-link>فعال‌سازی</a>
+                <a href="#" data-demo-link>بازنشانی رمز</a>
+              </div>
+            </form>
+          </section>
+
+          <section class="security-side">
+           <div><h6 class="pr-0 pr-md-1 mt-4 mt-lg-2 mb-4">نکات امنیتی</h6><ul class="text-justify pr-0 pr-md-2 security-tip mt-4-5-2"><div><i class="fa fa-assistive-listening-systems "></i><span class="mr-4">از صحت آدرس URL وارد شده در مرورگر وب خود اطمینان حاصل نمایید.</span></div><div><i class="fa fa-assistive-listening-systems "></i><span class="mr-4">جهت کاهش احتمال سوء استفاده از رمز عبور، ازصفحه کلید مجازی استفاده نمایید.</span></div><div><i class="fa fa-assistive-listening-systems "></i><span class="mr-4">به منظور بالا بردن امنیت ورود به سامانه بانکداری اینترنتی، از یک بار رمز (OTP) استفاده نمایید.</span></div><div><i class="fa fa-assistive-listening-systems "></i><span class="mr-4">رمز عبور خود را در فواصل زمانی کوتاه تغییرداده و هرگز آن را به سایرین ندهید.</span></div><div><i class="fa fa-assistive-listening-systems "></i><span class="mr-4"> همواره از رايانه&zwnj; امن مجهز به ضد ویروس به روز شده و دارای آخرین وصله&zwnj;های امنیتی استفاده نمایید.</span></div><div><i class="fa fa-assistive-listening-systems "></i><span class="mr-4">بانک هرگز اطلاعات محرمانه شما را از طریق ایمیل یا پیامک درخواست نمی کند. در صورت رخداد این مورد، ضمن عدم پاسخگویی به چنین درخواست هایی مراتب را سریعاً به بانک اطلاع دهید.<a class="a-href" target="_blank" href="https://bankmellat.ir/fa-IR/site/5132/page/%D8%AA%D9%88%D8%B5%DB%8C%D9%87-%D9%87%D8%A7%DB%8C-%D8%A7%D9%85%D9%86%DB%8C%D8%AA%DB%8C-%D8%A8%D8%A7%D9%86%DA%A9%D8%AF%D8%A7%D8%B1%DB%8C-%D8%A7%DB%8C%D9%86%D8%AA%D8%B1%D9%86%D8%AA%DB%8C">ادامه...</a></span></div></ul><div style="font-weight: 600; font-size: 22px; text-align: center; margin-top: 60px;">جهت کسب اطلاعات بیشتر از شرایط تسهیلات سامانه فرابانک<a href="https://bankmellat.ir/fa-IR/commercial.personal/5310/page/%D8%AA%D8%B3%D9%87%DB%8C%D9%84%D8%A7%D8%AA-%D8%BA%DB%8C%D8%B1%D8%AD%D8%B6%D9%88%D8%B1%DB%8C-%D8%A8%D8%A7%D9%86%DA%A9-%D9%85%D9%84%D8%AA" target="_blank"><span style="text-decoration: underline; color: rgb(255, 0, 0); cursor: pointer; text-underline-offset: 6px;"> اینجا </span></a>کلیک کنید</div></div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <!-- DASHBOARD VIEW -->
+  <section id="dashboardView" class="hidden">
+       <header class="topbar">
+      <div class="top-actions">
+        <button class="icon-btn more-btn" type="button">⋮</button>
+      </div>
+
+     <div class="brand">
+    <img
+      class="brand-logo"
+      src="./assets/logo-small.png"
+      alt="لوگو"
+    >
+  </div>
+
+       
+
+      <div></div>
+      <div class="top-title">بانکداری اینترنتی بانک ملت</div>
+    </header>
+
+    <div class="subbar dashboard-statusbar">
+      <span class="timer-pill" id="sessionTimer">۱۰:۰۰</span>
+    </div>
+
+    <div class="dashboard-shell">
+      <main class="dashboard-main">
+        <div class="dashboard-grid">
+          <section class="side-column">
+            <div id="desktopProfileMount"></div>
+
+            <div class="card profile-card" id="profileCard">
+              <div class="panel-head">
+                <div class="panel-tab active">اطلاعات ورود</div>
+                <div class="panel-tab">نمودار وضعیت مالی</div>
+              </div>
+
+              <div class="profile-grid">
+                <div class="profile-label">آدرس آی‌پی</div>
+                <div class="profile-value">۰۰۵.۲۱۷.۱۰۶.۰۵۲</div>
+
+                <div class="profile-label">نام مشتری</div>
+                <div class="profile-value profile-name">سیدرضا پورحق‌شناس</div>
+
+                <div class="profile-label">شماره موبایل</div>
+                <div class="profile-value">۰۹۳۷***۰۷۸۲</div>
+
+                <div class="profile-label">تاریخ آخرین ورود</div>
+                <div class="profile-value">۱۴۰۵/۰۴/29</div>
+
+                <div class="profile-label">تاریخ آخرین تغییر رمز</div>
+                <div class="profile-value">۱۴۰۵/۰۴/۰۱</div>
+              </div>
+
+              <div class="lock-watermark" aria-hidden="true"></div>
+            </div>
+
+            <div class="card club-card">
+              <div class="panel-head">
+                <div class="panel-tab active">باشگاه مشتریان</div>
+                <span class="expand-corner">↗</span>
+              </div>
+
+              <div class="club-body">
+                <div class="club-name">باشگاه مشتریان بانک دانشگاه</div>
+
+                <svg class="club-logo" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+                  <path d="M50 7c18 8 31 25 31 44 0 10-4 21-10 29-8-3-15-9-21-17-6 8-13 14-21 17-6-8-10-19-10-29 0-19 13-36 31-44Z" fill="#d71022"/>
+                  <path d="M50 17c11 7 18 19 18 33 0 8-3 16-8 22-4-3-7-7-10-12-3 5-6 9-10 12-5-6-8-14-8-22 0-14 7-26 18-33Z" fill="#ef3c2f"/>
+                  <ellipse cx="50" cy="53" rx="18" ry="20" fill="#ffb700"/>
+                  <ellipse cx="50" cy="50" rx="12" ry="14" fill="#fff36a"/>
+                  <path d="M18 71c11 1 22-2 32-9M82 71c-11 1-22-2-32-9" stroke="#9e0012" stroke-width="7" stroke-linecap="round"/>
+                </svg>
+
+                <p class="club-description">
+                  هدف در باشگاه مشتریان بانک دانشگاه، فرهنگ‌سازی، توسعه و ترویج استفاده از
+                  خدمات الکترونیکی و ارائه پاسخ‌های شایسته به اعتماد مشتریان وفادار است.
+                </p>
+
+                <button class="club-join" type="button" data-demo-link>عضویت در باشگاه</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="main-column">
+            <div class="card accounts-card">
+              <div class="accounts-title">سپرده‌های من</div>
+
+              <div class="accounts-wrap">
+                <table class="accounts-table" id="accountsTable">
+                  <thead>
+                    <tr>
+                      <th>ردیف</th>
+                      <th></th>
+                      <th>نام حساب</th>
+                      <th>شماره حساب</th>
+                      <th>عملیات</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    <tr class="account-row" data-details="details1" tabindex="0">
+                      <td>۱</td>
+                      <td class="status-cell">
+                        <button
+                          class="status-toggle"
+                          type="button"
+                          aria-label="اطلاعات بیشتر"
+                          aria-expanded="false"
+                          aria-controls="details1"
+                        >
+                          <span class="status-icon" aria-hidden="true">+</span>
+                        </button>
+                      </td>
+                      <td>قرض‌الحسنه</td>
+                      <td class="ltr">7582397425</td>
+                      <td>
+                    <button class="toggle-details" type="button" aria-expanded="true" aria-controls="details2">
+  <span class="chevron" aria-hidden="true"></span>
+</button>
+                      </td>
+                    </tr>
+
+                    <tr class="details-row" id="details1">
+                      <td colspan="5">
+                        <div class="details-animation">
+                          <div class="details-overflow">
+                            <div class="account-details">
+                              <div><span>مانده حساب:</span><strong>1,434,730 ریال</strong></div>
+                              <div class="amount-green"><span>مانده قابل برداشت:</span><strong>1,334,730 ریال</strong></div>
+                              <div><span>نوع حساب:</span><strong> سپرده قرض الحسنه پس انداز نیک حقیقی انفرادی</strong></div>
+                              <div><span>شعبه:</span><strong> سه راه طالقانی</strong></div>
+                              <div><span>تاریخ آخرین گردش:</span><strong>۱۴۰۵/۰۴/7</strong></div>
+                              <div><span>کد شبا:</span><strong class="ltr">IR740120010000007582397425</strong></div>
+                              <div><span>مشخصه تجاری:</span><strong>ندارد</strong></div>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr class="account-row" data-details="details2" tabindex="0">
+                      <td>۲</td>
+                      <td class="status-cell">
+                        <button
+                          class="status-toggle"
+                          type="button"
+                          aria-label="اطلاعات بیشتر"
+                          aria-expanded="false"
+                          aria-controls="details2"
+                        >
+                          <span class="status-icon" aria-hidden="true">+</span>
+                        </button>
+                      </td>
+                      <td>سپرده کوتاه‌مدت</td>
+                      <td class="ltr">3641282259</td>
+                      <td>
+                      <button class="toggle-details" type="button" aria-expanded="true" aria-controls="details2">
+  <span class="chevron" aria-hidden="true"></span>
+</button>
+                      </td>
+                    </tr>
+
+                    <tr class="details-row" id="details2">
+                      <td colspan="5">
+                        <div class="details-animation">
+                          <div class="details-overflow">
+                            <div class="account-details">
+                              <div><span>مانده حساب:</span><strong><bdi dir="ltr">3,210,943,960,536,953</bdi> ریال</strong></div>
+                              <div class="amount-green"><span>مانده قابل برداشت:</span><strong><bdi dir="ltr">3,210,943,960,436,953</bdi> ریال</strong></div>
+                              <div><span>نوع حساب:</span><strong>کوتاه مدت اشخاص حقیقی انفرادی</strong></div>
+							                                <div><span>شعبه:</span><strong>پل تهران نو</strong></div>
+
+                              <div><span>تاریخ آخرین گردش:</span><strong>۱۴۰۵/۰۴/۰7</strong></div>
+                              <div><span>کد شبا:</span><strong class="ltr">IR450120020000003641282259</strong></div>
+							    <div><span>مشخصه تجاری:</span><strong>ندارد</strong></div>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr class="account-row" data-details="details3" tabindex="0">
+                      <td>۳</td>
+                      <td class="status-cell">
+                        <button
+                          class="status-toggle"
+                          type="button"
+                          aria-label="اطلاعات بیشتر"
+                          aria-expanded="false"
+                          aria-controls="details3"
+                        >
+                          <span class="status-icon" aria-hidden="true">+</span>
+                        </button>
+                      </td>
+                      <td>قرض‌الحسنه جاری</td>
+                      <td class="ltr">۱۳۱۹۳۹۹۶۸ </td>
+                      <td>
+                       <button class="toggle-details" type="button" aria-expanded="true" aria-controls="details2">
+  <span class="chevron" aria-hidden="true"></span>
+</button>
+                      </td>
+                    </tr>
+
+                    <tr class="details-row" id="details3">
+                      <td colspan="5">
+                        <div class="details-animation">
+                          <div class="details-overflow">
+                            <div class="account-details">
+                              <div><span>مانده حساب:</span><strong>5,573,410 ریال</strong></div>
+                              <div class="amount-green"><span>مانده قابل برداشت:</span><strong>5,573,410 ریال</strong></div>
+                              <div><span>نوع حساب:</span><strong>جاری اشخاص حقیقی انفرادی</strong></div>
+                              <div><span>شعبه:</span><strong>میدان شهدا</strong></div>
+                              <div><span>تاریخ آخرین گردش:</span><strong>۱۴۰۵/۰۴/2۰</strong></div>
+                              <div><span>کد شبا:</span><strong class="ltr">IR۶۰۰۱۲۰۰۰۰۰۰۰۰۰۰۰۱۳۱۹۳۹۹۶۸</strong></div>
+                              <div><span>مشخصه تجاری:</span><strong>ندارد</strong></div>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+
+                    <tr class="account-row" data-details="details4" tabindex="0">
+                      <td>۴</td>
+                      <td class="status-cell">
+                        <button
+                          class="status-toggle"
+                          type="button"
+                          aria-label="اطلاعات بیشتر"
+                          aria-expanded="false"
+                          aria-controls="details4"
+                        >
+                          <span class="status-icon" aria-hidden="true">+</span>
+                        </button>
+                      </td>
+                      <td>سپرده بلندمدت</td>
+                      <td class="ltr">۳۶۴۲۳۷۳۴۷۹</td>
+                      <td>
+                      <button class="toggle-details" type="button" aria-expanded="true" aria-controls="details2">
+  <span class="chevron" aria-hidden="true"></span>
+</button>
+                      </td>
+                    </tr>
+
+                    <tr class="details-row" id="details4">
+                      <td colspan="5">
+                        <div class="details-animation">
+                          <div class="details-overflow">
+                            <div class="account-details">
+                              <div><span>مانده حساب:</span><strong>7,950,000 ریال</strong></div>
+                              <div class="amount-green"><span>مانده قابل برداشت:</span><strong>6,950,000 ریال</strong></div>
+                              <div><span>نوع حساب:</span><strong> سپرده بلندمدت یکساله ویژه حچ</strong></div>
+							                                <div><span>شعبه:</span><strong> پل تهران نو</strong></div>
+
+                              <div><span>تاریخ آخرین گردش:</span><strong>1390/06/26</strong></div>
+							          <div><span>کد شبا:</span><strong class="ltr">IR29012004000000۳۶۴۲۳۷۳۴۷۹</strong></div>
+							    <div><span>مشخصه تجاری:</span><strong>ندارد</strong></div>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div id="mobileProfileMount"></div>
+
+            <div class="promo-row">
+              <div class="promo">فرابانک ملت (تسهیلات غیرحضوری)</div>
+              <div class="promo">محاسبه‌گر تسهیلات امتیازی</div>
+            </div>
+
+            <div class="card services-card">
+              <div class="services-tabs">
+                <div class="services-tab">خدمات پرکاربرد</div>
+                <div class="services-tab active">خدمات پیشنهادی</div>
+                <div class="services-tab">خدمات برگزیده من</div>
+              </div>
+
+              <div class="service-grid">
+                <div class="service-item">
+                  <div class="service-text">حواله هوشمند</div>
+                  <div class="service-icon">💡</div>
+                </div>
+
+                <div class="service-item">
+                  <div class="service-text">ثبت صدور چک در سامانه نمونه</div>
+                  <div class="service-icon">🧾</div>
+                </div>
+
+                <div class="service-item">
+                  <div class="service-text">دریافت رمز دوم ثابت</div>
+                  <div class="service-icon">🔐</div>
+                </div>
+
+                <div class="service-item">
+                  <div class="service-text">ثبت انتقال چک در سامانه نمونه</div>
+                  <div class="service-icon">✅</div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-search">
+          <span>▶</span>
+          <input type="text" placeholder="جستجو">
+          <span>🔍</span>
+          <button id="sidebarCloseBtn" class="sidebar-close" type="button">×</button>
+        </div>
+
+        <ul class="menu-list">
+          <li><span class="menu-icon">🏦</span>مدیریت حساب</li>
+          <li><span class="menu-icon">💸</span>انتقال وجه</li>
+          <li><span class="menu-icon">📱</span>قبض و شارژ</li>
+          <li><span class="menu-icon">💳</span>بانک پرداخت</li>
+          <li><span class="menu-icon">🧾</span>چک</li>
+          <li><span class="menu-icon">📲</span>چک الکترونیکی</li>
+          <li><span class="menu-icon">💳</span>کارت</li>
+          <li><span class="menu-icon">🏷️</span>تسهیلات</li>
+          <li><span class="menu-icon">⚙️</span>مدیریت وجوه</li>
+          <li><span class="menu-icon">🧰</span>سایر خدمات</li>
+          <li><span class="menu-icon">📈</span>مدیریت بازار سرمایه</li>
+          <li><span class="menu-icon">💬</span>پیامک</li>
+          <li><span class="menu-icon">🪪</span>پروفایل</li>
+          <li id="logoutMenuBtn"><span class="menu-icon">🚪</span>خروج</li>
+        </ul>
+      </aside>
+    </div>
+
+    <button id="mobileMenuBtn" class="mobile-menu-handle" type="button" aria-label="باز کردن منو">◀</button>
+    <div id="menuOverlay" class="menu-overlay"></div>
+  </section>
+  <script>
+  (function () {
+    "use strict";
+
+    function initializePage() {
+      // ---------- Persian UI: direction, font and displayed digits ----------
+      document.documentElement.lang = "fa";
+      document.documentElement.dir = "rtl";
+
+      function installPersianFont() {
+        if (!document.getElementById("vazirmatn-font-link")) {
+          const fontLink = document.createElement("link");
+          fontLink.id = "vazirmatn-font-link";
+          fontLink.rel = "stylesheet";
+          fontLink.href =
+            "https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap";
+          document.head.appendChild(fontLink);
+        }
+
+        if (!document.getElementById("persian-global-style")) {
+          const style = document.createElement("style");
+          style.id = "persian-global-style";
+          style.textContent = `
+            html,
+            body {
+              direction: rtl;
+              text-align: right;
+            }
+
+            body,
+            button,
+            input,
+            textarea,
+            select,
+            option,
+            table,
+            th,
+            td {
+              font-family: "Vazirmatn", Tahoma, Arial, sans-serif !important;
+            }
+
+            button,
+            input,
+            textarea,
+            select {
+              font: inherit;
+            }
+
+            input[type="number"],
+            input[type="tel"],
+            input[inputmode="numeric"],
+            input[inputmode="decimal"] {
+              direction: ltr;
+              text-align: right;
+            }
+          `;
+          document.head.appendChild(style);
+        }
+      }
+
+      function toPersianDigits(value) {
+        return String(value)
+          .replace(/[0-9]/g, function (digit) {
+            return "۰۱۲۳۴۵۶۷۸۹"[Number(digit)];
+          })
+          .replace(/[٠-٩]/g, function (digit) {
+            return "۰۱۲۳۴۵۶۷۸۹"["٠١٢٣٤٥٦٧٨٩".indexOf(digit)];
+          });
+      }
+
+      function toEnglishDigits(value) {
+        return String(value)
+          .replace(/[۰-۹]/g, function (digit) {
+            return String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit));
+          })
+          .replace(/[٠-٩]/g, function (digit) {
+            return String("٠١٢٣٤٥٦٧٨٩".indexOf(digit));
+          });
+      }
+
+      const ignoredDigitTags = new Set([
+        "SCRIPT",
+        "STYLE",
+        "CODE",
+        "PRE",
+        "TEXTAREA",
+        "NOSCRIPT"
+      ]);
+
+      function shouldIgnoreTextNode(node) {
+        const parent = node.parentElement;
+
+        return (
+          !parent ||
+          ignoredDigitTags.has(parent.tagName) ||
+          parent.closest("[data-keep-english-digits]") !== null
+        );
+      }
+
+      function convertTextNodeDigits(node) {
+        if (!node || shouldIgnoreTextNode(node) || !/[0-9٠-٩]/.test(node.nodeValue)) {
+          return;
+        }
+
+        const convertedValue = toPersianDigits(node.nodeValue);
+
+        if (convertedValue !== node.nodeValue) {
+          node.nodeValue = convertedValue;
+        }
+      }
+
+      function convertElementAttributes(element) {
+        if (
+          !(element instanceof Element) ||
+          element.closest("[data-keep-english-digits]")
+        ) {
+          return;
+        }
+
+        ["placeholder", "title", "aria-label"].forEach(function (attributeName) {
+          if (!element.hasAttribute(attributeName)) {
+            return;
+          }
+
+          const currentValue = element.getAttribute(attributeName);
+          const convertedValue = toPersianDigits(currentValue);
+
+          if (convertedValue !== currentValue) {
+            element.setAttribute(attributeName, convertedValue);
+          }
+        });
+      }
+
+      function convertDisplayedDigits(root) {
+        if (!root) {
+          return;
+        }
+
+        if (root.nodeType === Node.TEXT_NODE) {
+          convertTextNodeDigits(root);
+          return;
+        }
+
+        if (!(root instanceof Element) && root !== document.body) {
+          return;
+        }
+
+        if (root instanceof Element) {
+          convertElementAttributes(root);
+        }
+
+        const walker = document.createTreeWalker(
+          root,
+          NodeFilter.SHOW_TEXT,
+          {
+            acceptNode: function (node) {
+              return shouldIgnoreTextNode(node)
+                ? NodeFilter.FILTER_REJECT
+                : NodeFilter.FILTER_ACCEPT;
+            }
+          }
+        );
+
+        while (walker.nextNode()) {
+          convertTextNodeDigits(walker.currentNode);
+        }
+
+        if (root.querySelectorAll) {
+          root
+            .querySelectorAll("[placeholder], [title], [aria-label]")
+            .forEach(convertElementAttributes);
+        }
+      }
+
+      function watchForNewDisplayedDigits() {
+        if (!document.body || typeof MutationObserver === "undefined") {
+          return;
+        }
+
+        const observer = new MutationObserver(function (mutations) {
+          mutations.forEach(function (mutation) {
+            if (mutation.type === "characterData") {
+              convertTextNodeDigits(mutation.target);
+              return;
+            }
+
+            if (mutation.type === "attributes") {
+              convertElementAttributes(mutation.target);
+              return;
+            }
+
+            mutation.addedNodes.forEach(function (node) {
+              convertDisplayedDigits(node);
+            });
+          });
+        });
+
+        observer.observe(document.body, {
+          subtree: true,
+          childList: true,
+          characterData: true,
+          attributes: true,
+          attributeFilter: ["placeholder", "title", "aria-label"]
+        });
+      }
+
+      installPersianFont();
+      convertDisplayedDigits(document.body);
+      watchForNewDisplayedDigits();
+
+      // ---------- DOM references ----------
+      const loginView = document.getElementById("loginView");
+      const dashboardView = document.getElementById("dashboardView");
+      const loginForm = document.getElementById("loginForm");
+      const customerId = document.getElementById("customerId");
+      const password = document.getElementById("password");
+      const otpInput = document.getElementById("otpInput");
+      const sendOtpBtn = document.getElementById("sendOtpBtn");
+      const toast = document.getElementById("toast");
+
+      const sessionTimer = document.getElementById("sessionTimer");
+      const sessionModal = document.getElementById("sessionModal");
+      const sessionModalButton = document.getElementById("sessionModalButton");
+
+      const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+      const sidebarCloseBtn = document.getElementById("sidebarCloseBtn");
+      const menuOverlay = document.getElementById("menuOverlay");
+      const logoutTopBtn = document.getElementById("logoutTopBtn");
+      const logoutMenuBtn = document.getElementById("logoutMenuBtn");
+
+      const accountsTable = document.getElementById("accountsTable");
+      const profileCard = document.getElementById("profileCard");
+      const mobileProfileMount = document.getElementById("mobileProfileMount");
+      const desktopProfileMount = document.getElementById("desktopProfileMount");
+
+      // Stop clearly if the essential login elements are missing.
+      const requiredElements = {
+        loginView,
+        dashboardView,
+        loginForm,
+        customerId,
+        password,
+        otpInput,
+        sendOtpBtn
+      };
+
+      const missingElements = Object.entries(requiredElements)
+        .filter(function (entry) {
+          return !entry[1];
+        })
+        .map(function (entry) {
+          return entry[0];
+        });
+
+      if (missingElements.length > 0) {
+        console.error(
+          "عناصر ضروری صفحه پیدا نشدند:",
+          missingElements.join(", ")
+        );
+        return;
+      }
+
+      // ---------- Demo configuration ----------
+      const DEMO_CUSTOMER_ID = "148013352043";
+      const DEMO_PASSWORD = "Srp5050782";
+      const DEMO_OTP_CODES = new Set([
+        "1655205",
+        "1577987",
+        "5998298"
+      ]);
+
+      const OTP_RESEND_SECONDS = 120;
+      const SESSION_SECONDS = 10 * 60; // 10 minutes = 600 seconds
+
+      // ---------- State ----------
+      let otpSent = false;
+      let otpCountdownInterval = null;
+      let otpCountdownDeadline = 0;
+      let sessionInterval = null;
+      let sessionDeadline = 0;
+      let toastTimer = null;
+
+      // ---------- Helpers ----------
+      function showToast(message) {
+        if (!toast) {
+          return;
+        }
+
+        window.clearTimeout(toastTimer);
+        toast.textContent = message;
+        toast.classList.add("show");
+
+        toastTimer = window.setTimeout(function () {
+          toast.classList.remove("show");
+        }, 2300);
+      }
+
+      function credentialsAreValid() {
+        return (
+          toEnglishDigits(customerId.value.trim()) === DEMO_CUSTOMER_ID &&
+          toEnglishDigits(password.value) === DEMO_PASSWORD
+        );
+      }
+
+      // ---------- OTP button countdown ----------
+      function setOtpButtonReady(label) {
+        sendOtpBtn.disabled = false;
+        sendOtpBtn.textContent = label || "ارسال پیامک";
+      }
+
+      function stopOtpCountdown(options) {
+        const settings = Object.assign(
+          {
+            resetButton: true,
+            buttonLabel: "ارسال مجدد"
+          },
+          options || {}
+        );
+
+        if (otpCountdownInterval !== null) {
+          window.clearInterval(otpCountdownInterval);
+          otpCountdownInterval = null;
+        }
+
+        otpCountdownDeadline = 0;
+
+        if (settings.resetButton) {
+          setOtpButtonReady(settings.buttonLabel);
+        }
+      }
+
+      function updateOtpCountdown() {
+        if (!otpCountdownDeadline) {
+          return;
+        }
+
+        const remainingSeconds = Math.max(
+          0,
+          Math.ceil((otpCountdownDeadline - Date.now()) / 1000)
+        );
+
+        if (remainingSeconds <= 0) {
+          stopOtpCountdown({
+            resetButton: true,
+            buttonLabel: "ارسال مجدد"
+          });
+          return;
+        }
+
+        sendOtpBtn.textContent =
+          "ارسال شد " + toPersianDigits(remainingSeconds);
+      }
+
+      function startOtpCountdown() {
+        stopOtpCountdown({ resetButton: false });
+
+        otpCountdownDeadline =
+          Date.now() + OTP_RESEND_SECONDS * 1000;
+
+        sendOtpBtn.disabled = true;
+        updateOtpCountdown();
+
+        otpCountdownInterval = window.setInterval(
+          updateOtpCountdown,
+          250
+        );
+      }
+
+      sendOtpBtn.addEventListener("click", function () {
+        if (!customerId.value.trim() || !password.value) {
+          showToast("ابتدا شناسه مشتری و رمز ورود را وارد کنید.");
+          return;
+        }
+
+        if (!credentialsAreValid()) {
+          otpSent = false;
+          otpInput.value = "";
+          showToast("شناسه مشتری یا رمز ورود صحیح نیست.");
+          return;
+        }
+
+        otpSent = true;
+        otpInput.value = "";
+        otpInput.focus();
+        startOtpCountdown();
+        showToast("کد یکبارمصرف ارسال شد.");
+      });
+
+      // ---------- Session timer ----------
+      function formatSessionTime(totalSeconds) {
+        const safeSeconds = Math.max(0, totalSeconds);
+        const minutes = Math.floor(safeSeconds / 60);
+        const seconds = safeSeconds % 60;
+
+        return (
+          toPersianDigits(String(minutes).padStart(2, "0")) +
+          ":" +
+          toPersianDigits(String(seconds).padStart(2, "0"))
+        );
+      }
+
+      function clearSessionTimer() {
+        if (sessionInterval !== null) {
+          window.clearInterval(sessionInterval);
+          sessionInterval = null;
+        }
+
+        sessionDeadline = 0;
+
+        if (sessionTimer) {
+          sessionTimer.textContent = formatSessionTime(SESSION_SECONDS);
+          sessionTimer.classList.remove("timer-expiring");
+        }
+      }
+
+      function updateSessionTimer() {
+        if (!sessionTimer || !sessionDeadline) {
+          return;
+        }
+
+        const remainingSeconds = Math.max(
+          0,
+          Math.ceil((sessionDeadline - Date.now()) / 1000)
+        );
+
+        sessionTimer.textContent = formatSessionTime(remainingSeconds);
+        sessionTimer.classList.toggle(
+          "timer-expiring",
+          remainingSeconds <= 60
+        );
+
+        if (remainingSeconds <= 0) {
+          expireSession();
+        }
+      }
+
+      function startSessionTimer() {
+        clearSessionTimer();
+        sessionDeadline = Date.now() + SESSION_SECONDS * 1000;
+        updateSessionTimer();
+        sessionInterval = window.setInterval(updateSessionTimer, 250);
+      }
+
+      function showSessionModal() {
+        if (!sessionModal) {
+          return;
+        }
+
+        sessionModal.classList.add("show");
+
+        if (sessionModalButton) {
+          sessionModalButton.focus();
+        }
+      }
+
+      function hideSessionModal() {
+        if (sessionModal) {
+          sessionModal.classList.remove("show");
+        }
+      }
+
+      function resetLoginForm() {
+        customerId.value = "";
+        password.value = "";
+        otpInput.value = "";
+        otpSent = false;
+
+        stopOtpCountdown({
+          resetButton: true,
+          buttonLabel: "ارسال پیامک"
+        });
+      }
+
+      function expireSession() {
+        clearSessionTimer();
+        closeMenu();
+        dashboardView.classList.add("hidden");
+        loginView.classList.remove("hidden");
+        resetLoginForm();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        showSessionModal();
+      }
+
+      // ---------- Login ----------
+      loginForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        if (!customerId.value.trim() || !password.value) {
+          showToast("شناسه مشتری و رمز ورود را وارد کنید.");
+          return;
+        }
+
+        if (!credentialsAreValid()) {
+          showToast("شناسه مشتری یا رمز ورود صحیح نیست.");
+          return;
+        }
+
+        if (!otpSent) {
+          showToast("ابتدا روی دکمه ارسال پیامک بزنید.");
+          return;
+        }
+
+        const normalizedOtp = toEnglishDigits(otpInput.value.trim());
+
+        if (!DEMO_OTP_CODES.has(normalizedOtp)) {
+          showToast("کد یکبارمصرف صحیح نیست.");
+          return;
+        }
+
+        stopOtpCountdown({
+          resetButton: true,
+          buttonLabel: "ارسال پیامک"
+        });
+
+        loginView.classList.add("hidden");
+        dashboardView.classList.remove("hidden");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        startSessionTimer();
+      });
+
+      // ---------- Responsive profile placement ----------
+      function placeProfileCard() {
+        if (!profileCard || !mobileProfileMount || !desktopProfileMount) {
+          return;
+        }
+
+        if (window.innerWidth <= 760) {
+          if (profileCard.parentElement !== mobileProfileMount) {
+            mobileProfileMount.appendChild(profileCard);
+          }
+          return;
+        }
+
+        if (profileCard.previousElementSibling !== desktopProfileMount) {
+          desktopProfileMount.insertAdjacentElement("afterend", profileCard);
+        }
+      }
+
+      placeProfileCard();
+
+      window.addEventListener("resize", function () {
+        placeProfileCard();
+
+        if (window.innerWidth > 760) {
+          closeMenu();
+        }
+      });
+
+      // ---------- Mobile menu ----------
+      function openMenu() {
+        document.body.classList.add("menu-open");
+      }
+
+      function closeMenu() {
+        document.body.classList.remove("menu-open");
+      }
+
+      if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener("click", openMenu);
+      }
+
+      if (sidebarCloseBtn) {
+        sidebarCloseBtn.addEventListener("click", closeMenu);
+      }
+
+      if (menuOverlay) {
+        menuOverlay.addEventListener("click", closeMenu);
+      }
+
+      // ---------- Logout ----------
+      function logout() {
+        clearSessionTimer();
+        closeMenu();
+        dashboardView.classList.add("hidden");
+        loginView.classList.remove("hidden");
+        resetLoginForm();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        showToast("خروج انجام شد.");
+      }
+
+      // These elements are optional, so a missing one must not crash the script.
+      if (logoutTopBtn) {
+        logoutTopBtn.addEventListener("click", logout);
+      }
+
+      if (logoutMenuBtn) {
+        logoutMenuBtn.addEventListener("click", logout);
+      }
+
+      // ---------- Session modal ----------
+      if (sessionModalButton) {
+        sessionModalButton.addEventListener("click", hideSessionModal);
+      }
+
+      if (sessionModal) {
+        sessionModal.addEventListener("click", function (event) {
+          if (event.target === sessionModal) {
+            hideSessionModal();
+          }
+        });
+      }
+
+      document.addEventListener("keydown", function (event) {
+        if (
+          event.key === "Escape" &&
+          sessionModal &&
+          sessionModal.classList.contains("show")
+        ) {
+          hideSessionModal();
+        }
+      });
+
+      // ---------- Demo-only links ----------
+      document.querySelectorAll("[data-demo-link]").forEach(function (element) {
+        element.addEventListener("click", function (event) {
+          event.preventDefault();
+          showToast("این بخش در نسخه نمایشی فعال نیست.");
+        });
+      });
+
+      // ---------- Account details ----------
+      function setAccountState(row, shouldOpen) {
+        const detailsId = row.dataset.details;
+        const detailsRow = detailsId
+          ? document.getElementById(detailsId)
+          : null;
+        const toggleButton = row.querySelector(".toggle-details");
+        const statusButton = row.querySelector(".status-toggle");
+        const statusIcon = row.querySelector(".status-icon");
+
+        if (!detailsRow) {
+          return;
+        }
+
+        row.classList.toggle("is-open", shouldOpen);
+        detailsRow.classList.toggle("is-open", shouldOpen);
+
+        if (toggleButton) {
+          toggleButton.setAttribute(
+            "aria-expanded",
+            shouldOpen ? "true" : "false"
+          );
+        }
+
+        if (statusButton) {
+          statusButton.setAttribute(
+            "aria-expanded",
+            shouldOpen ? "true" : "false"
+          );
+        }
+
+        if (statusIcon) {
+          statusIcon.textContent = shouldOpen ? "−" : "+";
+        }
+      }
+
+      function closeOtherAccounts(currentRow) {
+        if (!accountsTable) {
+          return;
+        }
+
+        accountsTable
+          .querySelectorAll(".account-row")
+          .forEach(function (row) {
+            if (row !== currentRow) {
+              setAccountState(row, false);
+            }
+          });
+      }
+
+      function toggleAccount(row) {
+        const shouldOpen = !row.classList.contains("is-open");
+
+        if (shouldOpen) {
+          closeOtherAccounts(row);
+        }
+
+        setAccountState(row, shouldOpen);
+      }
+
+      if (accountsTable) {
+        accountsTable
+          .querySelectorAll(".account-row")
+          .forEach(function (row) {
+            setAccountState(row, false);
+          });
+
+        accountsTable.addEventListener("click", function (event) {
+          const row = event.target.closest(".account-row");
+
+          if (!row || !accountsTable.contains(row)) {
+            return;
+          }
+
+          toggleAccount(row);
+        });
+
+        accountsTable.addEventListener("keydown", function (event) {
+          const row = event.target.closest(".account-row");
+
+          if (!row || event.target !== row) {
+            return;
+          }
+
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            toggleAccount(row);
+          }
+        });
+      }
+
+      // Initial visual state.
+      setOtpButtonReady("ارسال پیامک");
+      clearSessionTimer();
+      convertDisplayedDigits(document.body);
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initializePage, { once: true });
+    } else {
+      initializePage();
+    }
+  })();
+</script>
+</body>
+</html>

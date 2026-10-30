@@ -54,3 +54,4 @@
     @include('field-visits.map-script', ['points' => $mapPoints, 'mapId' => 'visits-map'])
     @endpush
 </x-app-layout>
+

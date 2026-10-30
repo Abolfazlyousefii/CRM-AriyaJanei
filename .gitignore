@@ -29,14 +29,48 @@ public/site/public/error_log
 /public/site/public/C:*
 /storage/*.zip
 
-# Deployment secrets and source archives stay outside version control.
+# Local configuration, generated Laravel files and review artifacts.
+.env
+.env.*
+!.env.example
+*.log
+error_log
 *.pem
 *.key
 *.p12
-.rnd
 *.zip
 *.sql.gz
-.env.*
-!.env.example
-/storage/app/public/*
-!/storage/app/public/.gitignore
+*.sqlite
+*.sqlite3
+/.rnd
+/laravel
+/node_modules/
+/vendor/
+/.idea/
+/.vscode/
+/.phpunit.cache/
+/.phpunit.result.cache
+/auth.json
+/public/hot
+/storage/debugbar/
+/storage/pail/
+/output/
+/outputs/
+/tmp/
+/Claude outputs/
+/test-results.xml
+/prototypes/
+/New Text Document.txt
+/CHANGED-FILES.txt
+/EXISTING-FILES-PATCH.diff
+/README-FA.txt
+/README-LOCAL-TEST.txt
+/UPLOAD-INSTRUCTIONS-FA.txt
+
+# Editor backups and superseded deployment copies.
+*.bak
+*.bak-*
+*.backup
+*.backup-*
+*.before-*
+*.orig

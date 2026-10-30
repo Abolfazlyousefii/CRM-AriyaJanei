@@ -657,7 +657,7 @@
     geoStatus.textContent =
       'موقعیت دریافت نشد؛ اجازه دسترسی و اتصال امن مرورگر را بررسی کنید.';
     console.log('Location error:', e);
-
+    
   });
 
   if (myLocationBtn) {

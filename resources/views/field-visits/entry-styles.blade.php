@@ -38,3 +38,4 @@
 @media(max-height:500px) and (max-width:991px){.entry-submit-bar{position:static}}
 @media(prefers-reduced-motion:reduce){.fv-entry *{scroll-behavior:auto!important;transition:none!important}}
 </style>
+
