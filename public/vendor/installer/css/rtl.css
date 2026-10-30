@@ -1,0 +1,203 @@
+@font-face {
+    font-family: Vazir;
+    font-style: normal;
+    font-weight: 400;
+    src: url('../fonts/Vazir-Light.eot');
+    src: url('../fonts/Vazir-Light.eot?#iefix') format('embedded-opentype'), url('../fonts/Vazir-Light.woff2') format('woff2'), url('../fonts/Vazir-Light.woff') format('woff'), url('../fonts/Vazir-Light.ttf') format('truetype')
+}
+
+html,
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: Vazir;
+}
+
+body {
+    direction: rtl;
+    text-align: right;
+}
+
+.textarea,
+pre {
+    direction: ltr;
+    text-align: left;
+}
+
+select {
+    height: 40px;
+}
+
+.fa-ul {
+    padding-right: 0;
+    margin-right: 2.1428571429em;
+    margin-left: auto;
+}
+
+.fa-li {
+    right: -2.1428571429em;
+    left: auto;
+}
+
+.fa-li.fa-lg {
+    right: -1.8571428571em;
+    left: auto;
+}
+
+.fa-pull-left {
+    float: right;
+}
+
+.fa-pull-right {
+    float: left;
+}
+
+.fa.fa-pull-left {
+    margin-left: .3em;
+    margin-right: auto;
+}
+
+.fa.fa-pull-right {
+    margin-right: .3em;
+    margin-left: auto;
+}
+
+.pull-right {
+    float: left;
+}
+
+.pull-left {
+    float: right;
+}
+
+.fa.pull-left {
+    margin-left: .3em;
+    margin-right: auto;
+}
+
+.fa.pull-right {
+    margin-right: .3em;
+    margin-left: auto;
+}
+
+.fa-stack-1x,
+.fa-stack-2x {
+    right: 0;
+    left: auto;
+}
+
+th {
+    text-align: right;
+}
+
+ol {
+    padding-right: 1.4em;
+    padding-left: 0;
+}
+
+p {
+    margin: 0 0 1rem 0;
+}
+
+ul {
+    padding-right: 1.1em;
+    padding-left: 0;
+}
+
+.box {
+    border-radius: 0 0 3px 3px;
+}
+
+.header {
+    border-radius: 3px 3px 0 0;
+}
+
+.step {
+    padding-right: 0;
+}
+
+.main {
+    border-radius: 0 0 3px 3px;
+}
+
+.buttons--right {
+    text-align: left;
+}
+
+.list {
+    padding-right: 0;
+}
+
+.list__item .fa.row-icon:before {
+    left: 0;
+    right: auto;
+}
+
+.list__item--permissions span {
+    left: 0;
+    right: auto;
+}
+
+.list__item--permissions span:before {
+    margin-left: 7px;
+    margin-right: auto;
+}
+
+.tabs .tab-label {
+    /* float: right; */
+}
+
+.float-left {
+    float: right;
+}
+
+.float-right {
+    float: left;
+}
+
+.block span {
+    padding: 10px 15px 12px 12px;
+}
+
+.info {
+    padding-right: 15px;
+    padding-left: 15px;
+}
+
+.alert .close {
+    float: left;
+    left: 0;
+    right: auto;
+}
+
+.github img {
+    left: 0;
+    right: auto;
+}
+
+#tab3content .block:first-child {
+    border-radius: 3px 3px 0 0;
+}
+
+#tab3content .block:last-child {
+    border-radius: 0 0 3px 3px;
+}
+
+.fa-angle-right,
+.fa-angle-double-right,
+.fa-angle-double-left,
+.fa-angle-left {
+    transform: rotate(180deg);
+}
+
+.ltr {
+    direction: ltr;
+}
+
+.alert.alert-danger h4 {
+    font-size: 22px;
+}

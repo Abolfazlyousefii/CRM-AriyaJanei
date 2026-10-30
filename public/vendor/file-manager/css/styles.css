@@ -1,0 +1,16 @@
+@font-face {
+    font-family: Vazir;
+    src: url('../fonts/vazir/Vazir-Light-FD.eot');
+    src: url('../fonts/vazir/Vazir-Light-FD.eot?#iefix') format('embedded-opentype'), url('../fonts/vazir/Vazir-Light-FD.woff2') format('woff2'), url('../fonts/vazir/Vazir-Light-FD.woff') format('woff'), url('../fonts/vazir/Vazir-Light-FD.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+    font-display: fallback;
+}
+
+body {
+    font-family: Vazir;
+}
+
+.modal-header .close {
+    margin: -1rem auto -1rem -1rem;
+}

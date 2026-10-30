@@ -1,0 +1,29 @@
+@if ($paginator->hasPages())
+    <nav role="navigation" aria-label="ناوبری صفحه‌بندی">
+        <ul class="pagination">
+            {{-- Previous Page Link --}}
+            @if ($paginator->onFirstPage())
+                <li class="page-item disabled" aria-disabled="true">
+                    <span class="page-link">قبلی</span>
+                </li>
+            @else
+                <li class="page-item">
+                    <a class="page-link" href="{{ $paginator->previousPageUrl() }}" rel="prev">
+                        قبلی
+                    </a>
+                </li>
+            @endif
+
+            {{-- Next Page Link --}}
+            @if ($paginator->hasMorePages())
+                <li class="page-item">
+                    <a class="page-link" href="{{ $paginator->nextPageUrl() }}" rel="next">بعدی</a>
+                </li>
+            @else
+                <li class="page-item disabled" aria-disabled="true">
+                    <span class="page-link">بعدی</span>
+                </li>
+            @endif
+        </ul>
+    </nav>
+@endif
