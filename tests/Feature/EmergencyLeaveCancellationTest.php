@@ -52,12 +52,16 @@ class EmergencyLeaveCancellationTest extends TestCase
         $previous = $this->existing();
         $previous->update(['substitute_user_id' => $internal->id]);
         app(StagedLeaveService::class)->start($previous, $this->employee);
+        $eventsBefore = $previous->events()->count();
         $this->actingAs($this->employee)->delete(route('leaves.destroy', $previous))->assertRedirect(route('leaves'));
 
         $this->assertSoftDeleted($previous);
         $this->assertSame('cancelled', $previous->fresh()->status);
         app(StagedLeaveService::class)->assertRules($this->employee, [...$this->payload(), 'substitute' => $internal]);
-        $this->assertDatabaseCount('leave_workflow_events', 1);
+        $this->assertSame($eventsBefore + 1, $previous->events()->count());
+        $this->assertDatabaseHas('leave_workflow_events', [
+            'leave_id' => $previous->id, 'actor_id' => $this->employee->id, 'action' => 'cancelled',
+        ]);
     }
 
     public function test_cancelled_requests_do_not_exhaust_monthly_occurrences(): void
