@@ -205,6 +205,7 @@
             @endcan
 
             @can('approve', $leave)
+                @include('Leaves.monthly-usage', ['leave' => $leave, 'monthlyUsage' => $monthlyUsage])
                 <form action="{{ route('leaves.approve', $leave->id) }}" method="POST" class="d-inline">
                     @csrf @method('PATCH')
                     <button class="btn btn-success btn-sm">تأیید</button>

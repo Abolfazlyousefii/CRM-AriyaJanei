@@ -35,7 +35,9 @@ class LeaveController extends Controller
                 $active->whereNull('blocked_until')->orWhere('blocked_until', '<=', now());
             })->orderBy('name')->get(['id', 'name']) : collect();
 
-        return view('Leaves.index', compact('leaves', 'leaveAssignees'));
+        $monthlyUsage = app(\App\Services\LeaveMonthlyUsageService::class)->forRequests($leaves->getCollection());
+
+        return view('Leaves.index', compact('leaves', 'leaveAssignees', 'monthlyUsage'));
     }
 
     public function create()

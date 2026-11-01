@@ -21,6 +21,7 @@
     @endforeach
 </details>
 @if(app(\App\Services\ExecutiveLeaveCodeService::class)->canDelegate(auth()->user(),$leave))
+    @include('Leaves.monthly-usage', ['leave' => $leave, 'monthlyUsage' => $monthlyUsage])
     <div class="border rounded p-2 text-end" style="min-width:190px;max-width:300px;white-space:normal">
         <p class="small">در نبود اینترنت مدیر اجرایی، کد را به شمارهٔ خود ایشان ارسال کنید و پس از دریافت از ایشان وارد کنید.</p>
         <form method="POST" action="{{ route('leaves.executive-code.request',$leave) }}">@csrf
