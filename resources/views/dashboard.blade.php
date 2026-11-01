@@ -98,6 +98,18 @@
             }
         }
 
+        // Leave access is available to every signed-in employee, including admin-only accounts.
+        if ($user) {
+            $managesLeaves = $user->hasAnyRole(['Admin', 'Manager', 'InternalManager', 'internalManager', 'Supervisor', 'Owner'])
+                || app(\App\Services\CompanyStructureService::class)->isLeader($user);
+            $addLink([
+                'title' => $managesLeaves ? 'مدیریت مرخصی‌ها' : 'مرخصی‌های من',
+                'route' => 'leaves',
+                'icon' => 'calendar',
+                'group' => 'requests',
+            ]);
+        }
+
         if ($user && $user->can('viewAny', \App\Models\ShopContact::class)) {
             $addLink(['title' => 'نقطه‌زنی و گزارش بازدیدها', 'route' => 'field-visits.index', 'icon' => 'chart', 'group' => 'reports']);
         }
