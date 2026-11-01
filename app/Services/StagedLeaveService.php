@@ -40,15 +40,18 @@ class StagedLeaveService
             $month = Verta::parse($jalali->format('Y/m').'/01')->startMonth();
             $from = Carbon::instance($month->datetime())->startOfDay();
             $to = Carbon::instance($month->copy()->addMonth()->datetime())->startOfDay();
-            $count = Leave::withTrashed()->where('user_id', $author->id)->where('leave_type', 'اضطراری')->where('start_date', '>=', $from)->where('start_date', '<', $to)->count();
+            // Retain the audit history, but a cancelled request consumes neither hours nor an occurrence.
+            $quotaLeaves = Leave::withTrashed()->where('user_id', $author->id)->where('leave_type', 'اضطراری')
+                ->where('status', '!=', 'cancelled');
+            $count = (clone $quotaLeaves)->where('start_date', '>=', $from)->where('start_date', '<', $to)->count();
             if ($count >= 3) {
-                throw ValidationException::withMessages(['leave_type' => 'سهمیه سه درخواست اضطراری این ماه شمسی تکمیل شده است؛ درخواست ردشده یا لغوشده نیز شمرده می‌شود.']);
+                throw ValidationException::withMessages(['leave_type' => 'سهمیه سه درخواست اضطراری این ماه شمسی تکمیل شده است؛ درخواست ردشده شمرده می‌شود، اما درخواست لغوشده سهمیه مصرف نمی‌کند.']);
             }
             if ($minutes > 240) {
                 throw ValidationException::withMessages(['end_time' => 'هر نوبت مرخصی اضطراری حداکثر ۴ ساعت است؛ ساعت استفاده‌نشده ذخیره نمی‌شود.']);
             }
             // The controller holds the author's row lock, so simultaneous submissions cannot exceed this cap.
-            $usedMinutes = Leave::withTrashed()->where('user_id', $author->id)->where('leave_type', 'اضطراری')
+            $usedMinutes = (clone $quotaLeaves)
                 ->whereDate('start_date', $start->toDateString())->get()->sum(function (Leave $previous) {
                     $from = $previous->start_date->copy()->setTimeFromTimeString($previous->start_time->format('H:i:s'));
                     $to = $previous->end_date->copy()->setTimeFromTimeString($previous->end_time->format('H:i:s'));
