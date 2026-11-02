@@ -18,6 +18,7 @@
 .leave-table th{padding:16px 10px;color:var(--muted,#64748b);font-size:12px;font-weight:600;border-bottom:1px solid var(--border,#dce2eb)}
 .leave-table th:nth-child(1){width:19%}.leave-table th:nth-child(2){width:15%}.leave-table th:nth-child(3){width:22%}.leave-table th:nth-child(4){width:20%}.leave-table th:nth-child(5){width:24%}
 .leave-table td{padding:16px 10px;vertical-align:top;border:0;border-bottom:1px solid var(--border,#dce2eb);white-space:normal;overflow-wrap:anywhere;color:var(--text,#18283b);background:transparent!important}
+.leave-table td>div[style]{min-width:0!important;max-width:100%!important}
 .leave-table tbody tr:last-child td{border-bottom:0}
 .leave-table .badge{white-space:normal;line-height:1.6}
 .leave-table .btn{margin:3px 0;min-height:34px}
@@ -276,7 +277,7 @@
             </div>
 
             <div class="mt-4">
-                {{ $leaves->links() }}
+                {{ $leaves->onEachSide(1)->links() }}
             </div>
         </div>
     </div>
