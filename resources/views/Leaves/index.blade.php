@@ -5,7 +5,35 @@
         </h2>
     </x-slot>
 
-    <div class="py-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" dir="rtl">
+
+<style>
+.leave-workspace{width:100%;max-width:none;padding:20px clamp(12px,2.4vw,40px);margin:0 auto;box-sizing:border-box}
+.leave-workspace *{box-sizing:border-box}
+.leave-tools{border:1px solid var(--border,#dce2eb);border-radius:12px;padding:12px 16px;margin:4px 0 16px;background:var(--surface,#fff)}
+.leave-tools>summary{cursor:pointer;font-weight:600;list-style-position:inside}
+.leave-tools .card{margin:12px 0 0!important;border:0;background:transparent;box-shadow:none!important}
+.leave-tools .card-body{padding:0}
+.leave-list-panel{border:1px solid var(--border,#dce2eb);border-radius:14px;background:var(--surface,#fff);padding:0 12px 12px}
+.leave-table{table-layout:fixed;margin:0;width:100%;font-size:13px;text-align:right;border-collapse:collapse}
+.leave-table th{padding:16px 10px;color:var(--muted,#64748b);font-size:12px;font-weight:600;border-bottom:1px solid var(--border,#dce2eb)}
+.leave-table th:nth-child(1){width:19%}.leave-table th:nth-child(2){width:15%}.leave-table th:nth-child(3){width:22%}.leave-table th:nth-child(4){width:20%}.leave-table th:nth-child(5){width:24%}
+.leave-table td{padding:16px 10px;vertical-align:top;border:0;border-bottom:1px solid var(--border,#dce2eb);white-space:normal;overflow-wrap:anywhere;color:var(--text,#18283b);background:transparent!important}
+.leave-table tbody tr:last-child td{border-bottom:0}
+.leave-table .badge{white-space:normal;line-height:1.6}
+.leave-table .btn{margin:3px 0;min-height:34px}
+.leave-table details{min-width:0!important;max-width:100%!important;margin-top:8px}
+.leave-table summary{cursor:pointer;font-size:12px;color:var(--muted,#64748b)}
+.leave-unit{display:inline-block;padding:2px 7px;border-radius:6px;background:var(--surface-2,#f1f5f9);font-size:11px;margin-inline-start:4px}
+.leave-date{display:flex;justify-content:space-between;gap:6px;margin-bottom:5px;font-size:12px;flex-wrap:wrap}
+.leave-date>span{color:var(--muted,#64748b)}
+.leave-description p{margin:8px 0;line-height:1.8}
+.leave-workspace [data-monthly-leave-summary]{min-width:0!important;max-width:none!important;width:100%;font-size:12px}
+@media(min-width:1600px){.leave-table{font-size:14px}.leave-workspace{padding-inline:40px}}
+@media(max-width:900px){.leave-list-panel{padding:0;border:0;background:transparent}.leave-table,.leave-table tbody{display:block;width:100%}.leave-table thead{display:none}.leave-table tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);border:1px solid var(--border,#dce2eb);border-radius:12px;background:var(--surface,#fff);margin-bottom:12px;padding:8px}.leave-table td{display:block;padding:10px;border:0;min-width:0}.leave-table td:before{content:attr(data-label);display:block;font-size:11px;color:var(--muted,#64748b);margin-bottom:6px}.leave-table td:last-child{grid-column:1/-1;border-top:1px solid var(--border,#dce2eb)}.leave-table td[colspan]{grid-column:1/-1}.leave-date{justify-content:flex-start}}
+@media(max-width:420px){.leave-table tbody tr{grid-template-columns:minmax(0,1fr)}.leave-table td{padding:8px}.leave-workspace{padding:12px}}
+</style>
+
+    <div class="leave-workspace" dir="rtl">
         @if(session('success'))
             <div class="alert alert-success text-center mb-4">
                 {{ session('success') }}
@@ -30,6 +58,7 @@
 
 
 
+<details class="leave-tools"><summary>گزارش و خروجی</summary>
         @if(auth()->user()->hasRole('Accountant'))
             <div class="card mb-3 shadow-sm">
                 <div class="card-body">
@@ -97,21 +126,17 @@
             </div>
         </div>
 
-        <div class="bg-white shadow-sm rounded-lg p-4 sm:p-6">
-            <div class="overflow-x-auto">
-                <table class="table table-bordered table-striped w-full text-center min-w-[1000px]">
+        </details>
+        <div class="leave-list-panel">
+            <div class="leave-table-wrap">
+                <table class="table leave-table w-full">
                     <thead>
                         <tr>
                             <th>کارمند</th>
-                            <th>جایگزین</th>
-                            <th>نوع مرخصی</th>
-                            <th>نوع ثبت</th>
-                            <th>شروع</th>
-                            <th>پایان</th>
-                            <th>توضیحات</th>
-                            <th>تاریخ ارائه درخواست</th>
-                            <th>وضعیت</th>
-                            <th>عملیات</th>
+                            <th>درخواست</th>
+                            <th>بازه مرخصی</th>
+                            <th>وضعیت و سابقه</th>
+                            <th>بررسی درخواست</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -124,41 +149,40 @@
     $endDate = verta($leave->end_date)->format('Y/m/d');
 
     $startTime = $leave->start_time
-        ? \Carbon\Carbon::parse($leave->start_time)->format('H:i:s')
+        ? \Carbon\Carbon::parse($leave->start_time)->format('H:i')
         : '00:00:00';
 
     $endTime = $leave->end_time
-        ? \Carbon\Carbon::parse($leave->end_time)->format('H:i:s')
+        ? \Carbon\Carbon::parse($leave->end_time)->format('H:i')
         : '00:00:00';
 
     $startDateTime = $startDate . ' ' . $startTime;
     $endDateTime = $endDate . ' ' . $endTime;
 
-    $createdAt = verta($leave->created_at)->format('Y/m/d H:i:s');
+    $createdAt = verta($leave->created_at)->format('Y/m/d H:i');
 @endphp
 
     <tr>
-        <td class="whitespace-nowrap">
+        <td data-label="کارمند">
             {{ $leave->user?->name ?? '-' }}
             @if(in_array($leave->approval_route,['organization','staged'],true))
                 <small class="d-block text-muted">مسئول بررسی: {{ $leave->assignedApprover?->name ?? 'نیازمند تعیین مسئول' }}</small>
             @endif
         </td>
-        <td class="whitespace-nowrap">{{ $leave->substituteUser?->name ?? '-' }}</td>
-        <td class="whitespace-nowrap">{{ $leave->leave_type }}</td>
-        <td class="whitespace-nowrap">{{ $leave->leave_unit }}</td>
-
-        <td class="whitespace-nowrap">{{ $startDateTime }}</td>
-        <td class="whitespace-nowrap">{{ $endDateTime }}</td>
-
-        <td>{{ $leave->reason ?: '-' }}</td>
-
-        <td class="whitespace-nowrap">{{ $createdAt }}</td>
-
-        <td class="whitespace-nowrap">
-            @if($leave->approval_route==='staged')
-                @include('Leaves.workflow',['leave'=>$leave])
-            @endif
+        <td data-label="درخواست">
+            <strong>{{ $leave->leave_type }}</strong>
+            <span class="leave-unit">{{ $leave->leave_unit }}</span>
+            <small class="d-block text-muted mt-1">جایگزین: {{ $leave->substituteUser?->name ?? '-' }}</small>
+        </td>
+        <td data-label="بازه مرخصی">
+            <div class="leave-date"><span>از</span> <bdi>{{ $startDateTime }}</bdi></div>
+            <div class="leave-date"><span>تا</span> <bdi>{{ $endDateTime }}</bdi></div>
+            <details class="leave-description"><summary>جزئیات درخواست</summary>
+                <p>{{ $leave->reason ?: 'توضیحی ثبت نشده است.' }}</p>
+                <small>ثبت: <bdi>{{ $createdAt }}</bdi></small>
+            </details>
+        </td>
+        <td data-label="وضعیت و سابقه">
             @switch($leave->status)
                 @case('pending')
                 @case('manager_approved')
@@ -167,7 +191,7 @@
                 @case('pending_manager')
                 @case('pending_internal')
                 @case('pending_account')
-                    <span class="badge bg-warning">در انتظار بررسی تأییدکنندگان</span>
+                    <span class="badge bg-warning">در انتظار بررسی</span>
                     @break
 
                 @case('final_rejected')
@@ -193,9 +217,13 @@
                 @default
                     <span class="badge bg-secondary">{{ $leave->status }}</span>
             @endswitch
+            @if($leave->approval_route==='staged')
+                @include('Leaves.workflow',['leave'=>$leave])
+            @endif
+
         </td>
 
-        <td class="whitespace-nowrap">
+        <td data-label="بررسی درخواست">
             @can('delete',$leave)
                 <form action="{{ route('leaves.destroy', $leave->id) }}" method="POST" class="d-inline">
                     @csrf
@@ -240,7 +268,7 @@
 @empty
                      
                             <tr>
-                                <td colspan="10" class="text-center text-muted">هیچ مرخصی‌ای ثبت نشده است.</td>
+                                <td colspan="5" class="text-center text-muted">هیچ مرخصی‌ای ثبت نشده است.</td>
                             </tr>
                         @endforelse
                     </tbody>
